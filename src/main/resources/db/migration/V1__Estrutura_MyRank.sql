@@ -1,6 +1,6 @@
 -- =========================================================
 -- MyRank - Schema inicial
--- V1__init_schema.sql
+-- V1__Estrutura_MyRank.sql
 -- =========================================================
 
 -- ---------------------------------------------------------
@@ -24,6 +24,7 @@ CREATE TABLE users (
     avatar_url      VARCHAR(500),
     bio             TEXT,
     plan            plan_type           NOT NULL DEFAULT 'FREE',
+    is_public       BOOLEAN             NOT NULL DEFAULT true,
     created_at      TIMESTAMP           NOT NULL DEFAULT now(),
     updated_at      TIMESTAMP           NOT NULL DEFAULT now(),
 
@@ -73,6 +74,7 @@ CREATE TABLE works (
     image_url           VARCHAR(500),
     creator             VARCHAR(255),
     release_date        DATE,
+    time_minutes        INT           NOT NULL DEFAULT 0,
     position            INT,
     score               DECIMAL(4,2)  NOT NULL,
     time_bonus_score    DECIMAL(4,2)  NOT NULL DEFAULT 0,
@@ -137,19 +139,21 @@ CREATE INDEX idx_activity_user_created ON user_activity_history (user_id, create
 -- BADGES (catálogo) + USER_BADGES (join table)
 -- ---------------------------------------------------------
 CREATE TABLE badges (
-    id          BIGSERIAL PRIMARY KEY,
-    name        VARCHAR(150) NOT NULL,
-    description TEXT,
-    icon_url    VARCHAR(500),
-    criteria    TEXT,
-    created_at  TIMESTAMP    NOT NULL DEFAULT now()
+    id              BIGSERIAL PRIMARY KEY,
+    name            VARCHAR(150) NOT NULL,
+    description     TEXT,
+    icon_url        VARCHAR(500),
+    criteria        TEXT,
+    target_progress INT          NOT NULL DEFAULT 1,
+    created_at      TIMESTAMP    NOT NULL DEFAULT now()
 );
 
 CREATE TABLE user_badges (
-    id          BIGSERIAL PRIMARY KEY,
-    user_id     BIGINT    NOT NULL,
-    badge_id    BIGINT    NOT NULL,
-    unlocked_at TIMESTAMP NOT NULL DEFAULT now(),
+    id                BIGSERIAL PRIMARY KEY,
+    user_id           BIGINT    NOT NULL,
+    badge_id          BIGINT    NOT NULL,
+    current_progress  INT       NOT NULL DEFAULT 0,
+    unlocked_at       TIMESTAMP,
 
     CONSTRAINT fk_user_badges_user FOREIGN KEY (user_id)
         REFERENCES users (id) ON DELETE CASCADE,
