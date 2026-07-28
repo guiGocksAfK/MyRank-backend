@@ -28,7 +28,6 @@ public class UserService {
         }
 
         User user = new User();
-        user.setName(dto.name());
         user.setUsername(dto.username());
         user.setEmail(dto.email());
         user.setPasswordHash(passwordEncoder.encode(dto.password()));

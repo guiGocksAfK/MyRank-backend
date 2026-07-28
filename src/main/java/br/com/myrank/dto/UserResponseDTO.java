@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 
 public record UserResponseDTO(
         Long id,
-        String name,
         String username,
         String email,
         String avatarUrl,
@@ -18,7 +17,6 @@ public record UserResponseDTO(
     public static UserResponseDTO fromEntity(User user) {
         return new UserResponseDTO(
                 user.getId(),
-                user.getName(),
                 user.getUsername(),
                 user.getEmail(),
                 user.getAvatarUrl(),

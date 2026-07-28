@@ -15,7 +15,6 @@ CREATE TYPE activity_action_type AS ENUM ('RATED', 'UPDATED', 'REMOVED');
 -- ---------------------------------------------------------
 CREATE TABLE users (
     id              BIGSERIAL PRIMARY KEY,
-    name            VARCHAR(150)        NOT NULL,
     username        VARCHAR(50)         NOT NULL,
     email           VARCHAR(255),
     password_hash   VARCHAR(255),
