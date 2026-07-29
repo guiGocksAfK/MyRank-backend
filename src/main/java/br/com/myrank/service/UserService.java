@@ -43,4 +43,27 @@ public class UserService {
         return userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
     }
+
+    public User getByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
+    }
+
+    public User updateUser(Long id, br.com.myrank.dto.UserUpdateDTO dto) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
+
+        if (dto.username() != null && !dto.username().isBlank()) {
+            if (userRepository.existsByUsernameAndIdNot(dto.username(), id)) {
+                throw new IllegalArgumentException("Username já está em uso.");
+            }
+            user.setUsername(dto.username());
+        }
+
+        if (dto.bio() != null) {
+            user.setBio(dto.bio());
+        }
+
+        return userRepository.save(user);
+    }
 }
