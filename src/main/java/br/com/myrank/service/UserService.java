@@ -4,6 +4,8 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.entity.UserStats;
 import br.com.myrank.domain.enums.AuthProvider;
 import br.com.myrank.dto.UserCreateDTO;
+import br.com.myrank.dto.UserResponseDTO;
+import br.com.myrank.dto.UserUpdateDTO;
 import br.com.myrank.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -49,7 +51,7 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
     }
 
-    public User updateUser(Long id, br.com.myrank.dto.UserUpdateDTO dto) {
+    public User updateUser(Long id, UserUpdateDTO dto) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
 
