@@ -4,7 +4,6 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.entity.UserStats;
 import br.com.myrank.domain.enums.AuthProvider;
 import br.com.myrank.dto.UserCreateDTO;
-import br.com.myrank.dto.UserResponseDTO;
 import br.com.myrank.dto.UserUpdateDTO;
 import br.com.myrank.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,10 +14,12 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CategoryService categoryService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, CategoryService categoryService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.categoryService = categoryService;
     }
 
     public User createUser(UserCreateDTO dto) {
@@ -38,7 +39,11 @@ public class UserService {
         UserStats stats = new UserStats(user);
         user.setUserStats(stats);
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        categoryService.createDefaultCategories(savedUser);
+
+        return savedUser;
     }
 
     public User getUserById(Long id) {

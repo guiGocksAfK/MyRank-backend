@@ -47,12 +47,28 @@ public class CategoryService {
             throw new IllegalArgumentException("Você não tem permissão para excluir essa categoria.");
         }
 
-        if (category.isDefault()) {
-            throw new IllegalArgumentException("Categorias padrão não podem ser excluídas.");
-        }
-
         categoryRepository.delete(category);
     }
+
+    // dentro da classe CategoryService, adiciona esse método
+
+    public void createDefaultCategories(User user) {
+        List<String> defaults = List.of(
+                "🎬 Filmes",
+                "🎮 Jogos",
+                "📚 Livros",
+                "📺 Séries & Animes"
+        );
+
+        for (String name : defaults) {
+            Category category = new Category();
+            category.setUser(user);
+            category.setName(name);
+            category.setDefault(true);
+            categoryRepository.save(category);
+        }
+    }
+
 
     private CategoryResponseDTO toResponseDTO(Category category) {
         return new CategoryResponseDTO(
