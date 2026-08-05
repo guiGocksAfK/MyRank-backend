@@ -9,6 +9,8 @@ import br.com.myrank.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class UserService {
 
@@ -72,5 +74,66 @@ public class UserService {
         }
 
         return userRepository.save(user);
+    }
+
+    public User findOrCreateFromOAuth(OAuthUserInfo info, AuthProvider provider) {
+        return userRepository.findByAuthProviderAndProviderId(provider, info.providerId())
+                .map(user -> userRepository.save(updateOAuthProfile(user, info)))
+                .orElseGet(() -> createOrLinkOAuthUser(info, provider));
+    }
+
+    private User createOrLinkOAuthUser(OAuthUserInfo info, AuthProvider provider) {
+        if (info.email() != null && !info.email().isBlank()) {
+            Optional<User> existingByEmail = userRepository.findByEmail(info.email());
+            if (existingByEmail.isPresent()) {
+                User user = existingByEmail.get();
+                if (user.getAuthProvider() != AuthProvider.LOCAL && user.getAuthProvider() != provider) {
+                    throw new IllegalArgumentException("Email já cadastrado com outro método de login.");
+                }
+
+                user.setProviderId(info.providerId());
+                return userRepository.save(updateOAuthProfile(user, info));
+            }
+        }
+
+        User user = new User();
+        user.setUsername(generateUniqueUsername(info.usernameBase()));
+        user.setEmail(info.email());
+        user.setAuthProvider(provider);
+        user.setProviderId(info.providerId());
+        user.setAvatarUrl(info.avatarUrl());
+
+        UserStats stats = new UserStats(user);
+        user.setUserStats(stats);
+
+        User savedUser = userRepository.save(user);
+        categoryService.createDefaultCategories(savedUser);
+        return savedUser;
+    }
+
+    private User updateOAuthProfile(User user, OAuthUserInfo info) {
+        if (info.avatarUrl() != null && !info.avatarUrl().isBlank()) {
+            user.setAvatarUrl(info.avatarUrl());
+        }
+        return user;
+    }
+
+    private String generateUniqueUsername(String base) {
+        String sanitized = base.toLowerCase().replaceAll("[^a-z0-9_]", "");
+        if (sanitized.length() < 3) {
+            sanitized = "user" + sanitized;
+        }
+        if (sanitized.length() > 50) {
+            sanitized = sanitized.substring(0, 50);
+        }
+
+        String username = sanitized;
+        int counter = 1;
+        while (userRepository.existsByUsername(username)) {
+            String suffix = String.valueOf(counter++);
+            int maxBaseLength = 50 - suffix.length();
+            username = sanitized.substring(0, Math.min(sanitized.length(), maxBaseLength)) + suffix;
+        }
+        return username;
     }
 }
