@@ -3,6 +3,7 @@ package br.com.myrank.controller;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.auth.LoginRequestDTO;
 import br.com.myrank.dto.auth.LoginResponseDTO;
+import br.com.myrank.dto.auth.OAuthCodeRequestDTO;
 import br.com.myrank.dto.auth.OAuthTokenRequestDTO;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.security.JwtService;
@@ -64,5 +65,10 @@ public class AuthController {
     @PostMapping("/oauth/discord")
     public ResponseEntity<LoginResponseDTO> loginWithDiscord(@Valid @RequestBody OAuthTokenRequestDTO dto) {
         return ResponseEntity.ok(oAuthService.loginWithDiscord(dto.token()));
+    }
+
+    @PostMapping("/oauth/discord/callback")
+    public ResponseEntity<LoginResponseDTO> loginWithDiscordCallback(@Valid @RequestBody OAuthCodeRequestDTO dto) {
+        return ResponseEntity.ok(oAuthService.loginWithDiscordCode(dto.code(), dto.redirectUri()));
     }
 }
