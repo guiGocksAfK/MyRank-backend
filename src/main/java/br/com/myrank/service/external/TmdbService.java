@@ -75,23 +75,18 @@ public class TmdbService {
         );
     }
 
-    /** Detalhes completos de uma série: GET /tv/{id}?append_to_response=credits */
+    /** Detalhes completos de uma série: GET /tv/{id} (created_by já vem no payload padrão) */
     public ExternalWorkDetailsDTO getTvShowDetails(Long tmdbId) {
         String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/tv/" + tmdbId)
                 .queryParam("language", "pt-BR")
-                .queryParam("append_to_response", "credits")
                 .toUriString();
 
         TmdbTvDetailsDTO details = executeGet(url, TmdbTvDetailsDTO.class);
 
-        String creator = details.getCredits() != null
-                ? details.getCredits().findDirectorName()
-                : null;
-
         return new ExternalWorkDetailsDTO(
                 details.getName(),
                 buildImageUrl(details.getPosterPath()),
-                creator,
+                details.resolveCreatorNames(),
                 details.getFirstAirDate(),
                 details.resolveTotalMinutes()
         );
