@@ -1,8 +1,10 @@
 package br.com.myrank.service.external;
 
 import br.com.myrank.dto.external.*;
+import br.com.myrank.exception.ExternalServiceUnavailableException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -33,7 +35,13 @@ public class RawgService {
                 .queryParam("ordering", "-rating")
                 .toUriString();
 
-        RawgSearchResponseDTO response = restTemplate.getForObject(url, RawgSearchResponseDTO.class);
+        RawgSearchResponseDTO response;
+        try {
+            response = restTemplate.getForObject(url, RawgSearchResponseDTO.class);
+        } catch (RestClientException e) {
+            // RAWG indisponível no momento — devolve lista vazia em vez de propagar o erro.
+            return Collections.emptyList();
+        }
         return mapSearchResults(response);
     }
 
@@ -43,7 +51,18 @@ public class RawgService {
                 .queryParam("key", apiKey)
                 .toUriString();
 
-        RawgGameDetailsDTO details = restTemplate.getForObject(url, RawgGameDetailsDTO.class);
+        RawgGameDetailsDTO details;
+        try {
+            details = restTemplate.getForObject(url, RawgGameDetailsDTO.class);
+        } catch (RestClientException e) {
+            throw new ExternalServiceUnavailableException(
+                    "Não foi possível buscar os detalhes do jogo agora. O serviço da RAWG pode estar instável — tente novamente em instantes.", e);
+        }
+
+        if (details == null) {
+            throw new ExternalServiceUnavailableException(
+                    "Não foi possível buscar os detalhes do jogo agora. Tente novamente em instantes.", null);
+        }
 
         return new ExternalWorkDetailsDTO(
                 details.getName(),

@@ -1,12 +1,14 @@
 package br.com.myrank.service.external;
 
 import br.com.myrank.dto.external.*;
+import br.com.myrank.exception.ExternalServiceUnavailableException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -37,7 +39,7 @@ public class TmdbService {
                 .queryParam("include_adult", false)
                 .toUriString();
 
-        TmdbSearchResponseDTO response = executeGet(url, TmdbSearchResponseDTO.class);
+        TmdbSearchResponseDTO response = executeGetSilently(url, TmdbSearchResponseDTO.class);
         return mapSearchResults(response);
     }
 
@@ -49,7 +51,7 @@ public class TmdbService {
                 .queryParam("include_adult", false)
                 .toUriString();
 
-        TmdbSearchResponseDTO response = executeGet(url, TmdbSearchResponseDTO.class);
+        TmdbSearchResponseDTO response = executeGetSilently(url, TmdbSearchResponseDTO.class);
         return mapSearchResults(response);
     }
 
@@ -60,7 +62,7 @@ public class TmdbService {
                 .queryParam("append_to_response", "credits")
                 .toUriString();
 
-        TmdbMovieDetailsDTO details = executeGet(url, TmdbMovieDetailsDTO.class);
+        TmdbMovieDetailsDTO details = executeGetOrThrow(url, TmdbMovieDetailsDTO.class);
 
         String director = details.getCredits() != null
                 ? details.getCredits().findDirectorName()
@@ -81,7 +83,7 @@ public class TmdbService {
                 .queryParam("language", "pt-BR")
                 .toUriString();
 
-        TmdbTvDetailsDTO details = executeGet(url, TmdbTvDetailsDTO.class);
+        TmdbTvDetailsDTO details = executeGetOrThrow(url, TmdbTvDetailsDTO.class);
 
         return new ExternalWorkDetailsDTO(
                 details.getName(),
@@ -90,6 +92,25 @@ public class TmdbService {
                 details.getFirstAirDate(),
                 details.resolveTotalMinutes()
         );
+    }
+
+    /** Usado na busca/autocomplete: se a TMDB falhar, devolve null (vira lista vazia) em vez de propagar. */
+    private <T> T executeGetSilently(String url, Class<T> responseType) {
+        try {
+            return executeGet(url, responseType);
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
+
+    /** Usado nos detalhes: se a TMDB falhar, propaga como erro claro (503), nunca um 403 confuso. */
+    private <T> T executeGetOrThrow(String url, Class<T> responseType) {
+        try {
+            return executeGet(url, responseType);
+        } catch (RestClientException e) {
+            throw new ExternalServiceUnavailableException(
+                    "Não foi possível buscar os detalhes agora. O serviço da TMDB pode estar instável — tente novamente em instantes.", e);
+        }
     }
 
     private <T> T executeGet(String url, Class<T> responseType) {
