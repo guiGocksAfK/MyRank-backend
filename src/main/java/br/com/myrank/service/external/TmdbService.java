@@ -129,7 +129,7 @@ public class TmdbService {
         }
         return response.getResults().stream()
                 .map(item -> new ExternalSearchResultDTO(
-                        item.getId(),
+                        String.valueOf(item.getId()),
                         item.resolveTitle(),
                         buildImageUrl(item.getPosterPath()),
                         item.resolveDate()

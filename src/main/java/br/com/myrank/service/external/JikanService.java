@@ -89,7 +89,7 @@ public class JikanService {
         }
         return response.getData().stream()
                 .map(item -> new ExternalSearchResultDTO(
-                        item.getMalId(),
+                        String.valueOf(item.getMalId()),
                         item.getTitle(),
                         item.getImages() != null && item.getImages().getJpg() != null
                                 ? item.getImages().getJpg().getImageUrl()
