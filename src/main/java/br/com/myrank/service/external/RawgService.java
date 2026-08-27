@@ -24,12 +24,13 @@ public class RawgService {
         this.apiKey = apiKey;
     }
 
-    /** Autocomplete de jogos: GET /games?search=... (a key vai na query string, padrão da RAWG). */
+    /** Autocomplete de jogos: GET /games?search=...&ordering=-rating (prioriza jogos mais bem avaliados). */
     public List<ExternalSearchResultDTO> searchGames(String query) {
         String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/games")
                 .queryParam("key", apiKey)
                 .queryParam("search", query)
                 .queryParam("page_size", 20)
+                .queryParam("ordering", "-rating")
                 .toUriString();
 
         RawgSearchResponseDTO response = restTemplate.getForObject(url, RawgSearchResponseDTO.class);
