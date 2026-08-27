@@ -41,8 +41,8 @@ public class GoogleBooksService {
             GoogleBooksSearchResponseDTO response = restTemplate.getForObject(builder.toUriString(), GoogleBooksSearchResponseDTO.class);
             return mapSearchResults(response);
         } catch (RestClientException e) {
-            // Google Books indisponível no momento — devolve lista vazia em vez de propagar o erro.
-            return Collections.emptyList();
+                throw new ExternalServiceUnavailableException(
+                    "Nao foi possivel buscar livros agora. O Google Books pode ter atingido o limite de requisicoes ou estar indisponivel. Tente novamente em instantes.", e);
         }
     }
 

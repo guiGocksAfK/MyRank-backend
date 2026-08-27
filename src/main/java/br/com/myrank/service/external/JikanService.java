@@ -42,8 +42,8 @@ public class JikanService {
             JikanSearchResponseDTO response = restTemplate.getForObject(url, JikanSearchResponseDTO.class);
             return mapSearchResults(response);
         } catch (RestClientException e) {
-            // MAL/Jikan indisponível no momento — devolve lista vazia em vez de propagar o erro.
-            return Collections.emptyList();
+                throw new ExternalServiceUnavailableException(
+                    "Nao foi possivel buscar animes agora. A Jikan/MyAnimeList pode estar indisponivel ou limitando requisicoes. Tente novamente em instantes.", e);
         }
     }
 
