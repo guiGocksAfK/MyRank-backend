@@ -2,6 +2,7 @@ package br.com.myrank.controller;
 
 import br.com.myrank.dto.external.ExternalSearchResultDTO;
 import br.com.myrank.dto.external.ExternalWorkDetailsDTO;
+import br.com.myrank.service.external.JikanService;
 import br.com.myrank.service.external.RawgService;
 import br.com.myrank.service.external.TmdbService;
 import org.springframework.http.ResponseEntity;
@@ -10,8 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Endpoints de busca em bases externas (TMDB para filmes/séries, RAWG para
- * jogos; Google Books e Jikan entram depois seguindo o mesmo padrão).
+ * Endpoints de busca em bases externas: TMDB (filmes/séries), RAWG (jogos),
+ * Jikan (anime). Google Books entra depois seguindo o mesmo padrão.
  * Protegido pela mesma SecurityConfig já existente (usuário precisa estar logado).
  */
 @RestController
@@ -20,10 +21,12 @@ public class ExternalSearchController {
 
     private final TmdbService tmdbService;
     private final RawgService rawgService;
+    private final JikanService jikanService;
 
-    public ExternalSearchController(TmdbService tmdbService, RawgService rawgService) {
+    public ExternalSearchController(TmdbService tmdbService, RawgService rawgService, JikanService jikanService) {
         this.tmdbService = tmdbService;
         this.rawgService = rawgService;
+        this.jikanService = jikanService;
     }
 
     @GetMapping("/search/movies")
@@ -41,6 +44,11 @@ public class ExternalSearchController {
         return ResponseEntity.ok(rawgService.searchGames(query));
     }
 
+    @GetMapping("/search/anime")
+    public ResponseEntity<List<ExternalSearchResultDTO>> searchAnime(@RequestParam String query) {
+        return ResponseEntity.ok(jikanService.searchAnime(query));
+    }
+
     @GetMapping("/movies/{id}")
     public ResponseEntity<ExternalWorkDetailsDTO> getMovieDetails(@PathVariable Long id) {
         return ResponseEntity.ok(tmdbService.getMovieDetails(id));
@@ -54,5 +62,10 @@ public class ExternalSearchController {
     @GetMapping("/games/{id}")
     public ResponseEntity<ExternalWorkDetailsDTO> getGameDetails(@PathVariable Long id) {
         return ResponseEntity.ok(rawgService.getGameDetails(id));
+    }
+
+    @GetMapping("/anime/{id}")
+    public ResponseEntity<ExternalWorkDetailsDTO> getAnimeDetails(@PathVariable Long id) {
+        return ResponseEntity.ok(jikanService.getAnimeDetails(id));
     }
 }
