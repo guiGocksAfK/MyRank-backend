@@ -1,12 +1,14 @@
 package br.com.myrank.service.external;
 
 import br.com.myrank.dto.external.*;
+import br.com.myrank.exception.ExternalServiceUnavailableException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -37,7 +39,7 @@ public class TmdbService {
                 .queryParam("include_adult", false)
                 .toUriString();
 
-        TmdbSearchResponseDTO response = executeGet(url, TmdbSearchResponseDTO.class);
+        TmdbSearchResponseDTO response = executeGetSilently(url, TmdbSearchResponseDTO.class);
         return mapSearchResults(response);
     }
 
@@ -49,7 +51,7 @@ public class TmdbService {
                 .queryParam("include_adult", false)
                 .toUriString();
 
-        TmdbSearchResponseDTO response = executeGet(url, TmdbSearchResponseDTO.class);
+        TmdbSearchResponseDTO response = executeGetSilently(url, TmdbSearchResponseDTO.class);
         return mapSearchResults(response);
     }
 
@@ -60,7 +62,7 @@ public class TmdbService {
                 .queryParam("append_to_response", "credits")
                 .toUriString();
 
-        TmdbMovieDetailsDTO details = executeGet(url, TmdbMovieDetailsDTO.class);
+        TmdbMovieDetailsDTO details = executeGetOrThrow(url, TmdbMovieDetailsDTO.class);
 
         String director = details.getCredits() != null
                 ? details.getCredits().findDirectorName()
@@ -75,26 +77,40 @@ public class TmdbService {
         );
     }
 
-    /** Detalhes completos de uma série: GET /tv/{id}?append_to_response=credits */
+    /** Detalhes completos de uma série: GET /tv/{id} (created_by já vem no payload padrão) */
     public ExternalWorkDetailsDTO getTvShowDetails(Long tmdbId) {
         String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/tv/" + tmdbId)
                 .queryParam("language", "pt-BR")
-                .queryParam("append_to_response", "credits")
                 .toUriString();
 
-        TmdbTvDetailsDTO details = executeGet(url, TmdbTvDetailsDTO.class);
-
-        String creator = details.getCredits() != null
-                ? details.getCredits().findDirectorName()
-                : null;
+        TmdbTvDetailsDTO details = executeGetOrThrow(url, TmdbTvDetailsDTO.class);
 
         return new ExternalWorkDetailsDTO(
                 details.getName(),
                 buildImageUrl(details.getPosterPath()),
-                creator,
+                details.resolveCreatorNames(),
                 details.getFirstAirDate(),
                 details.resolveTotalMinutes()
         );
+    }
+
+    /** Usado na busca/autocomplete: se a TMDB falhar, devolve null (vira lista vazia) em vez de propagar. */
+    private <T> T executeGetSilently(String url, Class<T> responseType) {
+        try {
+            return executeGet(url, responseType);
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
+
+    /** Usado nos detalhes: se a TMDB falhar, propaga como erro claro (503), nunca um 403 confuso. */
+    private <T> T executeGetOrThrow(String url, Class<T> responseType) {
+        try {
+            return executeGet(url, responseType);
+        } catch (RestClientException e) {
+            throw new ExternalServiceUnavailableException(
+                    "Não foi possível buscar os detalhes agora. O serviço da TMDB pode estar instável — tente novamente em instantes.", e);
+        }
     }
 
     private <T> T executeGet(String url, Class<T> responseType) {
@@ -113,7 +129,7 @@ public class TmdbService {
         }
         return response.getResults().stream()
                 .map(item -> new ExternalSearchResultDTO(
-                        item.getId(),
+                        String.valueOf(item.getId()),
                         item.resolveTitle(),
                         buildImageUrl(item.getPosterPath()),
                         item.resolveDate()
