@@ -3,8 +3,10 @@ package br.com.myrank.service.external;
 import br.com.myrank.dto.external.*;
 import br.com.myrank.exception.ExternalServiceUnavailableException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Collections;
@@ -41,10 +43,46 @@ public class JikanService {
         try {
             JikanSearchResponseDTO response = restTemplate.getForObject(url, JikanSearchResponseDTO.class);
             return mapSearchResults(response);
+        } catch (HttpServerErrorException | ResourceAccessException e) {
+            // 502/503/504 da Jikan ou timeout: quase sempre o MyAnimeList (fonte) está instável.
+            // Instabilidade transitória e não-acionável pelo usuário — degrada para "nenhum resultado"
+            // em vez de disparar toast de erro no autocomplete.
+            return Collections.emptyList();
         } catch (RestClientException e) {
-            // MAL/Jikan indisponível no momento — devolve lista vazia em vez de propagar o erro.
+            // 4xx (ex.: 429 rate limit) e demais falhas: acionável / inesperado, propaga.
+            throw new ExternalServiceUnavailableException(
+                    "Não foi possível buscar animes agora. A Jikan/MyAnimeList pode estar limitando requisições. Tente novamente em instantes.", e);
+        }
+    }
+
+    /**
+     * Pôsteres dos animes mais populares (Jikan /top/anime), para o grid decorativo
+     * da home pública. Best-effort: Jikan/MAL instável → lista vazia, quem chama usa
+     * o fallback estático.
+     */
+    public List<String> getShowcasePosters() {
+        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/top/anime")
+                .queryParam("limit", 20)
+                .queryParam("filter", "bypopularity")
+                .toUriString();
+
+        JikanSearchResponseDTO response;
+        try {
+            response = restTemplate.getForObject(url, JikanSearchResponseDTO.class);
+        } catch (RestClientException e) {
             return Collections.emptyList();
         }
+        if (response == null || response.getData() == null) {
+            return Collections.emptyList();
+        }
+        return response.getData().stream()
+                .map(item -> {
+                    if (item.getImages() == null || item.getImages().getJpg() == null) return null;
+                    JikanImageVariantDTO jpg = item.getImages().getJpg();
+                    return jpg.getLargeImageUrl() != null ? jpg.getLargeImageUrl() : jpg.getImageUrl();
+                })
+                .filter(u -> u != null && !u.isBlank())
+                .collect(Collectors.toList());
     }
 
     /** Detalhes completos de um anime: GET /anime/{id} */

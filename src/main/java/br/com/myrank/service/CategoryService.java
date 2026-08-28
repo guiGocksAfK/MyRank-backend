@@ -2,6 +2,7 @@ package br.com.myrank.service;
 
 import br.com.myrank.dto.CategoryCreateDTO;
 import br.com.myrank.dto.CategoryResponseDTO;
+import br.com.myrank.dto.CategoryUpdateDTO;
 import br.com.myrank.domain.entity.Category;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.repository.CategoryRepository;
@@ -37,6 +38,27 @@ public class CategoryService {
                 .stream()
                 .map(this::toResponseDTO)
                 .toList();
+    }
+
+    public CategoryResponseDTO updateCategory(Long categoryId, Long userId, CategoryUpdateDTO dto) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+
+        if (!category.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Você não tem permissão para editar essa categoria.");
+        }
+
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            String newName = dto.getName();
+            if (!category.getName().equalsIgnoreCase(newName)
+                    && categoryRepository.existsByUserIdAndNameIgnoreCase(userId, newName)) {
+                throw new IllegalArgumentException("Você já tem uma categoria com esse nome.");
+            }
+            category.setName(newName);
+        }
+
+        Category saved = categoryRepository.save(category);
+        return toResponseDTO(saved);
     }
 
     public void deleteCategory(Long categoryId, Long userId) {

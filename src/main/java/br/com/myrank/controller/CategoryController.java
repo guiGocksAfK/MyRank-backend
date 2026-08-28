@@ -3,6 +3,7 @@ package br.com.myrank.controller;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.CategoryCreateDTO;
 import br.com.myrank.dto.CategoryResponseDTO;
+import br.com.myrank.dto.CategoryUpdateDTO;
 import br.com.myrank.security.AuthUtils;
 import br.com.myrank.service.CategoryService;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,15 @@ public class CategoryController {
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = authUtils.getUser(userDetails);
         return ResponseEntity.ok(categoryService.getCategoriesByUser(user.getId()));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<CategoryResponseDTO> update(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody CategoryUpdateDTO dto) {
+        User user = authUtils.getUser(userDetails);
+        return ResponseEntity.ok(categoryService.updateCategory(id, user.getId(), dto));
     }
 
     @DeleteMapping("/{id}")

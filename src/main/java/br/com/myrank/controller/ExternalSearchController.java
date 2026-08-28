@@ -5,6 +5,7 @@ import br.com.myrank.dto.external.ExternalWorkDetailsDTO;
 import br.com.myrank.service.external.GoogleBooksService;
 import br.com.myrank.service.external.JikanService;
 import br.com.myrank.service.external.RawgService;
+import br.com.myrank.service.external.ShowcaseService;
 import br.com.myrank.service.external.TmdbService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,13 +25,26 @@ public class ExternalSearchController {
     private final RawgService rawgService;
     private final JikanService jikanService;
     private final GoogleBooksService googleBooksService;
+    private final ShowcaseService showcaseService;
 
     public ExternalSearchController(TmdbService tmdbService, RawgService rawgService,
-                                    JikanService jikanService, GoogleBooksService googleBooksService) {
+                                    JikanService jikanService, GoogleBooksService googleBooksService,
+                                    ShowcaseService showcaseService) {
         this.tmdbService = tmdbService;
         this.rawgService = rawgService;
         this.jikanService = jikanService;
         this.googleBooksService = googleBooksService;
+        this.showcaseService = showcaseService;
+    }
+
+    /**
+     * Grid decorativo da home pública: lista de URLs de pôster de obras populares.
+     * Endpoint aberto (sem auth) — ver SecurityConfig. Pode vir vazio/parcial se as
+     * bases externas estiverem indisponíveis; o frontend completa com fallback estático.
+     */
+    @GetMapping("/showcase")
+    public ResponseEntity<List<String>> showcasePosters() {
+        return ResponseEntity.ok(showcaseService.getShowcasePosters());
     }
 
     @GetMapping("/search/movies")

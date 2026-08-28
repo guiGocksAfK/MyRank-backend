@@ -107,7 +107,9 @@ public class WorkService {
 
     // Nota_Final = Nota_Original + Log10(Minutos / 60)
     private void applyScoreCalculation(Work work) {
-        double timeBonus = Math.log10(work.getTimeMinutes() / 60.0);
+        double timeBonus = work.getTimeMinutes() > 0
+            ? Math.log10(work.getTimeMinutes() / 60.0)
+            : 0.0;
         BigDecimal bonus = BigDecimal.valueOf(timeBonus).setScale(2, RoundingMode.HALF_UP);
         BigDecimal finalScore = work.getScore().add(bonus).setScale(2, RoundingMode.HALF_UP);
 

@@ -45,6 +45,33 @@ public class RawgService {
         return mapSearchResults(response);
     }
 
+    /**
+     * Pôsteres/artes de jogos bem avaliados (RAWG), para o grid decorativo da home
+     * pública. Best-effort: RAWG fora do ar → lista vazia, quem chama usa o fallback.
+     */
+    public List<String> getShowcasePosters() {
+        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/games")
+                .queryParam("key", apiKey)
+                .queryParam("page_size", 20)
+                .queryParam("ordering", "-added") // mais adicionados = mais populares
+                .queryParam("metacritic", "80,100")
+                .toUriString();
+
+        RawgSearchResponseDTO response;
+        try {
+            response = restTemplate.getForObject(url, RawgSearchResponseDTO.class);
+        } catch (RestClientException e) {
+            return Collections.emptyList();
+        }
+        if (response == null || response.getResults() == null) {
+            return Collections.emptyList();
+        }
+        return response.getResults().stream()
+                .map(RawgSearchItemDTO::getBackgroundImage)
+                .filter(url2 -> url2 != null && !url2.isBlank())
+                .collect(Collectors.toList());
+    }
+
     /** Detalhes completos de um jogo: GET /games/{id}?key=... */
     public ExternalWorkDetailsDTO getGameDetails(Long rawgId) {
         String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/games/" + rawgId)
