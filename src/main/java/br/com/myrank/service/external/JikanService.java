@@ -3,8 +3,10 @@ package br.com.myrank.service.external;
 import br.com.myrank.dto.external.*;
 import br.com.myrank.exception.ExternalServiceUnavailableException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Collections;
@@ -41,9 +43,15 @@ public class JikanService {
         try {
             JikanSearchResponseDTO response = restTemplate.getForObject(url, JikanSearchResponseDTO.class);
             return mapSearchResults(response);
+        } catch (HttpServerErrorException | ResourceAccessException e) {
+            // 502/503/504 da Jikan ou timeout: quase sempre o MyAnimeList (fonte) está instável.
+            // Instabilidade transitória e não-acionável pelo usuário — degrada para "nenhum resultado"
+            // em vez de disparar toast de erro no autocomplete.
+            return Collections.emptyList();
         } catch (RestClientException e) {
-                throw new ExternalServiceUnavailableException(
-                    "Nao foi possivel buscar animes agora. A Jikan/MyAnimeList pode estar indisponivel ou limitando requisicoes. Tente novamente em instantes.", e);
+            // 4xx (ex.: 429 rate limit) e demais falhas: acionável / inesperado, propaga.
+            throw new ExternalServiceUnavailableException(
+                    "Não foi possível buscar animes agora. A Jikan/MyAnimeList pode estar limitando requisições. Tente novamente em instantes.", e);
         }
     }
 
