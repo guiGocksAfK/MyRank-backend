@@ -55,6 +55,33 @@ public class TmdbService {
         return mapSearchResults(response);
     }
 
+    /**
+     * Pôsteres de filmes e séries em alta na semana (TMDB /trending), usado no grid
+     * decorativo da home pública. Best-effort: se a TMDB falhar, devolve lista vazia
+     * e quem chama completa com o fallback estático.
+     */
+    public List<String> getShowcasePosters() {
+        List<String> posters = new java.util.ArrayList<>();
+        posters.addAll(fetchTrendingPosters("/trending/movie/week"));
+        posters.addAll(fetchTrendingPosters("/trending/tv/week"));
+        return posters;
+    }
+
+    private List<String> fetchTrendingPosters(String path) {
+        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + path)
+                .queryParam("language", "pt-BR")
+                .toUriString();
+
+        TmdbSearchResponseDTO response = executeGetSilently(url, TmdbSearchResponseDTO.class);
+        if (response == null || response.getResults() == null) {
+            return Collections.emptyList();
+        }
+        return response.getResults().stream()
+                .map(item -> buildImageUrl(item.getPosterPath()))
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
     /** Detalhes completos de um filme: GET /movie/{id}?append_to_response=credits */
     public ExternalWorkDetailsDTO getMovieDetails(Long tmdbId) {
         String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/movie/" + tmdbId)
