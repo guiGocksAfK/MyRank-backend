@@ -15,7 +15,8 @@ public class BadgeContext {
             int timeMinutes,
             String creatorKey,    // creator normalizado (lower/trim) ou null
             Integer releaseYear,  // ano de lançamento ou null
-            java.time.LocalDate addedDate
+            java.time.LocalDate addedDate,
+            boolean edited        // teve a nota/dados editados depois de cadastrada
     ) {
         double hours() { return timeMinutes / 60.0; }
     }
@@ -59,6 +60,19 @@ public class BadgeContext {
                 .map(BadgeContext.WorkView::addedDate)
                 .filter(java.util.Objects::nonNull)
                 .distinct().count();
+    }
+
+    /** Décadas de lançamento distintas (ex.: 1994 e 1998 contam como a mesma). */
+    public int distinctDecades() {
+        return (int) works.stream()
+                .map(BadgeContext.WorkView::releaseYear)
+                .filter(java.util.Objects::nonNull)
+                .map(y -> y / 10)
+                .distinct().count();
+    }
+
+    public boolean hasEditedWork() {
+        return works.stream().anyMatch(BadgeContext.WorkView::edited);
     }
 
     // ── horas ─────────────────────────────────────────────────

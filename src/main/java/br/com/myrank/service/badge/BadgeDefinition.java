@@ -23,6 +23,8 @@ public enum BadgeDefinition {
             c -> c.hasTenOfType("jogo") ? 1 : 0),
     JOGO_MARATONA("jogo", "RPG interminável", "Avalie um jogo com 100h+ registradas", "🐉", 1, false,
             c -> c.maxSingleHoursOfType("jogo") >= 100 ? 1 : 0),
+    JOGO_ESTUDIOS_10("jogo", "De indie a AAA", "Avalie jogos de 10 estúdios/criadores diferentes", "🎲", 10, true,
+            c -> c.distinctCreators("jogo")),
 
     // ─────────────────────────── 🎬 FILMES ──────────────────────────
     FILME_10("filme", "Sessão pipoca", "Avalie 10 filmes", "🎟️", 10, true,
@@ -35,6 +37,8 @@ public enum BadgeDefinition {
             c -> c.hasTenOfType("filme") ? 1 : 0),
     FILME_DIRETORES_10("filme", "Conhece o catálogo", "Avalie filmes de 10 criadores diferentes", "🎥", 10, true,
             c -> c.distinctCreators("filme")),
+    FILME_LONGO("filme", "Sessão épica", "Avalie um filme com 3h+ registradas", "🎬", 1, false,
+            c -> c.maxSingleHoursOfType("filme") >= 3 ? 1 : 0),
 
     // ─────────────────────────── 📺 SÉRIES ──────────────────────────
     SERIE_5("serie", "Só mais um episódio", "Avalie 5 séries", "📺", 5, true,
@@ -47,6 +51,8 @@ public enum BadgeDefinition {
             c -> c.hasTenOfType("serie") ? 1 : 0),
     SERIE_MEDIA_8("serie", "Bom gosto pra série", "Média ≥ 8,0 com pelo menos 10 séries", "🧠", 1, false,
             c -> c.countType("serie") >= 10 && c.avgOfType("serie") >= 8.0 ? 1 : 0),
+    SERIE_VICIANTE("serie", "Não consigo parar", "Avalie uma série com 100h+ registradas", "📼", 1, false,
+            c -> c.maxSingleHoursOfType("serie") >= 100 ? 1 : 0),
 
     // ─────────────────────────── 📚 LIVROS ──────────────────────────
     LIVRO_5("livro", "Marcador de página", "Avalie 5 livros", "🔖", 5, true,
@@ -59,6 +65,8 @@ public enum BadgeDefinition {
             c -> c.hasTenOfType("livro") ? 1 : 0),
     LIVRO_CLASSICO("livro", "Cânone literário", "Avalie um livro publicado antes de 1950", "🏛️", 1, false,
             c -> c.hasWorkBefore("livro", 1950) ? 1 : 0),
+    LIVRO_50("livro", "Devorador de livros", "Avalie 50 livros", "📕", 50, true,
+            c -> c.countType("livro")),
 
     // ─────────────────────────── 🌸 ANIMES ──────────────────────────
     ANIME_5("anime", "Isekai iniciante", "Avalie 5 animes", "🍥", 5, true,
@@ -71,6 +79,8 @@ public enum BadgeDefinition {
             c -> c.hasTenOfType("anime") ? 1 : 0),
     ANIME_ESTUDIOS_5("anime", "Conhece os estúdios", "Avalie animes de 5 criadores/estúdios diferentes", "🎨", 5, true,
             c -> c.distinctCreators("anime")),
+    ANIME_CLASSICO("anime", "Clássico do Japão", "Avalie um anime lançado antes de 2000", "🎞️", 1, false,
+            c -> c.hasWorkBefore("anime", 2000) ? 1 : 0),
 
     // ─────────────────────────── 🌐 GERAIS ──────────────────────────
     TOTAL_50("geral", "Colecionador", "Avalie 50 obras no total", "📈", 50, true,
@@ -91,6 +101,12 @@ public enum BadgeDefinition {
             c -> c.hasAnyWorkBefore(1950) ? 1 : 0),
     TOP_HEAVY("geral", "Cume alto", "Tenha 10 obras com nota ≥ 9,0", "🗻", 10, true,
             c -> c.countScoreGte(9.0)),
+    TOTAL_250("geral", "Acervo respeitável", "Avalie 250 obras no total", "🗃️", 250, true,
+            BadgeContext::totalWorks),
+    NOTA_PERFEITA_10("geral", "Dez de dez", "Dê nota 10 a 10 obras diferentes", "💎", 10, true,
+            c -> c.countScoreGte(9.999)),
+    DECADAS("geral", "Viajante do tempo", "Avalie obras de 5 décadas de lançamento diferentes", "🕰️", 5, true,
+            BadgeContext::distinctDecades),
 
     // ─────────────────────────── 🚀 USAR O SITE ─────────────────────
     PRIMEIRA_OBRA("site", "Primeiro passo", "Adicione sua primeira obra", "🌱", 1, false,
@@ -99,8 +115,8 @@ public enum BadgeDefinition {
             c -> c.hasAvatar() && c.hasBio() ? 1 : 0),
     CATEGORIA_CUSTOM("site", "Do seu jeito", "Crie uma categoria personalizada (além das padrão)", "🗂️", 1, false,
             c -> c.hasCustomCategory() ? 1 : 0),
-    TABELA_MAE("site", "Visão unificada", "Crie um grupo de tabela-mãe", "🧬", 1, false,
-            c -> c.hasMasterGroup() ? 1 : 0),
+    REVISOR("site", "Mudei de ideia", "Edite a nota de uma obra já cadastrada", "✏️", 1, false,
+            c -> c.hasEditedWork() ? 1 : 0),
     VETERANO("site", "Um ano de casa", "Conta criada há mais de 1 ano", "🎂", 1, false,
             c -> c.accountAgeDays() > 365 ? 1 : 0),
     MADRUGADOR("site", "Constante", "Adicione obras em 7 dias diferentes", "🌙", 7, true,

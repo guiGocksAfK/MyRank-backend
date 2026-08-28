@@ -131,7 +131,9 @@ public class BadgeService {
             String creatorKey = normalizeCreator(w.getCreator());
             Integer year = w.getReleaseDate() != null ? w.getReleaseDate().getYear() : null;
             LocalDate added = w.getCreatedAt() != null ? w.getCreatedAt().toLocalDate() : null;
-            return new BadgeContext.WorkView(type, score, w.getTimeMinutes(), creatorKey, year, added);
+            boolean edited = w.getCreatedAt() != null && w.getUpdatedAt() != null
+                    && ChronoUnit.SECONDS.between(w.getCreatedAt(), w.getUpdatedAt()) > 60;
+            return new BadgeContext.WorkView(type, score, w.getTimeMinutes(), creatorKey, year, added, edited);
         }).toList();
 
         boolean hasAvatar = (user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank())

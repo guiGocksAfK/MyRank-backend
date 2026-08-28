@@ -8,6 +8,10 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
  * Sincroniza a tabela {@code badges} com o enum {@link BadgeDefinition} a cada
  * startup (upsert por {@code code}). Assim dá pra iterar em nome/descrição/meta
@@ -38,5 +42,13 @@ public class BadgeCatalogInitializer implements ApplicationRunner {
             badge.setSortOrder(def.ordinal());
             badgeRepository.save(badge);
         }
+
+        // Remove badges que saíram do enum (o FK user_badges → badges é ON DELETE CASCADE).
+        Set<String> known = Arrays.stream(BadgeDefinition.values())
+                .map(BadgeDefinition::code)
+                .collect(Collectors.toSet());
+        badgeRepository.findAll().stream()
+                .filter(b -> !known.contains(b.getCode()))
+                .forEach(badgeRepository::delete);
     }
 }
