@@ -8,7 +8,8 @@
 -- ---------------------------------------------------------
 CREATE TYPE auth_provider_type AS ENUM ('LOCAL', 'GOOGLE', 'DISCORD');
 CREATE TYPE plan_type AS ENUM ('FREE', 'PRO');
-CREATE TYPE activity_action_type AS ENUM ('RATED', 'UPDATED', 'REMOVED');
+CREATE TYPE feed_event_type AS ENUM ('RATED', 'ADDED', 'BADGE', 'TAKE');
+CREATE TYPE reaction_kind AS ENUM ('UP', 'AGREE', 'DISAGREE');
 
 -- ---------------------------------------------------------
 -- USERS
@@ -135,25 +136,6 @@ CREATE TABLE master_table_categories (
 );
 
 -- ---------------------------------------------------------
--- USER_ACTIVITY_HISTORY (histórico de avaliações)
--- ---------------------------------------------------------
-CREATE TABLE user_activity_history (
-    id           BIGSERIAL PRIMARY KEY,
-    user_id      BIGINT                  NOT NULL,
-    work_id      BIGINT                  NOT NULL,
-    score_given  DECIMAL(4,2)            NOT NULL,
-    action_type  activity_action_type    NOT NULL,
-    created_at   TIMESTAMP               NOT NULL DEFAULT now(),
-
-    CONSTRAINT fk_activity_user FOREIGN KEY (user_id)
-        REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_activity_work FOREIGN KEY (work_id)
-        REFERENCES works (id) ON DELETE CASCADE
-);
-
-CREATE INDEX idx_activity_user_created ON user_activity_history (user_id, created_at DESC);
-
--- ---------------------------------------------------------
 -- BADGES (catálogo) + USER_BADGES (join table)
 -- ---------------------------------------------------------
 -- Catálogo de badges. As linhas são sincronizadas no startup a partir do
@@ -209,3 +191,60 @@ CREATE TABLE follow (
 
 CREATE INDEX idx_follow_follower ON follow (follower_id);
 CREATE INDEX idx_follow_followed ON follow (followed_id);
+
+-- ---------------------------------------------------------
+-- SOCIAL: TAKES + FEED_EVENTS + FEED_REACTIONS
+-- ---------------------------------------------------------
+
+-- Opinião curta (<=280) presa a uma obra.
+CREATE TABLE takes (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT       NOT NULL,
+    work_id     BIGINT       NOT NULL,
+    text        VARCHAR(280) NOT NULL,
+    created_at  TIMESTAMP    NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMP    NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_takes_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_takes_work FOREIGN KEY (work_id)
+        REFERENCES works (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_takes_work ON takes (work_id);
+
+-- Feed materializado: 1 linha por ação relevante (RATED, ADDED, BADGE, TAKE).
+CREATE TABLE feed_events (
+    id          BIGSERIAL       PRIMARY KEY,
+    user_id     BIGINT          NOT NULL,          -- ator
+    type        feed_event_type NOT NULL,
+    work_id     BIGINT,                            -- RATED / ADDED / TAKE
+    badge_id    BIGINT,                            -- BADGE
+    take_id     BIGINT,                            -- TAKE
+    score       DECIMAL(4,2),                      -- snapshot da nota no momento
+    created_at  TIMESTAMP       NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_feed_events_user  FOREIGN KEY (user_id)  REFERENCES users (id)  ON DELETE CASCADE,
+    CONSTRAINT fk_feed_events_work  FOREIGN KEY (work_id)  REFERENCES works (id)  ON DELETE CASCADE,
+    CONSTRAINT fk_feed_events_badge FOREIGN KEY (badge_id) REFERENCES badges (id) ON DELETE CASCADE,
+    CONSTRAINT fk_feed_events_take  FOREIGN KEY (take_id)  REFERENCES takes (id)  ON DELETE CASCADE
+);
+
+CREATE INDEX idx_feed_events_user_created ON feed_events (user_id, created_at DESC);
+
+-- Reação a um item do feed. Uma por usuário por evento (troca de tipo = update).
+CREATE TABLE feed_reactions (
+    id             BIGSERIAL     PRIMARY KEY,
+    feed_event_id  BIGINT        NOT NULL,
+    user_id        BIGINT        NOT NULL,
+    kind           reaction_kind NOT NULL,
+    created_at     TIMESTAMP     NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_feed_reactions_event FOREIGN KEY (feed_event_id)
+        REFERENCES feed_events (id) ON DELETE CASCADE,
+    CONSTRAINT fk_feed_reactions_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uq_feed_reactions UNIQUE (feed_event_id, user_id)
+);
+
+CREATE INDEX idx_feed_reactions_event ON feed_reactions (feed_event_id);
