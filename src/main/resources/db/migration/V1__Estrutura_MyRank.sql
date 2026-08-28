@@ -156,14 +156,22 @@ CREATE INDEX idx_activity_user_created ON user_activity_history (user_id, create
 -- ---------------------------------------------------------
 -- BADGES (catálogo) + USER_BADGES (join table)
 -- ---------------------------------------------------------
+-- Catálogo de badges. As linhas são sincronizadas no startup a partir do
+-- enum BadgeDefinition (BadgeCatalogInitializer) — `code` é a chave estável
+-- que liga cada linha à sua regra de cálculo em Java.
 CREATE TABLE badges (
     id              BIGSERIAL PRIMARY KEY,
+    code            VARCHAR(60)  NOT NULL,
+    bucket          VARCHAR(20)  NOT NULL,
     name            VARCHAR(150) NOT NULL,
     description     TEXT,
-    icon_url        VARCHAR(500),
-    criteria        TEXT,
+    icon            VARCHAR(16),
     target_progress INT          NOT NULL DEFAULT 1,
-    created_at      TIMESTAMP    NOT NULL DEFAULT now()
+    has_progress    BOOLEAN      NOT NULL DEFAULT true,
+    sort_order      INT          NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP    NOT NULL DEFAULT now(),
+
+    CONSTRAINT uq_badges_code UNIQUE (code)
 );
 
 CREATE TABLE user_badges (
@@ -179,6 +187,8 @@ CREATE TABLE user_badges (
         REFERENCES badges (id) ON DELETE CASCADE,
     CONSTRAINT uq_user_badges UNIQUE (user_id, badge_id)
 );
+
+CREATE INDEX idx_user_badges_user ON user_badges (user_id);
 
 -- ---------------------------------------------------------
 -- FOLLOW (relação social entre usuários)

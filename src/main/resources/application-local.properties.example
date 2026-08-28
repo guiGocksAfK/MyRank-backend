@@ -1,0 +1,21 @@
+# Copy to application-local.properties (git-ignored) and run with:
+#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+# Only override what you need — everything else falls back to application.properties.
+
+# --- Database ---
+spring.datasource.url=jdbc:postgresql://localhost:5432/myrank
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+
+# --- JWT (use a random 32+ char string) ---
+jwt.secret=change-me-to-a-long-random-string-of-at-least-32-chars
+
+# --- OAuth ---
+oauth.google.client-id=
+oauth.discord.client-id=
+oauth.discord.client-secret=
+
+# --- External metadata APIs (leave empty to disable that provider's search) ---
+tmdb.api-token=
+rawg.api-key=
+google-books.api-key=

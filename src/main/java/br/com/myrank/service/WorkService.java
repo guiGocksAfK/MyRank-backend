@@ -7,6 +7,7 @@ import br.com.myrank.dto.WorkCreateDTO;
 import br.com.myrank.dto.WorkUpdateDTO;
 import br.com.myrank.repository.CategoryRepository;
 import br.com.myrank.repository.WorkRepository;
+import br.com.myrank.service.badge.BadgeService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,10 +19,13 @@ public class WorkService {
 
     private final WorkRepository workRepository;
     private final CategoryRepository categoryRepository;
+    private final BadgeService badgeService;
 
-    public WorkService(WorkRepository workRepository, CategoryRepository categoryRepository) {
+    public WorkService(WorkRepository workRepository, CategoryRepository categoryRepository,
+                       BadgeService badgeService) {
         this.workRepository = workRepository;
         this.categoryRepository = categoryRepository;
+        this.badgeService = badgeService;
     }
 
     public Work createWork(User user, WorkCreateDTO dto) {
@@ -44,7 +48,9 @@ public class WorkService {
 
         applyScoreCalculation(work);
 
-        return workRepository.save(work);
+        Work saved = workRepository.save(work);
+        badgeService.recalculate(user.getId());
+        return saved;
     }
 
     public List<Work> getWorksByCategory(Long categoryId, Long userId) {
@@ -91,7 +97,9 @@ public class WorkService {
 
         applyScoreCalculation(work);
 
-        return workRepository.save(work);
+        Work saved = workRepository.save(work);
+        badgeService.recalculate(userId);
+        return saved;
     }
 
     public void deleteWork(Long workId, Long userId) {
@@ -103,6 +111,7 @@ public class WorkService {
         }
 
         workRepository.delete(work);
+        badgeService.recalculate(userId);
     }
 
     // Nota_Final = Nota_Original + Log10(Minutos / 60)
