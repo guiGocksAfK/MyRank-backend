@@ -55,6 +55,36 @@ public class JikanService {
         }
     }
 
+    /**
+     * Pôsteres dos animes mais populares (Jikan /top/anime), para o grid decorativo
+     * da home pública. Best-effort: Jikan/MAL instável → lista vazia, quem chama usa
+     * o fallback estático.
+     */
+    public List<String> getShowcasePosters() {
+        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/top/anime")
+                .queryParam("limit", 20)
+                .queryParam("filter", "bypopularity")
+                .toUriString();
+
+        JikanSearchResponseDTO response;
+        try {
+            response = restTemplate.getForObject(url, JikanSearchResponseDTO.class);
+        } catch (RestClientException e) {
+            return Collections.emptyList();
+        }
+        if (response == null || response.getData() == null) {
+            return Collections.emptyList();
+        }
+        return response.getData().stream()
+                .map(item -> {
+                    if (item.getImages() == null || item.getImages().getJpg() == null) return null;
+                    JikanImageVariantDTO jpg = item.getImages().getJpg();
+                    return jpg.getLargeImageUrl() != null ? jpg.getLargeImageUrl() : jpg.getImageUrl();
+                })
+                .filter(u -> u != null && !u.isBlank())
+                .collect(Collectors.toList());
+    }
+
     /** Detalhes completos de um anime: GET /anime/{id} */
     public ExternalWorkDetailsDTO getAnimeDetails(Long malId) {
         String url = BASE_URL + "/anime/" + malId;

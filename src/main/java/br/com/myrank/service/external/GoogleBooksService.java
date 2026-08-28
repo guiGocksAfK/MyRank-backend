@@ -51,6 +51,38 @@ public class GoogleBooksService {
         }
     }
 
+    /**
+     * Capas de livros de ficção populares, para o grid decorativo da home pública.
+     * Best-effort: qualquer falha (429, indisponibilidade) → lista vazia, e quem
+     * chama completa com o fallback estático.
+     */
+    public List<String> getShowcasePosters() {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(BASE_URL)
+                .queryParam("q", "subject:fiction")
+                .queryParam("orderBy", "relevance")
+                .queryParam("maxResults", 20)
+                .queryParam("langRestrict", "pt");
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.queryParam("key", apiKey);
+        }
+
+        GoogleBooksSearchResponseDTO response;
+        try {
+            response = restTemplate.getForObject(builder.toUriString(), GoogleBooksSearchResponseDTO.class);
+        } catch (RestClientException e) {
+            return Collections.emptyList();
+        }
+        if (response == null || response.getItems() == null) {
+            return Collections.emptyList();
+        }
+        return response.getItems().stream()
+                .filter(item -> item.getVolumeInfo() != null)
+                .map(item -> item.getVolumeInfo().resolveImageUrl())
+                .filter(u -> u != null && !u.isBlank())
+                .map(u -> u.startsWith("http://") ? "https://" + u.substring(7) : u)
+                .collect(Collectors.toList());
+    }
+
     /** Detalhes completos de um livro: GET /volumes/{id} */
     public ExternalWorkDetailsDTO getBookDetails(String volumeId) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/" + volumeId);
