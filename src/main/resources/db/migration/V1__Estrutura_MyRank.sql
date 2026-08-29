@@ -276,3 +276,25 @@ CREATE INDEX idx_notifications_user ON notifications (user_id, updated_at DESC);
 CREATE UNIQUE INDEX uq_notif_reaction ON notifications (user_id, feed_event_id, reaction_kind) WHERE type = 'REACTION';
 CREATE UNIQUE INDEX uq_notif_follow   ON notifications (user_id, actor_id) WHERE type = 'FOLLOW';
 CREATE UNIQUE INDEX uq_notif_take     ON notifications (user_id, feed_event_id) WHERE type = 'TAKE';
+
+-- ---------------------------------------------------------
+-- AI_INSIGHTS — analise de perfil gerada por IA (Gemini).
+-- payload = JSON estruturado devolvido pelo modelo (summaryTitle, traits,
+-- tasteProfile, recommendation...). Cacheado por (user_id, selection_hash):
+-- mesma selecao de obras + mesmas notas + mesmo modelo => reaproveita a linha.
+-- ---------------------------------------------------------
+CREATE TABLE ai_insights (
+    id              BIGSERIAL PRIMARY KEY,
+    user_id         BIGINT       NOT NULL,
+    selection_hash  VARCHAR(64)  NOT NULL,   -- SHA-256 de (modelo + obras ordenadas + notas)
+    model           VARCHAR(60)  NOT NULL,
+    work_count      INT          NOT NULL,
+    payload         JSONB        NOT NULL,
+    created_at      TIMESTAMP    NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_ai_insights_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uq_ai_insights_selection UNIQUE (user_id, selection_hash)
+);
+
+CREATE INDEX idx_ai_insights_user_created ON ai_insights (user_id, created_at DESC);
