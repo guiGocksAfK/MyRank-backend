@@ -30,6 +30,7 @@ public class SocialService {
     private final UserBadgeRepository userBadgeRepository;
     private final BadgeRepository badgeRepository;
     private final FeedEventService feedEventService;
+    private final NotificationService notificationService;
 
     public SocialService(FollowRepository followRepository,
                          FeedEventRepository feedEventRepository,
@@ -39,7 +40,8 @@ public class SocialService {
                          UserRepository userRepository,
                          UserBadgeRepository userBadgeRepository,
                          BadgeRepository badgeRepository,
-                         FeedEventService feedEventService) {
+                         FeedEventService feedEventService,
+                         NotificationService notificationService) {
         this.followRepository = followRepository;
         this.feedEventRepository = feedEventRepository;
         this.feedReactionRepository = feedReactionRepository;
@@ -49,6 +51,7 @@ public class SocialService {
         this.userBadgeRepository = userBadgeRepository;
         this.badgeRepository = badgeRepository;
         this.feedEventService = feedEventService;
+        this.notificationService = notificationService;
     }
 
     // ── Resumo ──────────────────────────────────────────────────────────
@@ -177,7 +180,10 @@ public class SocialService {
         followRepository.findByFollowerIdAndFollowedId(viewerId, targetId)
                 .ifPresentOrElse(
                         followRepository::delete,
-                        () -> followRepository.save(new Follow(viewerId, targetId)));
+                        () -> {
+                            followRepository.save(new Follow(viewerId, targetId));
+                            notificationService.onFollow(targetId, viewerId);
+                        });
 
         return toSocialUser(target, viewerId);
     }
@@ -186,13 +192,14 @@ public class SocialService {
 
     @Transactional
     public ReactionSummaryDTO react(Long viewerId, Long feedEventId, String kindRaw) {
-        if (!feedEventRepository.existsById(feedEventId)) {
-            throw new IllegalArgumentException("Item do feed não encontrado.");
-        }
+        FeedEvent event = feedEventRepository.findById(feedEventId)
+                .orElseThrow(() -> new IllegalArgumentException("Item do feed não encontrado."));
         ReactionKind kind = ReactionKind.fromClient(kindRaw);
 
+        ReactionKind[] previous = { null };
         feedReactionRepository.findByFeedEventIdAndUserId(feedEventId, viewerId)
                 .ifPresentOrElse(existing -> {
+                    previous[0] = existing.getKind();
                     if (existing.getKind() == kind) {
                         feedReactionRepository.delete(existing); // toggle off
                     } else {
@@ -200,6 +207,12 @@ public class SocialService {
                         feedReactionRepository.save(existing);
                     }
                 }, () -> feedReactionRepository.save(new FeedReaction(feedEventId, viewerId, kind)));
+
+        // notificações: o tipo novo e (se mudou) o tipo antigo
+        notificationService.syncReaction(event, kind, viewerId);
+        if (previous[0] != null && previous[0] != kind) {
+            notificationService.syncReaction(event, previous[0], viewerId);
+        }
 
         return summarize(feedReactionRepository.findByFeedEventIdIn(List.of(feedEventId)), viewerId);
     }
@@ -220,6 +233,7 @@ public class SocialService {
 
         Take take = takeRepository.save(new Take(viewerId, work.getId(), text));
         FeedEvent event = feedEventService.recordTake(take, work);
+        notificationService.onTakePosted(event, viewerId);
         User me = userRepository.findById(viewerId).orElseThrow();
 
         return toFeedItem(event, me, work, null, take, new ReactionSummaryDTO(0, 0, 0, null));

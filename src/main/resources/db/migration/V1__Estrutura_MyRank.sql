@@ -10,6 +10,7 @@ CREATE TYPE auth_provider_type AS ENUM ('LOCAL', 'GOOGLE', 'DISCORD');
 CREATE TYPE plan_type AS ENUM ('FREE', 'PRO');
 CREATE TYPE feed_event_type AS ENUM ('RATED', 'ADDED', 'BADGE', 'TAKE');
 CREATE TYPE reaction_kind AS ENUM ('UP', 'AGREE', 'DISAGREE');
+CREATE TYPE notification_type AS ENUM ('REACTION', 'FOLLOW', 'TAKE');
 
 -- ---------------------------------------------------------
 -- USERS
@@ -248,3 +249,30 @@ CREATE TABLE feed_reactions (
 );
 
 CREATE INDEX idx_feed_reactions_event ON feed_reactions (feed_event_id);
+
+-- ---------------------------------------------------------
+-- NOTIFICATIONS
+-- Reações são AGREGADAS: 1 linha por (destinatário, feed_event, reaction_kind),
+-- com actor_count e o último ator. Follow e take são 1 linha por evento.
+-- ---------------------------------------------------------
+CREATE TABLE notifications (
+    id             BIGSERIAL         PRIMARY KEY,
+    user_id        BIGINT            NOT NULL,       -- destinatário
+    type           notification_type NOT NULL,
+    actor_id       BIGINT,                           -- último/único ator
+    actor_count    INT               NOT NULL DEFAULT 1,
+    feed_event_id  BIGINT,
+    reaction_kind  reaction_kind,
+    read           BOOLEAN           NOT NULL DEFAULT false,
+    created_at     TIMESTAMP         NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMP         NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_notif_user  FOREIGN KEY (user_id)       REFERENCES users (id)       ON DELETE CASCADE,
+    CONSTRAINT fk_notif_actor FOREIGN KEY (actor_id)      REFERENCES users (id)       ON DELETE CASCADE,
+    CONSTRAINT fk_notif_event FOREIGN KEY (feed_event_id) REFERENCES feed_events (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_notifications_user ON notifications (user_id, updated_at DESC);
+CREATE UNIQUE INDEX uq_notif_reaction ON notifications (user_id, feed_event_id, reaction_kind) WHERE type = 'REACTION';
+CREATE UNIQUE INDEX uq_notif_follow   ON notifications (user_id, actor_id) WHERE type = 'FOLLOW';
+CREATE UNIQUE INDEX uq_notif_take     ON notifications (user_id, feed_event_id) WHERE type = 'TAKE';
