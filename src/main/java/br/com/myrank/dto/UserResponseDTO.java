@@ -12,6 +12,7 @@ public record UserResponseDTO(
         String bio,
         String plan,
         boolean isPublic,
+        String language,
         LocalDateTime createdAt
 ) {
     public static UserResponseDTO fromEntity(User user) {
@@ -23,6 +24,7 @@ public record UserResponseDTO(
                 user.getBio(),
                 user.getPlan().name(),
                 user.isPublic(),
+                user.getLanguage(),
                 user.getCreatedAt()
         );
     }

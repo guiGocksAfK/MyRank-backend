@@ -73,6 +73,14 @@ public class UserService {
             user.setBio(dto.bio());
         }
 
+        if (dto.language() != null) {
+            String lang = dto.language().trim().toUpperCase();
+            if (!java.util.Set.of("PT", "EN", "ES").contains(lang)) {
+                throw new IllegalArgumentException("Idioma inválido.");
+            }
+            user.setLanguage(lang);
+        }
+
         return userRepository.save(user);
     }
 

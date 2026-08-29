@@ -137,6 +137,9 @@ environment variables below.
 | `TMDB_API_TOKEN`         | TMDB API bearer token                 | _(empty — movie/TV search disabled)_ |
 | `RAWG_API_KEY`           | RAWG API key                          | _(empty — game search disabled)_ |
 | `GOOGLE_BOOKS_API_KEY`   | Google Books API key                  | _(empty — book search disabled)_ |
+| `GEMINI_API_KEY`         | Google AI Studio key for AI Insights ([free tier](https://aistudio.google.com/apikey)) | _(empty — AI Insights disabled)_ |
+| `GEMINI_API_MODEL`       | model id (OpenAI-compat endpoint)     | `gemini-2.5-flash`              |
+| `GEMINI_API_BASE_URL`    | OpenAI-compatible base URL            | `.../v1beta/openai`             |
 
 CORS is restricted to `http://localhost:5173` (the Vite dev server) in
 [`SecurityConfig`](src/main/java/br/com/myrank/config/SecurityConfig.java).

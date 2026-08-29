@@ -19,3 +19,9 @@ oauth.discord.client-secret=
 tmdb.api-token=
 rawg.api-key=
 google-books.api-key=
+
+# --- Gemini (IA Insights) — get a free key at https://aistudio.google.com/apikey ---
+# Or set the GEMINI_API_KEY env var in your run config instead.
+gemini.api.key=
+gemini.api.base-url=https://generativelanguage.googleapis.com/v1beta/openai
+gemini.api.model=gemini-2.5-flash
