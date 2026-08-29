@@ -6,12 +6,13 @@ import br.com.myrank.domain.entity.UserBadge;
 import br.com.myrank.domain.entity.Work;
 import br.com.myrank.dto.BadgeResponseDTO;
 import br.com.myrank.repository.*;
+import br.com.myrank.service.WorkTypeResolver;
+import br.com.myrank.service.social.FeedEventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -31,6 +32,7 @@ public class BadgeService {
     private final MasterTableGroupRepository masterTableGroupRepository;
     private final UserRepository userRepository;
     private final UserAvatarRepository userAvatarRepository;
+    private final FeedEventService feedEventService;
 
     public BadgeService(BadgeRepository badgeRepository,
                         UserBadgeRepository userBadgeRepository,
@@ -38,7 +40,8 @@ public class BadgeService {
                         CategoryRepository categoryRepository,
                         MasterTableGroupRepository masterTableGroupRepository,
                         UserRepository userRepository,
-                        UserAvatarRepository userAvatarRepository) {
+                        UserAvatarRepository userAvatarRepository,
+                        FeedEventService feedEventService) {
         this.badgeRepository = badgeRepository;
         this.userBadgeRepository = userBadgeRepository;
         this.workRepository = workRepository;
@@ -46,6 +49,7 @@ public class BadgeService {
         this.masterTableGroupRepository = masterTableGroupRepository;
         this.userRepository = userRepository;
         this.userAvatarRepository = userAvatarRepository;
+        this.feedEventService = feedEventService;
     }
 
     /** Recalcula todo o progresso de badges do usuário. Nunca lança pra fora. */
@@ -66,6 +70,7 @@ public class BadgeService {
             }
 
             LocalDateTime now = LocalDateTime.now();
+            List<Long> justUnlocked = new java.util.ArrayList<>();
 
             for (BadgeDefinition def : BadgeDefinition.values()) {
                 Badge badge = catalog.get(def.code());
@@ -82,9 +87,13 @@ public class BadgeService {
                 // uma vez conquistada, continua conquistada
                 if (reached && ub.getUnlockedAt() == null) {
                     ub.setUnlockedAt(now);
+                    justUnlocked.add(badge.getId());
                 }
                 userBadgeRepository.save(ub);
             }
+
+            // feed: um evento por badge recém-conquistada
+            justUnlocked.forEach(badgeId -> feedEventService.recordBadgeUnlocked(userId, badgeId));
         } catch (Exception e) {
             log.warn("Falha ao recalcular badges do usuário {}: {}", userId, e.getMessage());
         }
@@ -126,7 +135,8 @@ public class BadgeService {
         List<Work> works = workRepository.findByUserId(userId);
 
         List<BadgeContext.WorkView> views = works.stream().map(w -> {
-            String type = inferType(w.getCategory() != null ? w.getCategory().getName() : null);
+            String type = WorkTypeResolver.fromCategoryName(
+                    w.getCategory() != null ? w.getCategory().getName() : null);
             double score = w.getScore() != null ? w.getScore().doubleValue() : 0.0;
             String creatorKey = normalizeCreator(w.getCreator());
             Integer year = w.getReleaseDate() != null ? w.getReleaseDate().getYear() : null;
@@ -155,17 +165,4 @@ public class BadgeService {
         return t.isEmpty() ? null : t;
     }
 
-    /** Mesma lógica do front (useUnifiedItems): infere o tipo pelo nome da categoria. */
-    static String inferType(String categoryName) {
-        if (categoryName == null) return "outro";
-        String s = Normalizer.normalize(categoryName, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .toLowerCase();
-        if (s.matches(".*(livro|book).*")) return "livro";
-        if (s.matches(".*(jogo|game).*")) return "jogo";
-        if (s.contains("anime")) return "anime";
-        if (s.matches(".*(serie|series|show|\\btv\\b).*")) return "serie";
-        if (s.matches(".*(filme|movie).*")) return "filme";
-        return "outro";
-    }
 }

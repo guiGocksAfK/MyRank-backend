@@ -8,6 +8,7 @@ import br.com.myrank.dto.WorkUpdateDTO;
 import br.com.myrank.repository.CategoryRepository;
 import br.com.myrank.repository.WorkRepository;
 import br.com.myrank.service.badge.BadgeService;
+import br.com.myrank.service.social.FeedEventService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,12 +21,14 @@ public class WorkService {
     private final WorkRepository workRepository;
     private final CategoryRepository categoryRepository;
     private final BadgeService badgeService;
+    private final FeedEventService feedEventService;
 
     public WorkService(WorkRepository workRepository, CategoryRepository categoryRepository,
-                       BadgeService badgeService) {
+                       BadgeService badgeService, FeedEventService feedEventService) {
         this.workRepository = workRepository;
         this.categoryRepository = categoryRepository;
         this.badgeService = badgeService;
+        this.feedEventService = feedEventService;
     }
 
     public Work createWork(User user, WorkCreateDTO dto) {
@@ -49,6 +52,7 @@ public class WorkService {
         applyScoreCalculation(work);
 
         Work saved = workRepository.save(work);
+        feedEventService.recordAdded(saved);
         badgeService.recalculate(user.getId());
         return saved;
     }
@@ -76,6 +80,8 @@ public class WorkService {
             throw new IllegalArgumentException("Você não tem permissão para editar essa obra.");
         }
 
+        BigDecimal previousScore = work.getScore();
+
         if (dto.title() != null && !dto.title().isBlank()) {
             work.setTitle(dto.title());
         }
@@ -98,6 +104,9 @@ public class WorkService {
         applyScoreCalculation(work);
 
         Work saved = workRepository.save(work);
+        if (previousScore == null || previousScore.compareTo(saved.getScore()) != 0) {
+            feedEventService.recordRated(saved);
+        }
         badgeService.recalculate(userId);
         return saved;
     }
