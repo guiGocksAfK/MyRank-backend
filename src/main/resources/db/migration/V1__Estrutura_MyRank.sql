@@ -26,11 +26,13 @@ CREATE TABLE users (
     bio             TEXT,
     plan            plan_type           NOT NULL DEFAULT 'FREE',
     is_public       BOOLEAN             NOT NULL DEFAULT true,
+    language        VARCHAR(5)          NOT NULL DEFAULT 'PT',   -- idioma da interface (PT | EN | ES)
     created_at      TIMESTAMP           NOT NULL DEFAULT now(),
     updated_at      TIMESTAMP           NOT NULL DEFAULT now(),
 
     CONSTRAINT uq_users_username UNIQUE (username),
-    CONSTRAINT uq_users_email UNIQUE (email)
+    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT chk_users_language CHECK (language IN ('PT', 'EN', 'ES'))
 );
 
 -- Um provider_id só pode pertencer a um usuário por provedor OAuth.

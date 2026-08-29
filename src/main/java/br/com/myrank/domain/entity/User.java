@@ -48,6 +48,10 @@ public class User {
     @Column(name = "is_public", nullable = false)
     private boolean isPublic = true;
 
+    /** Idioma da interface: PT | EN | ES. */
+    @Column(nullable = false, length = 5)
+    private String language = "PT";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -100,6 +104,9 @@ public class User {
 
     public boolean isPublic() { return isPublic; }
     public void setPublic(boolean isPublic) { this.isPublic = isPublic; }
+
+    public String getLanguage() { return language; }
+    public void setLanguage(String language) { this.language = language; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
