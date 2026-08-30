@@ -34,7 +34,8 @@ public class ChatController {
     @PostMapping("/conversations")
     public ResponseEntity<ChatConversationDTO> createGroup(
             @AuthenticationPrincipal UserDetails ud, @RequestBody CreateGroupDTO body) {
-        return ResponseEntity.ok(chatService.createGroup(me(ud), body.name(), body.memberIds()));
+        return ResponseEntity.ok(chatService.createGroup(
+                me(ud), body.name(), body.memberIds(), body.access(), body.imageUrl()));
     }
 
     @PostMapping("/direct/{userId}")
@@ -44,16 +45,59 @@ public class ChatController {
     }
 
     @PatchMapping("/conversations/{id}")
-    public ResponseEntity<ChatConversationDTO> rename(
+    public ResponseEntity<ChatConversationDTO> updateGroup(
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
-            @RequestBody RenameConversationDTO body) {
-        return ResponseEntity.ok(chatService.rename(me(ud), id, body.name()));
+            @RequestBody UpdateGroupDTO body) {
+        return ResponseEntity.ok(chatService.updateGroup(me(ud), id, body));
     }
 
     @DeleteMapping("/conversations/{id}")
     public ResponseEntity<Void> delete(@AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
         chatService.deleteConversation(me(ud), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Diretório de grupos ────────────────────────────────────────────
+
+    @GetMapping("/directory")
+    public ResponseEntity<List<GroupDirectoryEntryDTO>> directory(
+            @AuthenticationPrincipal UserDetails ud,
+            @RequestParam(name = "q", defaultValue = "") String q,
+            @RequestParam(defaultValue = "0") int page) {
+        return ResponseEntity.ok(chatService.directory(me(ud), q, page));
+    }
+
+    @PostMapping("/conversations/{id}/join")
+    public ResponseEntity<Map<String, String>> join(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
+        return ResponseEntity.ok(Map.of("state", chatService.joinOrRequest(me(ud), id)));
+    }
+
+    @DeleteMapping("/conversations/{id}/join")
+    public ResponseEntity<Void> cancelJoin(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
+        chatService.cancelJoinRequest(me(ud), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/conversations/{id}/requests")
+    public ResponseEntity<List<JoinRequestDTO>> requests(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
+        return ResponseEntity.ok(chatService.listJoinRequests(me(ud), id));
+    }
+
+    @PostMapping("/conversations/{id}/requests/{userId}/approve")
+    public ResponseEntity<Void> approve(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long id, @PathVariable Long userId) {
+        chatService.resolveJoinRequest(me(ud), id, userId, true);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/conversations/{id}/requests/{userId}/reject")
+    public ResponseEntity<Void> reject(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long id, @PathVariable Long userId) {
+        chatService.resolveJoinRequest(me(ud), id, userId, false);
         return ResponseEntity.noContent().build();
     }
 
@@ -73,7 +117,29 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
             @RequestBody SendMessageDTO body) {
-        return ResponseEntity.ok(chatService.send(me(ud), id, body.body()));
+        return ResponseEntity.ok(chatService.send(me(ud), id, body.body(), body.replyToId()));
+    }
+
+    @PatchMapping("/messages/{messageId}")
+    public ResponseEntity<ChatMessageDTO> editMessage(
+            @AuthenticationPrincipal UserDetails ud,
+            @PathVariable Long messageId,
+            @RequestBody EditMessageDTO body) {
+        return ResponseEntity.ok(chatService.editMessage(me(ud), messageId, body.body()));
+    }
+
+    @DeleteMapping("/messages/{messageId}")
+    public ResponseEntity<ChatMessageDTO> deleteMessage(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long messageId) {
+        return ResponseEntity.ok(chatService.deleteMessage(me(ud), messageId));
+    }
+
+    @PostMapping("/messages/{messageId}/react")
+    public ResponseEntity<ChatMessageDTO> react(
+            @AuthenticationPrincipal UserDetails ud,
+            @PathVariable Long messageId,
+            @RequestBody ReactDTO body) {
+        return ResponseEntity.ok(chatService.react(me(ud), messageId, body.emoji()));
     }
 
     @PostMapping("/conversations/{id}/read")
@@ -82,7 +148,7 @@ public class ChatController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Membros ────────────────────────────────────────────────────────
+    // ── Membros / cargos ───────────────────────────────────────────────
 
     @GetMapping("/conversations/{id}/members")
     public ResponseEntity<List<ConversationMemberDTO>> members(
@@ -105,6 +171,15 @@ public class ChatController {
             @PathVariable Long userId) {
         chatService.removeMember(me(ud), id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/conversations/{id}/members/{userId}/role")
+    public ResponseEntity<List<ConversationMemberDTO>> setRole(
+            @AuthenticationPrincipal UserDetails ud,
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            @RequestBody SetRoleDTO body) {
+        return ResponseEntity.ok(chatService.setRole(me(ud), id, userId, body.role()));
     }
 
     // ── Contador ───────────────────────────────────────────────────────

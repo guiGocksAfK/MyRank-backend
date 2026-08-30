@@ -1,6 +1,7 @@
 package br.com.myrank.dto.chat;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /** Uma mensagem. `senderName`/`senderAvatarUrl` servem pra render em grupo. */
 public record ChatMessageDTO(
@@ -10,6 +11,10 @@ public record ChatMessageDTO(
         String senderAvatarUrl,
         boolean mine,
         String kind,          // USER | SYSTEM
-        String body,
+        String body,          // null quando deleted
+        boolean edited,
+        boolean deleted,
+        ReplyPreviewDTO replyTo,
+        List<ReactionCountDTO> reactions,
         LocalDateTime createdAt
 ) {}
