@@ -14,6 +14,7 @@ CREATE TABLE users (
     plan            plan_type           NOT NULL DEFAULT 'FREE',
     is_public       BOOLEAN             NOT NULL DEFAULT true,
     language        VARCHAR(5)          NOT NULL DEFAULT 'PT',   -- idioma da interface (PT | EN | ES)
+    last_seen_at    TIMESTAMP,                                     -- presença (bump no heartbeat do chat)
     created_at      TIMESTAMP           NOT NULL DEFAULT now(),
     updated_at      TIMESTAMP           NOT NULL DEFAULT now(),
 

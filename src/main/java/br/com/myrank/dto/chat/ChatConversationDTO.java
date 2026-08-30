@@ -19,5 +19,8 @@ public record ChatConversationDTO(
         boolean lastMine,
         String lastKind,         // USER | SYSTEM
         LocalDateTime lastAt,
-        long unread
+        long unread,
+        Long myLastReadId,          // meu cursor de leitura (divisor de não-lidas)
+        Long peerLastReadId,        // cursor do outro (DIRECT) — pro "Visto"
+        LocalDateTime peerLastSeenAt // última atividade do outro (DIRECT) — presença
 ) {}

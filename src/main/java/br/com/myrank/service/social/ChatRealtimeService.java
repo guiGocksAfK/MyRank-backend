@@ -45,6 +45,30 @@ public class ChatRealtimeService {
         }
     }
 
+    /** "Fulano está digitando…" na conversa aberta. */
+    public void typing(Long convId, Long actorId, String actorName) {
+        if (convId == null) return;
+        try {
+            messaging.convertAndSend("/topic/conversation." + convId, Map.of(
+                    "type", "typing", "conversationId", convId,
+                    "actorId", actorId, "actorName", actorName == null ? "" : actorName));
+        } catch (Exception e) {
+            log.warn("typing({}) falhou: {}", convId, e.getMessage());
+        }
+    }
+
+    /** Recibo de leitura — pro "Visto" nos DMs. */
+    public void readReceipt(Long convId, Long actorId, Long lastReadId) {
+        if (convId == null || lastReadId == null) return;
+        try {
+            messaging.convertAndSend("/topic/conversation." + convId, Map.of(
+                    "type", "read", "conversationId", convId,
+                    "actorId", actorId, "lastReadId", lastReadId));
+        } catch (Exception e) {
+            log.warn("readReceipt({}) falhou: {}", convId, e.getMessage());
+        }
+    }
+
     /** Ping leve pra sidebar/badge de não-lidas de cada membro. */
     public void touch(Long convId) {
         if (convId == null) return;

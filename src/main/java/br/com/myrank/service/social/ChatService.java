@@ -416,15 +416,35 @@ public class ChatService {
         return oneMessageDTO(msg, me);
     }
 
+    /** Marca lido até a última mensagem. Retorna o id marcado, ou null se nada mudou. */
     @Transactional
-    public void markRead(Long me, Long convId) {
+    public Long markRead(Long me, Long convId) {
         ConversationMember member = assertMember(convId, me);
-        messageRepository.findFirstByConversationIdOrderByIdDesc(convId).ifPresent(last -> {
-            if (member.getLastReadMessageId() == null || last.getId() > member.getLastReadMessageId()) {
-                member.setLastReadMessageId(last.getId());
-                memberRepository.save(member);
-            }
-        });
+        Message last = messageRepository.findFirstByConversationIdOrderByIdDesc(convId).orElse(null);
+        if (last == null) return null;
+        if (member.getLastReadMessageId() == null || last.getId() > member.getLastReadMessageId()) {
+            member.setLastReadMessageId(last.getId());
+            memberRepository.save(member);
+            return last.getId();
+        }
+        return null;
+    }
+
+    /** Nome de quem está numa conversa (valida que participa). Pro "digitando…". */
+    @Transactional(readOnly = true)
+    public String memberName(Long me, Long convId) {
+        assertMember(convId, me);
+        return userRepository.findById(me).map(User::getUsername).orElse("Alguém");
+    }
+
+    /** Heartbeat de presença — chamado no poll de não-lidas (~60s). */
+    @Transactional
+    public void heartbeat(Long me) {
+        try {
+            userRepository.updateLastSeen(me, LocalDateTime.now());
+        } catch (Exception ignored) {
+            // presença é best-effort
+        }
     }
 
     // ── Membros / cargos ───────────────────────────────────────────────
@@ -718,17 +738,21 @@ public class ChatService {
                                          Long me,
                                          int pendingRequests) {
         ChatUserDTO peer = null;
+        Long peerLastReadId = null;
+        LocalDateTime peerLastSeenAt = null;
         if (conv.getType() == ConversationType.DIRECT) {
-            peer = members.stream()
+            ConversationMember peerMember = members.stream()
                     .filter(m -> !m.getUserId().equals(me))
                     .findFirst()
-                    .map(m -> {
-                        User u = users.get(m.getUserId());
-                        return new ChatUserDTO(m.getUserId(),
-                                u != null ? u.getUsername() : "Usuário",
-                                u != null ? u.getAvatarUrl() : null);
-                    })
                     .orElse(null);
+            if (peerMember != null) {
+                User u = users.get(peerMember.getUserId());
+                peer = new ChatUserDTO(peerMember.getUserId(),
+                        u != null ? u.getUsername() : "Usuário",
+                        u != null ? u.getAvatarUrl() : null);
+                peerLastReadId = peerMember.getLastReadMessageId();
+                peerLastSeenAt = u != null ? u.getLastSeenAt() : null;
+            }
         }
 
         String lastSenderName = null;
@@ -761,7 +785,10 @@ public class ChatService {
                 lastMine,
                 lastKind,
                 last != null ? last.getCreatedAt() : conv.getCreatedAt(),
-                unread
+                unread,
+                myMembership.getLastReadMessageId(),
+                peerLastReadId,
+                peerLastSeenAt
         );
     }
 
