@@ -25,7 +25,7 @@ CREATE TABLE users (
     password_hash   VARCHAR(255),
     auth_provider   auth_provider_type  NOT NULL DEFAULT 'LOCAL',
     provider_id     VARCHAR(255),
-    avatar_url      VARCHAR(500),
+    avatar_url      VARCHAR(1000),                                 -- URL da foto (upload do usuário ou avatar do OAuth)
     bio             TEXT,
     plan            plan_type           NOT NULL DEFAULT 'FREE',
     is_public       BOOLEAN             NOT NULL DEFAULT true,
@@ -42,20 +42,6 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX uq_users_auth_provider_provider_id
     ON users (auth_provider, provider_id)
     WHERE provider_id IS NOT NULL;
-
--- ---------------------------------------------------------
--- USER_AVATARS (1:1 com users) — foto de perfil enviada pelo usuário.
--- Tabela separada pra não carregar o BYTEA em toda request autenticada.
--- ---------------------------------------------------------
-CREATE TABLE user_avatars (
-    user_id       BIGINT PRIMARY KEY,
-    image         BYTEA        NOT NULL,
-    content_type  VARCHAR(100) NOT NULL,
-    updated_at    TIMESTAMP    NOT NULL DEFAULT now(),
-
-    CONSTRAINT fk_user_avatars_user FOREIGN KEY (user_id)
-        REFERENCES users (id) ON DELETE CASCADE
-);
 
 -- ---------------------------------------------------------
 -- USER_STATS (1:1 com users)

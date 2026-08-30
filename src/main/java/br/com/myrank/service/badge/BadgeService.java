@@ -31,7 +31,6 @@ public class BadgeService {
     private final CategoryRepository categoryRepository;
     private final MasterTableGroupRepository masterTableGroupRepository;
     private final UserRepository userRepository;
-    private final UserAvatarRepository userAvatarRepository;
     private final FeedEventService feedEventService;
 
     public BadgeService(BadgeRepository badgeRepository,
@@ -40,7 +39,6 @@ public class BadgeService {
                         CategoryRepository categoryRepository,
                         MasterTableGroupRepository masterTableGroupRepository,
                         UserRepository userRepository,
-                        UserAvatarRepository userAvatarRepository,
                         FeedEventService feedEventService) {
         this.badgeRepository = badgeRepository;
         this.userBadgeRepository = userBadgeRepository;
@@ -48,7 +46,6 @@ public class BadgeService {
         this.categoryRepository = categoryRepository;
         this.masterTableGroupRepository = masterTableGroupRepository;
         this.userRepository = userRepository;
-        this.userAvatarRepository = userAvatarRepository;
         this.feedEventService = feedEventService;
     }
 
@@ -146,8 +143,7 @@ public class BadgeService {
             return new BadgeContext.WorkView(type, score, w.getTimeMinutes(), creatorKey, year, added, edited);
         }).toList();
 
-        boolean hasAvatar = (user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank())
-                || userAvatarRepository.existsById(userId);
+        boolean hasAvatar = user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank();
         boolean hasBio = user.getBio() != null && !user.getBio().isBlank();
         boolean hasCustomCategory = categoryRepository.findByUserId(userId).stream()
                 .anyMatch(c -> !c.isDefault());

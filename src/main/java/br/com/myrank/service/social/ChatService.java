@@ -80,7 +80,7 @@ public class ChatService {
         LinkedHashSet<Long> ids = new LinkedHashSet<>();
         if (memberIdsRaw != null) memberIdsRaw.forEach(id -> { if (id != null) ids.add(id); });
         ids.remove(me);
-        if (ids.size() < 2) throw new IllegalArgumentException("Um grupo precisa de pelo menos 3 pessoas.");
+        // membros são opcionais: dá pra criar só com o dono e convidar depois
         if (ids.size() >= GROUP_MAX) throw new IllegalArgumentException("Máximo de " + GROUP_MAX + " participantes.");
 
         List<User> found = userRepository.findAllById(ids);
