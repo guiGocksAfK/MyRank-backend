@@ -33,6 +33,7 @@ public class ChatService {
 
     private static final int BODY_MAX = 2000;
     private static final int NAME_MAX = 80;
+    private static final int DESC_MAX = 300;
     private static final int HISTORY_MAX = 100;
     private static final int GROUP_MAX = 50;
     private static final int IMAGE_URL_MAX = 1000;
@@ -95,11 +96,12 @@ public class ChatService {
 
     @Transactional
     public ChatConversationDTO createGroup(Long me, String nameRaw, List<Long> memberIdsRaw,
-                                           String accessRaw, String imageUrlRaw) {
+                                           String accessRaw, String imageUrlRaw, String descriptionRaw) {
         String name = sanitizeName(nameRaw);
         ConversationAccess access = accessRaw == null || accessRaw.isBlank()
                 ? ConversationAccess.REQUEST : parseAccess(accessRaw);
         String imageUrl = sanitizeImageUrl(imageUrlRaw);
+        String description = sanitizeDescription(descriptionRaw);
 
         LinkedHashSet<Long> ids = new LinkedHashSet<>();
         if (memberIdsRaw != null) memberIdsRaw.forEach(id -> { if (id != null) ids.add(id); });
@@ -112,6 +114,7 @@ public class ChatService {
         Conversation conv = new Conversation(ConversationType.GROUP, name, me);
         conv.setAccess(access);
         conv.setImageUrl(imageUrl);
+        conv.setDescription(description);
         conv = conversationRepository.save(conv);
 
         memberRepository.save(new ConversationMember(conv.getId(), me, ConversationMemberRole.OWNER));
@@ -199,6 +202,7 @@ public class ChatService {
             return new GroupDirectoryEntryDTO(
                     c.getId(),
                     c.getName(),
+                    c.getDescription(),
                     c.getImageUrl(),
                     c.getAccess().name(),
                     Math.toIntExact(counts.getOrDefault(c.getId(), 0L)),
@@ -579,6 +583,21 @@ public class ChatService {
                 }
             }
         }
+        if (dto.description() != null) {
+            String v = dto.description().trim();
+            if (v.isEmpty()) {
+                if (conv.getDescription() != null) {
+                    conv.setDescription(null);
+                    system(convId, me, nameOf(me) + " removeu a descrição do grupo");
+                }
+            } else {
+                String desc = sanitizeDescription(v);
+                if (!desc.equals(conv.getDescription())) {
+                    conv.setDescription(desc);
+                    system(convId, me, nameOf(me) + " atualizou a descrição do grupo");
+                }
+            }
+        }
         if (dto.access() != null) {
             ConversationAccess access = parseAccess(dto.access());
             if (access != conv.getAccess()) {
@@ -730,6 +749,7 @@ public class ChatService {
                 conv.getId(),
                 conv.getType().name(),
                 conv.getName(),
+                conv.getDescription(),
                 conv.getImageUrl(),
                 conv.getAccess().name(),
                 peer,
@@ -844,6 +864,17 @@ public class ChatService {
         if (name.isEmpty()) throw new IllegalArgumentException("Dê um nome ao grupo.");
         if (name.length() > NAME_MAX) throw new IllegalArgumentException("O nome passa de " + NAME_MAX + " caracteres.");
         return name;
+    }
+
+    /** null = sem descrição; senão valida tamanho. */
+    private String sanitizeDescription(String raw) {
+        if (raw == null) return null;
+        String desc = raw.trim();
+        if (desc.isEmpty()) return null;
+        if (desc.length() > DESC_MAX) {
+            throw new IllegalArgumentException("A descrição passa de " + DESC_MAX + " caracteres.");
+        }
+        return desc;
     }
 
     /** null = sem foto; senão valida https e tamanho. */

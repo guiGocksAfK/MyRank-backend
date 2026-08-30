@@ -4,6 +4,7 @@ package br.com.myrank.dto.chat;
 public record GroupDirectoryEntryDTO(
         Long id,
         String name,
+        String description,
         String imageUrl,
         String access,        // OPEN | REQUEST
         int memberCount,

@@ -6,5 +6,6 @@ public record CreateGroupDTO(
         String name,
         List<Long> memberIds,
         String access,        // OPEN | REQUEST | CLOSED (default CLOSED)
-        String imageUrl       // opcional
+        String imageUrl,      // opcional
+        String description    // opcional
 ) {}

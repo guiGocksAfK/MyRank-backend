@@ -9,6 +9,7 @@ CREATE TABLE conversations (
     id           BIGSERIAL           PRIMARY KEY,
     type         conversation_type   NOT NULL,
     name         VARCHAR(80),                             -- null em DIRECT
+    description  VARCHAR(300),                             -- descrição do grupo (só GROUP); null = sem
     image_url    VARCHAR(1000),                           -- foto do grupo (URL)
     access       conversation_access NOT NULL DEFAULT 'CLOSED',  -- OPEN | REQUEST | CLOSED (só GROUP)
     invite_token VARCHAR(32),                             -- link de convite (só GROUP); null = sem link ativo

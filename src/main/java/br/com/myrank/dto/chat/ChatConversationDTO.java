@@ -7,6 +7,7 @@ public record ChatConversationDTO(
         Long id,
         String type,             // DIRECT | GROUP
         String name,
+        String description,
         String imageUrl,
         String access,           // OPEN | REQUEST | CLOSED
         ChatUserDTO peer,

@@ -38,7 +38,7 @@ public class ChatController {
     public ResponseEntity<ChatConversationDTO> createGroup(
             @AuthenticationPrincipal UserDetails ud, @RequestBody CreateGroupDTO body) {
         return ResponseEntity.ok(chatService.createGroup(
-                me(ud), body.name(), body.memberIds(), body.access(), body.imageUrl()));
+                me(ud), body.name(), body.memberIds(), body.access(), body.imageUrl(), body.description()));
     }
 
     @PostMapping("/direct/{userId}")

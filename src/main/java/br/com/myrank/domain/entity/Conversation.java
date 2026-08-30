@@ -26,6 +26,10 @@ public class Conversation {
     @Column(length = 80)
     private String name;
 
+    /** Descrição do grupo (só GROUP). null = sem. */
+    @Column(length = 300)
+    private String description;
+
     /** Foto do grupo (URL). null = usa iniciais. */
     @Column(name = "image_url", length = 1000)
     private String imageUrl;
@@ -65,6 +69,9 @@ public class Conversation {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
