@@ -280,6 +280,32 @@ CREATE UNIQUE INDEX uq_notif_follow   ON notifications (user_id, actor_id) WHERE
 CREATE UNIQUE INDEX uq_notif_take     ON notifications (user_id, feed_event_id) WHERE type = 'TAKE';
 
 -- ---------------------------------------------------------
+-- MESSAGES — DM 1:1 entre usuários que se seguem mutuamente.
+-- read_at NULL = não lida. Sem thread/room: o par (sender, recipient)
+-- define a conversa. Real-time via polling (igual ao sininho).
+-- ---------------------------------------------------------
+CREATE TABLE messages (
+    id            BIGSERIAL      PRIMARY KEY,
+    sender_id     BIGINT         NOT NULL,
+    recipient_id  BIGINT         NOT NULL,
+    body          VARCHAR(2000)  NOT NULL,
+    read_at       TIMESTAMP,
+    created_at    TIMESTAMP      NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_messages_recipient FOREIGN KEY (recipient_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT chk_messages_no_self CHECK (sender_id <> recipient_id)
+);
+
+-- histórico de uma conversa (os dois sentidos do par)
+CREATE INDEX idx_messages_sender_recipient ON messages (sender_id, recipient_id, created_at DESC);
+CREATE INDEX idx_messages_recipient_sender ON messages (recipient_id, sender_id, created_at DESC);
+-- contador de não-lidas por destinatário
+CREATE INDEX idx_messages_recipient_unread ON messages (recipient_id) WHERE read_at IS NULL;
+
+-- ---------------------------------------------------------
 -- AI_INSIGHTS — analise de perfil gerada por IA (Gemini).
 -- payload = JSON estruturado devolvido pelo modelo (summaryTitle, traits,
 -- tasteProfile, recommendation...). Cacheado por (user_id, selection_hash):
