@@ -81,6 +81,21 @@ public class UserService {
             user.setLanguage(lang);
         }
 
+        if (dto.avatarUrl() != null) {
+            String url = dto.avatarUrl().trim();
+            if (url.isEmpty()) {
+                user.setAvatarUrl(null);
+            } else {
+                if (!url.startsWith("https://")) {
+                    throw new IllegalArgumentException("A URL da foto precisa começar com https://");
+                }
+                if (url.length() > 1000) {
+                    throw new IllegalArgumentException("A URL da foto é longa demais.");
+                }
+                user.setAvatarUrl(url);
+            }
+        }
+
         return userRepository.save(user);
     }
 
@@ -120,7 +135,10 @@ public class UserService {
     }
 
     private User updateOAuthProfile(User user, OAuthUserInfo info) {
-        if (info.avatarUrl() != null && !info.avatarUrl().isBlank()) {
+        // só preenche a partir do OAuth se o usuário ainda não escolheu uma foto —
+        // assim a URL definida por ele não é sobrescrita a cada login
+        boolean hasOwnPhoto = user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank();
+        if (!hasOwnPhoto && info.avatarUrl() != null && !info.avatarUrl().isBlank()) {
             user.setAvatarUrl(info.avatarUrl());
         }
         return user;

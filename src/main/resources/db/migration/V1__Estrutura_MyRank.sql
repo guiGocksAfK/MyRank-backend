@@ -11,6 +11,10 @@ CREATE TYPE plan_type AS ENUM ('FREE', 'PRO');
 CREATE TYPE feed_event_type AS ENUM ('RATED', 'ADDED', 'BADGE', 'TAKE');
 CREATE TYPE reaction_kind AS ENUM ('UP', 'AGREE', 'DISAGREE');
 CREATE TYPE notification_type AS ENUM ('REACTION', 'FOLLOW', 'TAKE');
+CREATE TYPE conversation_type AS ENUM ('DIRECT', 'GROUP');
+CREATE TYPE conversation_member_role AS ENUM ('OWNER', 'ADMIN', 'MOD', 'MEMBER');
+CREATE TYPE conversation_access AS ENUM ('OPEN', 'REQUEST', 'CLOSED');
+CREATE TYPE message_kind AS ENUM ('USER', 'SYSTEM');
 
 -- ---------------------------------------------------------
 -- USERS
@@ -22,7 +26,7 @@ CREATE TABLE users (
     password_hash   VARCHAR(255),
     auth_provider   auth_provider_type  NOT NULL DEFAULT 'LOCAL',
     provider_id     VARCHAR(255),
-    avatar_url      VARCHAR(500),
+    avatar_url      VARCHAR(1000),                                 -- URL da foto (upload do usuário ou avatar do OAuth)
     bio             TEXT,
     plan            plan_type           NOT NULL DEFAULT 'FREE',
     is_public       BOOLEAN             NOT NULL DEFAULT true,
@@ -39,20 +43,6 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX uq_users_auth_provider_provider_id
     ON users (auth_provider, provider_id)
     WHERE provider_id IS NOT NULL;
-
--- ---------------------------------------------------------
--- USER_AVATARS (1:1 com users) — foto de perfil enviada pelo usuário.
--- Tabela separada pra não carregar o BYTEA em toda request autenticada.
--- ---------------------------------------------------------
-CREATE TABLE user_avatars (
-    user_id       BIGINT PRIMARY KEY,
-    image         BYTEA        NOT NULL,
-    content_type  VARCHAR(100) NOT NULL,
-    updated_at    TIMESTAMP    NOT NULL DEFAULT now(),
-
-    CONSTRAINT fk_user_avatars_user FOREIGN KEY (user_id)
-        REFERENCES users (id) ON DELETE CASCADE
-);
 
 -- ---------------------------------------------------------
 -- USER_STATS (1:1 com users)
@@ -278,6 +268,97 @@ CREATE INDEX idx_notifications_user ON notifications (user_id, updated_at DESC);
 CREATE UNIQUE INDEX uq_notif_reaction ON notifications (user_id, feed_event_id, reaction_kind) WHERE type = 'REACTION';
 CREATE UNIQUE INDEX uq_notif_follow   ON notifications (user_id, actor_id) WHERE type = 'FOLLOW';
 CREATE UNIQUE INDEX uq_notif_take     ON notifications (user_id, feed_event_id) WHERE type = 'TAKE';
+
+-- ---------------------------------------------------------
+-- CHAT — conversas (DM + grupo) unificadas.
+-- DIRECT = conversa de 2 membros (DM). GROUP = nome + N membros + 1 OWNER.
+-- Não-lidas por membro via cursor last_read_message_id.
+-- Real-time via polling (igual ao sininho).
+-- ---------------------------------------------------------
+CREATE TABLE conversations (
+    id          BIGSERIAL           PRIMARY KEY,
+    type        conversation_type   NOT NULL,
+    name        VARCHAR(80),                              -- null em DIRECT
+    image_url   VARCHAR(1000),                            -- foto do grupo (URL)
+    access      conversation_access NOT NULL DEFAULT 'CLOSED',  -- OPEN | REQUEST | CLOSED (só GROUP)
+    created_by  BIGINT              NOT NULL,
+    created_at  TIMESTAMP           NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_conversations_creator FOREIGN KEY (created_by)
+        REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE conversation_members (
+    id                    BIGSERIAL                PRIMARY KEY,
+    conversation_id       BIGINT                   NOT NULL,
+    user_id               BIGINT                   NOT NULL,
+    role                  conversation_member_role NOT NULL DEFAULT 'MEMBER',
+    last_read_message_id  BIGINT,                            -- cursor de leitura
+    joined_at             TIMESTAMP                NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_cm_conversation FOREIGN KEY (conversation_id)
+        REFERENCES conversations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_cm_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uq_cm UNIQUE (conversation_id, user_id)
+);
+
+CREATE INDEX idx_cm_user ON conversation_members (user_id);
+CREATE INDEX idx_cm_conversation ON conversation_members (conversation_id);
+
+-- Pedidos de entrada em grupos REQUEST (presença = pendente).
+CREATE TABLE conversation_join_requests (
+    id               BIGSERIAL PRIMARY KEY,
+    conversation_id  BIGINT    NOT NULL,
+    user_id          BIGINT    NOT NULL,
+    created_at       TIMESTAMP NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_cjr_conversation FOREIGN KEY (conversation_id)
+        REFERENCES conversations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_cjr_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uq_cjr UNIQUE (conversation_id, user_id)
+);
+
+CREATE INDEX idx_cjr_conversation ON conversation_join_requests (conversation_id);
+
+CREATE TABLE messages (
+    id              BIGSERIAL     PRIMARY KEY,
+    conversation_id BIGINT        NOT NULL,
+    sender_id       BIGINT        NOT NULL,
+    kind            message_kind  NOT NULL DEFAULT 'USER',   -- SYSTEM = "fulano criou o grupo" etc
+    body            VARCHAR(2000) NOT NULL,
+    reply_to_id     BIGINT,                                  -- resposta a outra mensagem
+    edited_at       TIMESTAMP,                               -- not null = editada
+    deleted_at      TIMESTAMP,                               -- not null = apagada (vira lápide)
+    created_at      TIMESTAMP     NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_messages_conversation FOREIGN KEY (conversation_id)
+        REFERENCES conversations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_messages_reply FOREIGN KEY (reply_to_id)
+        REFERENCES messages (id) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_messages_conversation ON messages (conversation_id, id DESC);
+
+-- Reações às mensagens: 1 por usuário por mensagem (troca o emoji ou remove).
+CREATE TABLE message_reactions (
+    id          BIGSERIAL   PRIMARY KEY,
+    message_id  BIGINT      NOT NULL,
+    user_id     BIGINT      NOT NULL,
+    emoji       VARCHAR(16) NOT NULL,
+    created_at  TIMESTAMP   NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_mr_message FOREIGN KEY (message_id)
+        REFERENCES messages (id) ON DELETE CASCADE,
+    CONSTRAINT fk_mr_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uq_mr UNIQUE (message_id, user_id)
+);
+
+CREATE INDEX idx_mr_message ON message_reactions (message_id);
 
 -- ---------------------------------------------------------
 -- AI_INSIGHTS — analise de perfil gerada por IA (Gemini).
