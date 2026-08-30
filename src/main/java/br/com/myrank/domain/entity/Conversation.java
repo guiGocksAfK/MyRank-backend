@@ -35,6 +35,10 @@ public class Conversation {
     @Column(nullable = false, columnDefinition = "conversation_access")
     private ConversationAccess access = ConversationAccess.CLOSED;
 
+    /** Link de convite do grupo (só GROUP). null = nenhum link ativo. */
+    @Column(name = "invite_token", length = 32)
+    private String inviteToken;
+
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
@@ -67,6 +71,9 @@ public class Conversation {
 
     public ConversationAccess getAccess() { return access; }
     public void setAccess(ConversationAccess access) { this.access = access; }
+
+    public String getInviteToken() { return inviteToken; }
+    public void setInviteToken(String inviteToken) { this.inviteToken = inviteToken; }
 
     public Long getCreatedBy() { return createdBy; }
     public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }

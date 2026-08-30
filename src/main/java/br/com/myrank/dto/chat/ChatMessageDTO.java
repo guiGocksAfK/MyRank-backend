@@ -6,6 +6,7 @@ import java.util.List;
 /** Uma mensagem. `senderName`/`senderAvatarUrl` servem pra render em grupo. */
 public record ChatMessageDTO(
         Long id,
+        Long conversationId,
         Long senderId,
         String senderName,
         String senderAvatarUrl,

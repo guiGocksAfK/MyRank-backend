@@ -23,6 +23,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     Optional<Conversation> findDirectBetween(@Param("direct") ConversationType direct,
                                              @Param("a") Long a, @Param("b") Long b);
 
+    Optional<Conversation> findByInviteToken(String inviteToken);
+
     /** Diretório: grupos descobríveis (não-fechados) cujo nome bate com a busca. */
     @Query("""
             select c from Conversation c

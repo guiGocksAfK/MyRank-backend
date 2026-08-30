@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,6 +43,8 @@ public class ChatService {
             "👍", "❤️", "😂", "😮", "😢",
             "😠", "🎉", "🔥", "👀", "🙏");
 
+    private static final SecureRandom RNG = new SecureRandom();
+
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository memberRepository;
     private final ConversationJoinRequestRepository joinRequestRepository;
@@ -49,6 +52,7 @@ public class ChatService {
     private final MessageReactionRepository reactionRepository;
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public ChatService(ConversationRepository conversationRepository,
                        ConversationMemberRepository memberRepository,
@@ -56,7 +60,8 @@ public class ChatService {
                        MessageRepository messageRepository,
                        MessageReactionRepository reactionRepository,
                        FollowRepository followRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       NotificationService notificationService) {
         this.conversationRepository = conversationRepository;
         this.memberRepository = memberRepository;
         this.joinRequestRepository = joinRequestRepository;
@@ -64,6 +69,7 @@ public class ChatService {
         this.reactionRepository = reactionRepository;
         this.followRepository = followRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     // ── Início de conversa ──────────────────────────────────────────────
@@ -277,6 +283,7 @@ public class ChatService {
             }
             memberRepository.save(new ConversationMember(convId, targetId, ConversationMemberRole.MEMBER));
             system(convId, me, nameOf(targetId) + " entrou no grupo");
+            notificationService.onJoinRequestApproved(targetId, me, convId);
         }
     }
 
@@ -468,6 +475,7 @@ public class ChatService {
             joinRequestRepository.findByConversationIdAndUserId(convId, id)
                     .ifPresent(joinRequestRepository::delete);
             memberRepository.save(new ConversationMember(convId, id, ConversationMemberRole.MEMBER));
+            notificationService.onAddedToGroup(id, me, convId);
         }
         system(convId, me, nameOf(me) + " adicionou " + humanJoin(
                 found.stream().map(User::getUsername).toList()));
@@ -583,6 +591,70 @@ public class ChatService {
         }
         conversationRepository.save(conv);
         return toConversationDTO(convId, me);
+    }
+
+    // ── Grupo: link de convite (reutilizável + revogável) ──────────────
+
+    @Transactional(readOnly = true)
+    public String getInviteToken(Long me, Long convId) {
+        Conversation conv = requireInviteManager(me, convId, "veem");
+        return conv.getInviteToken();
+    }
+
+    @Transactional
+    public String rotateInviteToken(Long me, Long convId) {
+        Conversation conv = requireInviteManager(me, convId, "geram");
+        String token = newInviteToken();
+        conv.setInviteToken(token);
+        conversationRepository.save(conv);
+        system(convId, me, nameOf(me) + " gerou um novo link de convite");
+        return token;
+    }
+
+    @Transactional
+    public void revokeInviteToken(Long me, Long convId) {
+        Conversation conv = requireInviteManager(me, convId, "revogam");
+        if (conv.getInviteToken() != null) {
+            conv.setInviteToken(null);
+            conversationRepository.save(conv);
+            system(convId, me, nameOf(me) + " revogou o link de convite");
+        }
+    }
+
+    @Transactional
+    public ChatConversationDTO acceptInvite(Long me, String tokenRaw) {
+        String token = tokenRaw == null ? "" : tokenRaw.trim();
+        if (token.isEmpty()) throw new IllegalArgumentException("Convite inválido.");
+        Conversation conv = conversationRepository.findByInviteToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Esse convite não vale mais."));
+        requireGroup(conv);
+
+        if (!memberRepository.existsByConversationIdAndUserId(conv.getId(), me)) {
+            if (memberRepository.countByConversationId(conv.getId()) >= GROUP_MAX) {
+                throw new IllegalArgumentException("O grupo está cheio.");
+            }
+            joinRequestRepository.findByConversationIdAndUserId(conv.getId(), me)
+                    .ifPresent(joinRequestRepository::delete);
+            memberRepository.save(new ConversationMember(conv.getId(), me, ConversationMemberRole.MEMBER));
+            system(conv.getId(), me, nameOf(me) + " entrou no grupo pelo link de convite");
+        }
+        return toConversationDTO(conv.getId(), me);
+    }
+
+    private Conversation requireInviteManager(Long me, Long convId, String verb) {
+        ConversationMember myMembership = assertMember(convId, me);
+        Conversation conv = getConversation(convId);
+        requireGroup(conv);
+        if (!myMembership.getRole().canEditGroup()) {
+            throw new IllegalArgumentException("Só o dono ou admins " + verb + " o link de convite.");
+        }
+        return conv;
+    }
+
+    private static String newInviteToken() {
+        byte[] buf = new byte[18];
+        RNG.nextBytes(buf);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(buf); // 24 chars
     }
 
     @Transactional
@@ -726,6 +798,7 @@ public class ChatService {
 
         return new ChatMessageDTO(
                 m.getId(),
+                m.getConversationId(),
                 m.getSenderId(),
                 sender != null ? sender.getUsername() : null,
                 sender != null ? sender.getAvatarUrl() : null,
