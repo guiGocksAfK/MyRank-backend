@@ -4,5 +4,6 @@ public record UserUpdateDTO(
         String username,
         String bio,
         String language,
-        String avatarUrl
+        String avatarUrl,
+        Boolean isPublic
 ) {}

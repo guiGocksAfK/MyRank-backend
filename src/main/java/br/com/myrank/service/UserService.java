@@ -73,6 +73,10 @@ public class UserService {
             user.setBio(dto.bio());
         }
 
+        if (dto.isPublic() != null) {
+            user.setPublic(dto.isPublic());
+        }
+
         if (dto.language() != null) {
             String lang = dto.language().trim().toUpperCase();
             if (!java.util.Set.of("PT", "EN", "ES").contains(lang)) {
