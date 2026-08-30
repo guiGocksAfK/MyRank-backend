@@ -3,47 +3,46 @@ package br.com.myrank.repository;
 import br.com.myrank.domain.entity.Message;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
-    /** Histórico de uma conversa (os dois sentidos do par), mais recentes primeiro. */
+    /** Histórico de uma conversa, mais recentes primeiro. */
+    List<Message> findByConversationIdOrderByIdDesc(Long conversationId, Pageable pageable);
+
+    Optional<Message> findFirstByConversationIdOrderByIdDesc(Long conversationId);
+
+    /** Últimas mensagens de várias conversas (uma por conversa). */
     @Query("""
             select m from Message m
-            where (m.senderId = :a and m.recipientId = :b)
-               or (m.senderId = :b and m.recipientId = :a)
-            order by m.createdAt desc, m.id desc
+            where m.id in (
+                select max(m2.id) from Message m2 where m2.conversationId in :conversationIds group by m2.conversationId
+            )
             """)
-    List<Message> findConversation(@Param("a") Long a, @Param("b") Long b, Pageable pageable);
+    List<Message> findLastPerConversation(@Param("conversationIds") List<Long> conversationIds);
 
-    /** Mensagens envolvendo o usuário (qualquer sentido), mais recentes primeiro. */
+    /** Não-lidas de um membro numa conversa: id > cursor e não enviadas por ele. */
     @Query("""
-            select m from Message m
-            where m.senderId = :userId or m.recipientId = :userId
-            order by m.createdAt desc, m.id desc
+            select count(m) from Message m
+            where m.conversationId = :conversationId
+              and m.senderId <> :userId
+              and (:cursor is null or m.id > :cursor)
             """)
-    List<Message> findRecentForUser(@Param("userId") Long userId, Pageable pageable);
+    long countUnread(@Param("conversationId") Long conversationId,
+                     @Param("userId") Long userId,
+                     @Param("cursor") Long cursor);
 
-    long countByRecipientIdAndReadAtIsNull(Long recipientId);
-
-    /** [senderId, count] das não-lidas do usuário, agrupadas por remetente. */
+    /** Total de não-lidas do usuário em todas as conversas. */
     @Query("""
-            select m.senderId, count(m) from Message m
-            where m.recipientId = :userId and m.readAt is null
-            group by m.senderId
+            select count(m) from Message m, ConversationMember cm
+            where cm.conversationId = m.conversationId
+              and cm.userId = :userId
+              and m.senderId <> :userId
+              and (cm.lastReadMessageId is null or m.id > cm.lastReadMessageId)
             """)
-    List<Object[]> unreadCountsBySender(@Param("userId") Long userId);
-
-    /** Marca como lidas as mensagens que `me` recebeu de `other`. */
-    @Modifying
-    @Query("""
-            update Message m set m.readAt = :now
-            where m.recipientId = :me and m.senderId = :other and m.readAt is null
-            """)
-    int markConversationRead(@Param("me") Long me, @Param("other") Long other, @Param("now") LocalDateTime now);
+    long countUnreadTotal(@Param("userId") Long userId);
 }

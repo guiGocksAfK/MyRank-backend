@@ -11,6 +11,9 @@ CREATE TYPE plan_type AS ENUM ('FREE', 'PRO');
 CREATE TYPE feed_event_type AS ENUM ('RATED', 'ADDED', 'BADGE', 'TAKE');
 CREATE TYPE reaction_kind AS ENUM ('UP', 'AGREE', 'DISAGREE');
 CREATE TYPE notification_type AS ENUM ('REACTION', 'FOLLOW', 'TAKE');
+CREATE TYPE conversation_type AS ENUM ('DIRECT', 'GROUP');
+CREATE TYPE conversation_member_role AS ENUM ('OWNER', 'MEMBER');
+CREATE TYPE message_kind AS ENUM ('USER', 'SYSTEM');
 
 -- ---------------------------------------------------------
 -- USERS
@@ -280,30 +283,55 @@ CREATE UNIQUE INDEX uq_notif_follow   ON notifications (user_id, actor_id) WHERE
 CREATE UNIQUE INDEX uq_notif_take     ON notifications (user_id, feed_event_id) WHERE type = 'TAKE';
 
 -- ---------------------------------------------------------
--- MESSAGES — DM 1:1 entre usuários que se seguem mutuamente.
--- read_at NULL = não lida. Sem thread/room: o par (sender, recipient)
--- define a conversa. Real-time via polling (igual ao sininho).
+-- CHAT — conversas (DM + grupo) unificadas.
+-- DIRECT = conversa de 2 membros (DM). GROUP = nome + N membros + 1 OWNER.
+-- Não-lidas por membro via cursor last_read_message_id.
+-- Real-time via polling (igual ao sininho).
 -- ---------------------------------------------------------
-CREATE TABLE messages (
-    id            BIGSERIAL      PRIMARY KEY,
-    sender_id     BIGINT         NOT NULL,
-    recipient_id  BIGINT         NOT NULL,
-    body          VARCHAR(2000)  NOT NULL,
-    read_at       TIMESTAMP,
-    created_at    TIMESTAMP      NOT NULL DEFAULT now(),
+CREATE TABLE conversations (
+    id          BIGSERIAL         PRIMARY KEY,
+    type        conversation_type NOT NULL,
+    name        VARCHAR(80),                          -- null em DIRECT
+    created_by  BIGINT            NOT NULL,
+    created_at  TIMESTAMP         NOT NULL DEFAULT now(),
 
-    CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id)
-        REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_messages_recipient FOREIGN KEY (recipient_id)
-        REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT chk_messages_no_self CHECK (sender_id <> recipient_id)
+    CONSTRAINT fk_conversations_creator FOREIGN KEY (created_by)
+        REFERENCES users (id) ON DELETE CASCADE
 );
 
--- histórico de uma conversa (os dois sentidos do par)
-CREATE INDEX idx_messages_sender_recipient ON messages (sender_id, recipient_id, created_at DESC);
-CREATE INDEX idx_messages_recipient_sender ON messages (recipient_id, sender_id, created_at DESC);
--- contador de não-lidas por destinatário
-CREATE INDEX idx_messages_recipient_unread ON messages (recipient_id) WHERE read_at IS NULL;
+CREATE TABLE conversation_members (
+    id                    BIGSERIAL                PRIMARY KEY,
+    conversation_id       BIGINT                   NOT NULL,
+    user_id               BIGINT                   NOT NULL,
+    role                  conversation_member_role NOT NULL DEFAULT 'MEMBER',
+    last_read_message_id  BIGINT,                            -- cursor de leitura
+    joined_at             TIMESTAMP                NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_cm_conversation FOREIGN KEY (conversation_id)
+        REFERENCES conversations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_cm_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uq_cm UNIQUE (conversation_id, user_id)
+);
+
+CREATE INDEX idx_cm_user ON conversation_members (user_id);
+CREATE INDEX idx_cm_conversation ON conversation_members (conversation_id);
+
+CREATE TABLE messages (
+    id              BIGSERIAL     PRIMARY KEY,
+    conversation_id BIGINT        NOT NULL,
+    sender_id       BIGINT        NOT NULL,
+    kind            message_kind  NOT NULL DEFAULT 'USER',   -- SYSTEM = "fulano criou o grupo" etc
+    body            VARCHAR(2000) NOT NULL,
+    created_at      TIMESTAMP     NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_messages_conversation FOREIGN KEY (conversation_id)
+        REFERENCES conversations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id)
+        REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_messages_conversation ON messages (conversation_id, id DESC);
 
 -- ---------------------------------------------------------
 -- AI_INSIGHTS — analise de perfil gerada por IA (Gemini).
