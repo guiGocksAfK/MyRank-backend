@@ -1,10 +1,12 @@
 package br.com.myrank.repository;
 
 import br.com.myrank.domain.entity.Conversation;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
@@ -17,4 +19,15 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
                    where m.conversationId = c.id and m.userId in (:a, :b)) = 2
             """)
     Optional<Conversation> findDirectBetween(@Param("a") Long a, @Param("b") Long b);
+
+    /** Diretório: grupos OPEN/REQUEST cujo nome bate com a busca. */
+    @Query("""
+            select c from Conversation c
+            where c.type = br.com.myrank.domain.enums.ConversationType.GROUP
+              and c.access in (br.com.myrank.domain.enums.ConversationAccess.OPEN,
+                               br.com.myrank.domain.enums.ConversationAccess.REQUEST)
+              and (:q = '' or lower(c.name) like lower(concat('%', :q, '%')))
+            order by c.createdAt desc
+            """)
+    List<Conversation> searchDirectory(@Param("q") String q, Pageable pageable);
 }

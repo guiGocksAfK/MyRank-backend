@@ -1,5 +1,6 @@
 package br.com.myrank.domain.entity;
 
+import br.com.myrank.domain.enums.ConversationAccess;
 import br.com.myrank.domain.enums.ConversationType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -7,7 +8,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
-/** DM (DIRECT, 2 membros) ou grupo (GROUP, nome + N membros + 1 OWNER). */
+/** DM (DIRECT, 2 membros) ou grupo (GROUP, nome + foto + N membros + cargos). */
 @Entity
 @Table(name = "conversations")
 public class Conversation {
@@ -24,6 +25,15 @@ public class Conversation {
     /** null em DIRECT. */
     @Column(length = 80)
     private String name;
+
+    /** Foto do grupo (URL). null = usa iniciais. */
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "conversation_access")
+    private ConversationAccess access = ConversationAccess.CLOSED;
 
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
@@ -51,6 +61,12 @@ public class Conversation {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public ConversationAccess getAccess() { return access; }
+    public void setAccess(ConversationAccess access) { this.access = access; }
 
     public Long getCreatedBy() { return createdBy; }
     public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }

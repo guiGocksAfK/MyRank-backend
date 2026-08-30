@@ -31,6 +31,18 @@ public class Message {
     @Column(nullable = false, length = 2000)
     private String body;
 
+    /** Mensagem que esta responde (mesma conversa). null = não é resposta. */
+    @Column(name = "reply_to_id")
+    private Long replyToId;
+
+    /** not null = foi editada. */
+    @Column(name = "edited_at")
+    private LocalDateTime editedAt;
+
+    /** not null = apagada (vira lápide "mensagem apagada"). */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -61,6 +73,15 @@ public class Message {
 
     public String getBody() { return body; }
     public void setBody(String body) { this.body = body; }
+
+    public Long getReplyToId() { return replyToId; }
+    public void setReplyToId(Long replyToId) { this.replyToId = replyToId; }
+
+    public LocalDateTime getEditedAt() { return editedAt; }
+    public void setEditedAt(LocalDateTime editedAt) { this.editedAt = editedAt; }
+
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

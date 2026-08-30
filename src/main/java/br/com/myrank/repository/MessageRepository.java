@@ -45,4 +45,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
               and (cm.lastReadMessageId is null or m.id > cm.lastReadMessageId)
             """)
     long countUnreadTotal(@Param("userId") Long userId);
+
+    List<Message> findByIdIn(List<Long> ids);
 }
