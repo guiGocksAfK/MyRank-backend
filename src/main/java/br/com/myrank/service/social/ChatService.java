@@ -77,7 +77,7 @@ public class ChatService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
         assertMutual(me, otherId);
 
-        Conversation conv = conversationRepository.findDirectBetween(me, otherId).orElseGet(() -> {
+        Conversation conv = conversationRepository.findDirectBetween(ConversationType.DIRECT, me, otherId).orElseGet(() -> {
             Conversation fresh = conversationRepository.save(
                     new Conversation(ConversationType.DIRECT, null, me));
             memberRepository.save(new ConversationMember(fresh.getId(), me, ConversationMemberRole.MEMBER));
@@ -92,7 +92,7 @@ public class ChatService {
                                            String accessRaw, String imageUrlRaw) {
         String name = sanitizeName(nameRaw);
         ConversationAccess access = accessRaw == null || accessRaw.isBlank()
-                ? ConversationAccess.CLOSED : parseAccess(accessRaw);
+                ? ConversationAccess.REQUEST : parseAccess(accessRaw);
         String imageUrl = sanitizeImageUrl(imageUrlRaw);
 
         LinkedHashSet<Long> ids = new LinkedHashSet<>();
@@ -175,6 +175,7 @@ public class ChatService {
     public List<GroupDirectoryEntryDTO> directory(Long me, String qRaw, int page) {
         String q = qRaw == null ? "" : qRaw.trim();
         List<Conversation> convs = conversationRepository.searchDirectory(
+                ConversationType.GROUP, ConversationAccess.CLOSED,
                 q, PageRequest.of(Math.max(page, 0), DIRECTORY_PAGE));
         if (convs.isEmpty()) return List.of();
 
