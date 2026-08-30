@@ -25,6 +25,18 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
     Optional<Conversation> findByInviteToken(String inviteToken);
 
+    /** Ids dos usuários com quem `me` já tem uma conversa DIRECT. */
+    @Query("""
+            select distinct m2.userId
+            from ConversationMember m1, ConversationMember m2, Conversation c
+            where m1.conversationId = m2.conversationId
+              and c.id = m1.conversationId
+              and c.type = :direct
+              and m1.userId = :me
+              and m2.userId <> :me
+            """)
+    List<Long> findDirectPeerIds(@Param("me") Long me, @Param("direct") ConversationType direct);
+
     /** Diretório: grupos descobríveis (não-fechados) cujo nome bate com a busca. */
     @Query("""
             select c from Conversation c

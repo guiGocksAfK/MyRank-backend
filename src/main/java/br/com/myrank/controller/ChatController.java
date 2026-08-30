@@ -49,6 +49,12 @@ public class ChatController {
         return ResponseEntity.ok(chatService.startDirect(me(ud), userId));
     }
 
+    /** Quem você segue de volta e ainda não tem DM — pra sugerir "diga oi" na aba Diretas. */
+    @GetMapping("/directs/suggested")
+    public ResponseEntity<List<ChatUserDTO>> suggestedDirects(@AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.ok(chatService.suggestedDirects(me(ud)));
+    }
+
     @PatchMapping("/conversations/{id}")
     public ResponseEntity<ChatConversationDTO> updateGroup(
             @AuthenticationPrincipal UserDetails ud,

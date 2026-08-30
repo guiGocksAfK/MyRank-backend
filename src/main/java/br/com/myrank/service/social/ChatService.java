@@ -82,7 +82,6 @@ public class ChatService {
         }
         userRepository.findById(otherId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
-        assertMutual(me, otherId);
 
         Conversation conv = conversationRepository.findDirectBetween(ConversationType.DIRECT, me, otherId).orElseGet(() -> {
             Conversation fresh = conversationRepository.save(
@@ -878,12 +877,22 @@ public class ChatService {
         }
     }
 
-    private void assertMutual(Long me, Long other) {
-        boolean iFollow = followRepository.existsByFollowerIdAndFollowedId(me, other);
-        boolean followsMe = followRepository.existsByFollowerIdAndFollowedId(other, me);
-        if (!iFollow || !followsMe) {
-            throw new IllegalArgumentException("Vocês precisam se seguir mutuamente pra trocar mensagens.");
-        }
+    /** Usuários que você segue de volta e ainda não tem DM — pra sugerir "diga oi". */
+    @Transactional(readOnly = true)
+    public List<ChatUserDTO> suggestedDirects(Long me) {
+        Set<Long> iFollow = new HashSet<>(followRepository.findFollowedIds(me));
+        Set<Long> followMe = new HashSet<>(followRepository.findFollowerIds(me));
+        iFollow.retainAll(followMe); // mútuos
+        iFollow.remove(me);
+        if (iFollow.isEmpty()) return List.of();
+
+        iFollow.removeAll(conversationRepository.findDirectPeerIds(me, ConversationType.DIRECT));
+        if (iFollow.isEmpty()) return List.of();
+
+        return userRepository.findAllById(iFollow).stream()
+                .sorted(Comparator.comparing(u -> u.getUsername().toLowerCase()))
+                .map(u -> new ChatUserDTO(u.getId(), u.getUsername(), u.getAvatarUrl()))
+                .toList();
     }
 
     private String sanitizeName(String raw) {
