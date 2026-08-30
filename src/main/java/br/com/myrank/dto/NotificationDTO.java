@@ -17,6 +17,7 @@ public record NotificationDTO(
         String reactionKind,    // up | agree | disagree  (só REACTION)
         WorkMiniDTO work,       // contexto (post/take é sobre essa obra)
         Long feedEventId,
+        Long conversationId,    // contexto (GROUP_ADDED / GROUP_APPROVED)
         String title,
         String message
 ) {}

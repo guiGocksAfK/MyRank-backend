@@ -35,6 +35,10 @@ public class Notification {
     @Column(name = "feed_event_id")
     private Long feedEventId;
 
+    /** Contexto de GROUP_ADDED / GROUP_APPROVED. */
+    @Column(name = "conversation_id")
+    private Long conversationId;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "reaction_kind", columnDefinition = "reaction_kind")
@@ -79,6 +83,9 @@ public class Notification {
 
     public Long getFeedEventId() { return feedEventId; }
     public void setFeedEventId(Long feedEventId) { this.feedEventId = feedEventId; }
+
+    public Long getConversationId() { return conversationId; }
+    public void setConversationId(Long conversationId) { this.conversationId = conversationId; }
 
     public ReactionKind getReactionKind() { return reactionKind; }
     public void setReactionKind(ReactionKind reactionKind) { this.reactionKind = reactionKind; }

@@ -29,19 +29,22 @@ public class NotificationService {
     private final FollowRepository followRepository;
     private final WorkRepository workRepository;
     private final UserRepository userRepository;
+    private final ConversationRepository conversationRepository;
 
     public NotificationService(NotificationRepository notificationRepository,
                                FeedReactionRepository feedReactionRepository,
                                FeedEventRepository feedEventRepository,
                                FollowRepository followRepository,
                                WorkRepository workRepository,
-                               UserRepository userRepository) {
+                               UserRepository userRepository,
+                               ConversationRepository conversationRepository) {
         this.notificationRepository = notificationRepository;
         this.feedReactionRepository = feedReactionRepository;
         this.feedEventRepository = feedEventRepository;
         this.followRepository = followRepository;
         this.workRepository = workRepository;
         this.userRepository = userRepository;
+        this.conversationRepository = conversationRepository;
     }
 
     // ── Gatilhos (nunca lançam pra fora) ───────────────────────────────
@@ -131,6 +134,39 @@ public class NotificationService {
         }
     }
 
+    /** Um moderador adicionou o usuário num grupo. */
+    @Transactional
+    public void onAddedToGroup(Long recipientId, Long actorId, Long conversationId) {
+        upsertGroupNotification(NotificationType.GROUP_ADDED, recipientId, actorId, conversationId);
+    }
+
+    /** O pedido do usuário pra entrar num grupo foi aprovado. */
+    @Transactional
+    public void onJoinRequestApproved(Long recipientId, Long actorId, Long conversationId) {
+        upsertGroupNotification(NotificationType.GROUP_APPROVED, recipientId, actorId, conversationId);
+    }
+
+    private void upsertGroupNotification(NotificationType type, Long recipientId, Long actorId, Long conversationId) {
+        try {
+            if (recipientId == null || conversationId == null || recipientId.equals(actorId)) return;
+            Notification n = notificationRepository
+                    .findByUserIdAndTypeAndConversationId(recipientId, type, conversationId)
+                    .orElseGet(() -> {
+                        Notification fresh = new Notification();
+                        fresh.setUserId(recipientId);
+                        fresh.setType(type);
+                        fresh.setConversationId(conversationId);
+                        return fresh;
+                    });
+            n.setActorId(actorId);
+            n.setActorCount(1);
+            n.setRead(false);
+            notificationRepository.save(n);
+        } catch (Exception e) {
+            log.warn("upsertGroupNotification({}) falhou (conv {}): {}", type, conversationId, e.getMessage());
+        }
+    }
+
     // ── Leitura ────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
@@ -159,18 +195,22 @@ public class NotificationService {
         Map<Long, Work> works = workRepository.findAllById(
                         events.values().stream().map(FeedEvent::getWorkId).filter(Objects::nonNull).collect(Collectors.toSet()))
                 .stream().collect(Collectors.toMap(Work::getId, w -> w));
+        Map<Long, Conversation> convs = conversationRepository.findAllById(
+                        rows.stream().map(Notification::getConversationId).filter(Objects::nonNull).collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(Conversation::getId, c -> c));
 
         return rows.stream().map(n -> {
             User actor = n.getActorId() != null ? actors.get(n.getActorId()) : null;
             FeedEvent ev = n.getFeedEventId() != null ? events.get(n.getFeedEventId()) : null;
             Work work = ev != null && ev.getWorkId() != null ? works.get(ev.getWorkId()) : null;
-            return render(n, actor, ev, work);
+            Conversation conv = n.getConversationId() != null ? convs.get(n.getConversationId()) : null;
+            return render(n, actor, ev, work, conv);
         }).toList();
     }
 
     // ── Render pt-BR ───────────────────────────────────────────────────
 
-    private NotificationDTO render(Notification n, User actor, FeedEvent ev, Work work) {
+    private NotificationDTO render(Notification n, User actor, FeedEvent ev, Work work, Conversation conv) {
         String actorName = actor != null ? actor.getUsername() : "Alguém";
         String noun = ev != null && ev.getType() == FeedEventType.TAKE ? "take" : "post";
         String about = work != null ? " sobre " + work.getTitle() : "";
@@ -205,6 +245,16 @@ public class NotificationService {
                 title = "Novo take";
                 message = actorName + " postou um take" + about;
             }
+            case GROUP_ADDED -> {
+                String group = conv != null && conv.getName() != null ? conv.getName() : "um grupo";
+                title = "Você entrou num grupo";
+                message = actorName + " te adicionou em " + group;
+            }
+            case GROUP_APPROVED -> {
+                String group = conv != null && conv.getName() != null ? conv.getName() : "um grupo";
+                title = "Pedido aprovado";
+                message = actorName + " aprovou sua entrada em " + group;
+            }
             default -> {
                 title = "Notificação";
                 message = "";
@@ -222,6 +272,7 @@ public class NotificationService {
                 reactionKind,
                 workMini,
                 n.getFeedEventId(),
+                n.getConversationId(),
                 title,
                 message
         );
