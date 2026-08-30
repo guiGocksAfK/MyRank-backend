@@ -1,10 +1,13 @@
 package br.com.myrank.domain.entity;
 
+import br.com.myrank.domain.enums.MessageKind;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
-/** DM 1:1. A conversa é definida pelo par (sender, recipient) nos dois sentidos. */
+/** Mensagem numa conversa. `kind = SYSTEM` são avisos gerados pelo servidor. */
 @Entity
 @Table(name = "messages")
 public class Message {
@@ -13,18 +16,20 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "conversation_id", nullable = false)
+    private Long conversationId;
+
+    /** Autor. Em SYSTEM, o ator da ação. */
     @Column(name = "sender_id", nullable = false)
     private Long senderId;
 
-    @Column(name = "recipient_id", nullable = false)
-    private Long recipientId;
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "message_kind")
+    private MessageKind kind = MessageKind.USER;
 
     @Column(nullable = false, length = 2000)
     private String body;
-
-    /** NULL = não lida. */
-    @Column(name = "read_at")
-    private LocalDateTime readAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -36,25 +41,26 @@ public class Message {
 
     public Message() {}
 
-    public Message(Long senderId, Long recipientId, String body) {
+    public Message(Long conversationId, Long senderId, MessageKind kind, String body) {
+        this.conversationId = conversationId;
         this.senderId = senderId;
-        this.recipientId = recipientId;
+        this.kind = kind;
         this.body = body;
     }
 
     public Long getId() { return id; }
 
+    public Long getConversationId() { return conversationId; }
+    public void setConversationId(Long conversationId) { this.conversationId = conversationId; }
+
     public Long getSenderId() { return senderId; }
     public void setSenderId(Long senderId) { this.senderId = senderId; }
 
-    public Long getRecipientId() { return recipientId; }
-    public void setRecipientId(Long recipientId) { this.recipientId = recipientId; }
+    public MessageKind getKind() { return kind; }
+    public void setKind(MessageKind kind) { this.kind = kind; }
 
     public String getBody() { return body; }
     public void setBody(String body) { this.body = body; }
-
-    public LocalDateTime getReadAt() { return readAt; }
-    public void setReadAt(LocalDateTime readAt) { this.readAt = readAt; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }
