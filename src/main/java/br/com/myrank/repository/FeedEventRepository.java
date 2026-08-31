@@ -12,25 +12,25 @@ import java.util.List;
 public interface FeedEventRepository extends JpaRepository<FeedEvent, Long> {
 
     /**
-     * Feed do viewer: tudo de quem ele segue + ele mesmo (`userIds`), MAIS os
-     * takes de qualquer perfil público (timeline geral). `takeType` é passado
-     * como parâmetro de propósito — enum PG referenciado por literal em @Query
-     * gera cast quebrado no Hibernate.
+     * Feed = só TAKEs (posts escritos). Traz os takes de quem o viewer segue +
+     * ele mesmo (`userIds`) e os takes de qualquer perfil público (timeline geral).
+     * RATED / ADDED / BADGE não entram no feed. `takeType` vai como parâmetro de
+     * propósito — enum PG por literal em @Query gera cast quebrado no Hibernate.
      */
     @Query("""
             select e from FeedEvent e
-            where e.userId in :userIds
-               or (e.type = :takeType and exists (
-                       select 1 from User u where u.id = e.userId and u.isPublic = true))
+            where e.type = :takeType
+              and (e.userId in :userIds
+                   or exists (select 1 from User u where u.id = e.userId and u.isPublic = true))
             order by e.createdAt desc, e.id desc
             """)
     List<FeedEvent> findFeed(Collection<Long> userIds, FeedEventType takeType, Pageable pageable);
 
     @Query("""
             select count(e) from FeedEvent e
-            where e.userId in :userIds
-               or (e.type = :takeType and exists (
-                       select 1 from User u where u.id = e.userId and u.isPublic = true))
+            where e.type = :takeType
+              and (e.userId in :userIds
+                   or exists (select 1 from User u where u.id = e.userId and u.isPublic = true))
             """)
     long countFeed(Collection<Long> userIds, FeedEventType takeType);
 
