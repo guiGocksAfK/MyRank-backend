@@ -136,8 +136,9 @@ public class SocialService {
 
     @Transactional(readOnly = true)
     public List<SocialUserDTO> getSuggestions(Long viewerId) {
-        List<Long> followed = followRepository.findFollowedIds(viewerId);
-        List<Long> excluded = followed.isEmpty() ? List.of(-1L) : followed;
+        Set<Long> excluded = new HashSet<>(followRepository.findFollowedIds(viewerId));
+        excluded.addAll(followRequestRepository.findRequestedTargetIdsAll(viewerId)); // já pediu
+        if (excluded.isEmpty()) excluded.add(-1L);
         return userRepository
                 .findSuggestions(viewerId, excluded, PageRequest.of(0, MAX_LIST)).stream()
                 .map(u -> toSocialUser(u, viewerId))
