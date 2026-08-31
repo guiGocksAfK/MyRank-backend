@@ -83,13 +83,19 @@ public class ChatService {
         userRepository.findById(otherId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
 
-        Conversation conv = conversationRepository.findDirectBetween(ConversationType.DIRECT, me, otherId).orElseGet(() -> {
-            Conversation fresh = conversationRepository.save(
-                    new Conversation(ConversationType.DIRECT, null, me));
-            memberRepository.save(new ConversationMember(fresh.getId(), me, ConversationMemberRole.MEMBER));
-            memberRepository.save(new ConversationMember(fresh.getId(), otherId, ConversationMemberRole.MEMBER));
-            return fresh;
-        });
+        // serializa criações concorrentes do mesmo par (evita DM duplicada numa corrida)
+        conversationRepository.lockDirectPair(
+                (int) Math.min(me, otherId), (int) Math.max(me, otherId));
+
+        Conversation conv = conversationRepository
+                .findDirectsBetween(ConversationType.DIRECT, me, otherId).stream().findFirst()
+                .orElseGet(() -> {
+                    Conversation fresh = conversationRepository.save(
+                            new Conversation(ConversationType.DIRECT, null, me));
+                    memberRepository.save(new ConversationMember(fresh.getId(), me, ConversationMemberRole.MEMBER));
+                    memberRepository.save(new ConversationMember(fresh.getId(), otherId, ConversationMemberRole.MEMBER));
+                    return fresh;
+                });
         return toConversationDTO(conv.getId(), me);
     }
 
@@ -182,22 +188,20 @@ public class ChatService {
     @Transactional(readOnly = true)
     public List<GroupDirectoryEntryDTO> directory(Long me, String qRaw, int page) {
         String q = qRaw == null ? "" : qRaw.trim();
+        // a query já exclui grupos em que `me` é membro — aqui só resta NONE/PENDING
         List<Conversation> convs = conversationRepository.searchDirectory(
                 ConversationType.GROUP, ConversationAccess.CLOSED,
-                q, PageRequest.of(Math.max(page, 0), DIRECTORY_PAGE));
+                q, me, PageRequest.of(Math.max(page, 0), DIRECTORY_PAGE));
         if (convs.isEmpty()) return List.of();
 
         List<Long> ids = convs.stream().map(Conversation::getId).toList();
         Map<Long, Long> counts = memberRepository.findByConversationIdIn(ids).stream()
                 .collect(Collectors.groupingBy(ConversationMember::getConversationId, Collectors.counting()));
-        Set<Long> myConvIds = memberRepository.findByUserId(me).stream()
-                .map(ConversationMember::getConversationId).collect(Collectors.toSet());
         Set<Long> myPending = joinRequestRepository.findByUserId(me).stream()
                 .map(ConversationJoinRequest::getConversationId).collect(Collectors.toSet());
 
         return convs.stream().map(c -> {
-            String membership = myConvIds.contains(c.getId()) ? "MEMBER"
-                    : myPending.contains(c.getId()) ? "PENDING" : "NONE";
+            String membership = myPending.contains(c.getId()) ? "PENDING" : "NONE";
             return new GroupDirectoryEntryDTO(
                     c.getId(),
                     c.getName(),

@@ -77,6 +77,25 @@ public class SocialController {
         return ResponseEntity.ok(socialService.toggleFollow(me(ud), id));
     }
 
+    @GetMapping("/follow-requests")
+    public ResponseEntity<List<SocialUserDTO>> followRequests(@AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.ok(socialService.getFollowRequests(me(ud)));
+    }
+
+    @PostMapping("/follow-requests/{requesterId}/approve")
+    public ResponseEntity<Void> approveFollowRequest(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long requesterId) {
+        socialService.approveFollowRequest(me(ud), requesterId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/follow-requests/{requesterId}/reject")
+    public ResponseEntity<Void> rejectFollowRequest(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long requesterId) {
+        socialService.rejectFollowRequest(me(ud), requesterId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/feed/{eventId}/react")
     public ResponseEntity<ReactionSummaryDTO> react(
             @AuthenticationPrincipal UserDetails ud,
