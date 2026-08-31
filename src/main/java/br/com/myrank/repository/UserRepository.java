@@ -27,7 +27,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("""
             select u from User u
-            where u.isPublic = true and u.id <> :viewerId and u.id not in :excluded
+            where u.id <> :viewerId and u.id not in :excluded
             order by u.createdAt desc
             """)
     List<User> findSuggestions(Long viewerId, Collection<Long> excluded, Pageable pageable);

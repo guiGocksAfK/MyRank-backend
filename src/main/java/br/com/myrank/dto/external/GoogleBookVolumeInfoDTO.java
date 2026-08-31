@@ -46,7 +46,7 @@ public class GoogleBookVolumeInfoDTO {
     }
 
     /**
-     * Normaliza publishedDate para yyyy-MM-dd (compatível com TMDB/RAWG/Jikan).
+     * Normaliza publishedDate para yyyy-MM-dd (compatível com TMDB/RAWG/MyAnimeList).
      * O Google Books às vezes só tem ano ("2005") ou ano-mês ("2005-11") —
      * nesses casos completa com 01 para manter o formato de data válido.
      */

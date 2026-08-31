@@ -111,6 +111,86 @@ public class NotificationService {
         }
     }
 
+    /** Alguém pediu pra seguir um perfil privado (destinatário = dono do perfil). */
+    @Transactional
+    public void onFollowRequest(Long recipientId, Long actorId) {
+        try {
+            if (recipientId.equals(actorId)) return;
+            Notification n = notificationRepository
+                    .findByUserIdAndTypeAndActorId(recipientId, NotificationType.FOLLOW_REQUEST, actorId)
+                    .orElseGet(() -> {
+                        Notification fresh = new Notification();
+                        fresh.setUserId(recipientId);
+                        fresh.setType(NotificationType.FOLLOW_REQUEST);
+                        fresh.setActorId(actorId);
+                        return fresh;
+                    });
+            n.setActorCount(1);
+            n.setRead(false);
+            notificationRepository.save(n);
+        } catch (Exception e) {
+            log.warn("onFollowRequest falhou: {}", e.getMessage());
+        }
+    }
+
+    /** O dono de um perfil privado aceitou o pedido (destinatário = quem pediu). */
+    @Transactional
+    public void onFollowAccepted(Long recipientId, Long actorId) {
+        try {
+            if (recipientId.equals(actorId)) return;
+            Notification n = notificationRepository
+                    .findByUserIdAndTypeAndActorId(recipientId, NotificationType.FOLLOW_ACCEPTED, actorId)
+                    .orElseGet(() -> {
+                        Notification fresh = new Notification();
+                        fresh.setUserId(recipientId);
+                        fresh.setType(NotificationType.FOLLOW_ACCEPTED);
+                        fresh.setActorId(actorId);
+                        return fresh;
+                    });
+            n.setActorCount(1);
+            n.setRead(false);
+            notificationRepository.save(n);
+        } catch (Exception e) {
+            log.warn("onFollowAccepted falhou: {}", e.getMessage());
+        }
+    }
+
+    /** Alguém comentou (ou respondeu) num take — agregado por take (feed_event). */
+    @Transactional
+    public void onTakeComment(Long recipientId, Long actorId, Long feedEventId) {
+        try {
+            if (recipientId.equals(actorId) || feedEventId == null) return;
+            Notification n = notificationRepository
+                    .findFirstByUserIdAndTypeAndFeedEventId(recipientId, NotificationType.TAKE_COMMENT, feedEventId)
+                    .orElseGet(() -> {
+                        Notification fresh = new Notification();
+                        fresh.setUserId(recipientId);
+                        fresh.setType(NotificationType.TAKE_COMMENT);
+                        fresh.setFeedEventId(feedEventId);
+                        fresh.setActorCount(0);
+                        return fresh;
+                    });
+            n.setActorId(actorId);
+            n.setActorCount(n.getActorCount() + 1);
+            n.setRead(false);
+            notificationRepository.save(n);
+        } catch (Exception e) {
+            log.warn("onTakeComment falhou: {}", e.getMessage());
+        }
+    }
+
+    /** Remove a notificação "quer te seguir" quando o pedido é cancelado/recusado/aceito. */
+    @Transactional
+    public void clearFollowRequest(Long recipientId, Long actorId) {
+        try {
+            notificationRepository
+                    .findByUserIdAndTypeAndActorId(recipientId, NotificationType.FOLLOW_REQUEST, actorId)
+                    .ifPresent(notificationRepository::delete);
+        } catch (Exception e) {
+            log.warn("clearFollowRequest falhou: {}", e.getMessage());
+        }
+    }
+
     /** Fan-out: 1 notificação por seguidor do autor do take. */
     @Transactional
     public void onTakePosted(FeedEvent takeEvent, Long authorId) {
@@ -241,9 +321,28 @@ public class NotificationService {
                 title = "Novo seguidor";
                 message = actorName + " começou a te seguir";
             }
+            case FOLLOW_REQUEST -> {
+                title = "Pedido para seguir";
+                message = actorName + " quer te seguir";
+            }
+            case FOLLOW_ACCEPTED -> {
+                title = "Pedido aceito";
+                message = actorName + " aceitou seu pedido pra seguir";
+            }
             case TAKE -> {
                 title = "Novo take";
                 message = actorName + " postou um take" + about;
+            }
+            case TAKE_COMMENT -> {
+                if (n.getActorCount() <= 1) {
+                    title = "Novo comentário";
+                    message = actorName + " comentou no seu take" + about;
+                } else {
+                    int others = n.getActorCount() - 1;
+                    title = "Comentários no seu take";
+                    message = actorName + " e mais " + others + (others == 1 ? " pessoa" : " pessoas")
+                            + " comentaram no seu take" + about;
+                }
             }
             case GROUP_ADDED -> {
                 String group = conv != null && conv.getName() != null ? conv.getName() : "um grupo";

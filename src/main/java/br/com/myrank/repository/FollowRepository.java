@@ -1,6 +1,7 @@
 package br.com.myrank.repository;
 
 import br.com.myrank.domain.entity.Follow;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -22,4 +23,7 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
 
     @Query("select f.followerId from Follow f where f.followedId = :userId")
     List<Long> findFollowerIds(Long userId);
+
+    @Query("select f.followerId from Follow f where f.followedId = :userId order by f.createdAt desc")
+    List<Long> findRecentFollowerIds(Long userId, Pageable pageable);
 }

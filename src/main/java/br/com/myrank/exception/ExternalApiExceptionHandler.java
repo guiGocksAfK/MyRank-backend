@@ -11,7 +11,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 
 /**
- * Trata falhas vindas das integrações externas (TMDB, RAWG, Jikan) de forma
+ * Trata falhas vindas das integrações externas (TMDB, RAWG, MyAnimeList) de forma
  * centralizada. Sem isso, uma RestClientException não capturada nos services
  * sobe sem tratamento específico e pode ser confundida com erro de autenticação
  * pelo cliente — por isso sempre devolvemos um status e mensagem claros aqui.

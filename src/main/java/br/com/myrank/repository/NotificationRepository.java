@@ -29,6 +29,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     boolean existsByUserIdAndTypeAndFeedEventId(
             Long userId, NotificationType type, Long feedEventId);
 
+    Optional<Notification> findFirstByUserIdAndTypeAndFeedEventId(
+            Long userId, NotificationType type, Long feedEventId);
+
     /** Bulk update: não dispara @PreUpdate, então updatedAt (e a ordem da lista) não muda. */
     @Modifying
     @Query("update Notification n set n.read = true where n.userId = :userId and n.read = false")

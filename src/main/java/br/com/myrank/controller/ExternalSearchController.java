@@ -3,7 +3,7 @@ package br.com.myrank.controller;
 import br.com.myrank.dto.external.ExternalSearchResultDTO;
 import br.com.myrank.dto.external.ExternalWorkDetailsDTO;
 import br.com.myrank.service.external.GoogleBooksService;
-import br.com.myrank.service.external.JikanService;
+import br.com.myrank.service.external.MyAnimeListService;
 import br.com.myrank.service.external.RawgService;
 import br.com.myrank.service.external.ShowcaseService;
 import br.com.myrank.service.external.TmdbService;
@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Endpoints de busca em bases externas: TMDB (filmes/séries), RAWG (jogos),
- * Jikan (anime), Google Books (livros).
+ * MyAnimeList (anime), Google Books (livros).
  * Protegido pela mesma SecurityConfig já existente (usuário precisa estar logado).
  */
 @RestController
@@ -23,16 +23,16 @@ public class ExternalSearchController {
 
     private final TmdbService tmdbService;
     private final RawgService rawgService;
-    private final JikanService jikanService;
+    private final MyAnimeListService myAnimeListService;
     private final GoogleBooksService googleBooksService;
     private final ShowcaseService showcaseService;
 
     public ExternalSearchController(TmdbService tmdbService, RawgService rawgService,
-                                    JikanService jikanService, GoogleBooksService googleBooksService,
+                                    MyAnimeListService myAnimeListService, GoogleBooksService googleBooksService,
                                     ShowcaseService showcaseService) {
         this.tmdbService = tmdbService;
         this.rawgService = rawgService;
-        this.jikanService = jikanService;
+        this.myAnimeListService = myAnimeListService;
         this.googleBooksService = googleBooksService;
         this.showcaseService = showcaseService;
     }
@@ -64,7 +64,7 @@ public class ExternalSearchController {
 
     @GetMapping("/search/anime")
     public ResponseEntity<List<ExternalSearchResultDTO>> searchAnime(@RequestParam String query) {
-        return ResponseEntity.ok(jikanService.searchAnime(query));
+        return ResponseEntity.ok(myAnimeListService.searchAnime(query));
     }
 
     @GetMapping("/search/books")
@@ -89,7 +89,7 @@ public class ExternalSearchController {
 
     @GetMapping("/anime/{id}")
     public ResponseEntity<ExternalWorkDetailsDTO> getAnimeDetails(@PathVariable Long id) {
-        return ResponseEntity.ok(jikanService.getAnimeDetails(id));
+        return ResponseEntity.ok(myAnimeListService.getAnimeDetails(id));
     }
 
     @GetMapping("/books/{id}")

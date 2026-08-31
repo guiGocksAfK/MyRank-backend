@@ -1,18 +1,16 @@
 package br.com.myrank.dto.external;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
+/** Estúdio na API oficial do MyAnimeList: { id, name }. */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class JikanStudioDTO {
+public class MalStudioDTO {
 
-    @JsonProperty("mal_id")
-    private Long malId;
-
+    private Long id;
     private String name;
 
-    public Long getMalId() { return malId; }
-    public void setMalId(Long malId) { this.malId = malId; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
