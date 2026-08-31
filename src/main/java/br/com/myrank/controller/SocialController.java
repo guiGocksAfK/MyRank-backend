@@ -4,6 +4,7 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.*;
 import br.com.myrank.security.AuthUtils;
 import br.com.myrank.service.social.SocialService;
+import br.com.myrank.service.social.TakeCommentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,10 +17,13 @@ import java.util.List;
 public class SocialController {
 
     private final SocialService socialService;
+    private final TakeCommentService takeCommentService;
     private final AuthUtils authUtils;
 
-    public SocialController(SocialService socialService, AuthUtils authUtils) {
+    public SocialController(SocialService socialService, TakeCommentService takeCommentService,
+                            AuthUtils authUtils) {
         this.socialService = socialService;
+        this.takeCommentService = takeCommentService;
         this.authUtils = authUtils;
     }
 
@@ -108,6 +112,27 @@ public class SocialController {
     public ResponseEntity<FeedItemDTO> postTake(
             @AuthenticationPrincipal UserDetails ud, @RequestBody PostTakeDTO body) {
         return ResponseEntity.ok(socialService.postTake(me(ud), body));
+    }
+
+    @GetMapping("/takes/{takeId}/comments")
+    public ResponseEntity<List<TakeCommentDTO>> listComments(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long takeId) {
+        return ResponseEntity.ok(takeCommentService.list(me(ud), takeId));
+    }
+
+    @PostMapping("/takes/{takeId}/comments")
+    public ResponseEntity<TakeCommentDTO> addComment(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long takeId,
+            @RequestBody PostCommentDTO body) {
+        return ResponseEntity.ok(
+                takeCommentService.add(me(ud), takeId, body.text(), body.parentCommentId()));
+    }
+
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<Void> deleteComment(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long commentId) {
+        takeCommentService.delete(me(ud), commentId);
+        return ResponseEntity.noContent().build();
     }
 
     private Long me(UserDetails ud) {

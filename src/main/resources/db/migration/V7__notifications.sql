@@ -32,5 +32,6 @@ CREATE UNIQUE INDEX uq_notif_follow   ON notifications (user_id, actor_id) WHERE
 CREATE UNIQUE INDEX uq_notif_follow_req ON notifications (user_id, actor_id) WHERE type = 'FOLLOW_REQUEST';
 CREATE UNIQUE INDEX uq_notif_follow_acc ON notifications (user_id, actor_id) WHERE type = 'FOLLOW_ACCEPTED';
 CREATE UNIQUE INDEX uq_notif_take     ON notifications (user_id, feed_event_id) WHERE type = 'TAKE';
+CREATE UNIQUE INDEX uq_notif_take_comment ON notifications (user_id, feed_event_id) WHERE type = 'TAKE_COMMENT';
 CREATE UNIQUE INDEX uq_notif_group    ON notifications (user_id, conversation_id, type)
     WHERE type IN ('GROUP_ADDED', 'GROUP_APPROVED');

@@ -55,6 +55,24 @@ CREATE TABLE takes (
 
 CREATE INDEX idx_takes_work ON takes (work_id);
 
+-- Comentários num take. 2 níveis (estilo Instagram): parent_comment_id null = raiz,
+-- senão = resposta. Responder a uma resposta continua preso à raiz (o serviço achata).
+CREATE TABLE take_comment (
+    id                BIGSERIAL    PRIMARY KEY,
+    take_id           BIGINT       NOT NULL,
+    user_id           BIGINT       NOT NULL,
+    parent_comment_id BIGINT,
+    text              VARCHAR(500) NOT NULL,
+    created_at        TIMESTAMP    NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_tc_take   FOREIGN KEY (take_id)           REFERENCES takes (id)        ON DELETE CASCADE,
+    CONSTRAINT fk_tc_user   FOREIGN KEY (user_id)           REFERENCES users (id)        ON DELETE CASCADE,
+    CONSTRAINT fk_tc_parent FOREIGN KEY (parent_comment_id) REFERENCES take_comment (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_take_comment_take   ON take_comment (take_id, created_at);
+CREATE INDEX idx_take_comment_parent ON take_comment (parent_comment_id);
+
 -- Feed materializado: 1 linha por ação relevante (RATED, ADDED, BADGE, TAKE).
 CREATE TABLE feed_events (
     id          BIGSERIAL       PRIMARY KEY,

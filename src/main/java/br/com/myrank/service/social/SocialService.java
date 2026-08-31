@@ -27,6 +27,7 @@ public class SocialService {
     private final FeedEventRepository feedEventRepository;
     private final FeedReactionRepository feedReactionRepository;
     private final TakeRepository takeRepository;
+    private final TakeCommentRepository takeCommentRepository;
     private final WorkRepository workRepository;
     private final UserRepository userRepository;
     private final UserBadgeRepository userBadgeRepository;
@@ -39,6 +40,7 @@ public class SocialService {
                          FeedEventRepository feedEventRepository,
                          FeedReactionRepository feedReactionRepository,
                          TakeRepository takeRepository,
+                         TakeCommentRepository takeCommentRepository,
                          WorkRepository workRepository,
                          UserRepository userRepository,
                          UserBadgeRepository userBadgeRepository,
@@ -50,6 +52,7 @@ public class SocialService {
         this.feedEventRepository = feedEventRepository;
         this.feedReactionRepository = feedReactionRepository;
         this.takeRepository = takeRepository;
+        this.takeCommentRepository = takeCommentRepository;
         this.workRepository = workRepository;
         this.userRepository = userRepository;
         this.userBadgeRepository = userBadgeRepository;
@@ -91,12 +94,20 @@ public class SocialService {
                 .findByFeedEventIdIn(events.stream().map(FeedEvent::getId).toList())
                 .stream().collect(Collectors.groupingBy(FeedReaction::getFeedEventId));
 
+        Set<Long> takeIds = idsOf(events, FeedEvent::getTakeId);
+        Map<Long, Integer> commentCounts = new HashMap<>();
+        if (!takeIds.isEmpty()) {
+            takeCommentRepository.countByTakeIdIn(takeIds).forEach(row ->
+                    commentCounts.put((Long) row[0], ((Number) row[1]).intValue()));
+        }
+
         return events.stream().map(e -> toFeedItem(
                 e,
                 users.get(e.getUserId()),
                 e.getWorkId() != null ? works.get(e.getWorkId()) : null,
                 e.getBadgeId() != null ? badges.get(e.getBadgeId()) : null,
                 e.getTakeId() != null ? takes.get(e.getTakeId()) : null,
+                e.getTakeId() != null ? commentCounts.getOrDefault(e.getTakeId(), 0) : 0,
                 summarize(reactionsByEvent.getOrDefault(e.getId(), List.of()), viewerId)
         )).toList();
     }
@@ -327,7 +338,7 @@ public class SocialService {
         notificationService.onTakePosted(event, viewerId);
         User me = userRepository.findById(viewerId).orElseThrow();
 
-        return toFeedItem(event, me, work, null, take, new ReactionSummaryDTO(0, 0, 0, null));
+        return toFeedItem(event, me, work, null, take, 0, new ReactionSummaryDTO(0, 0, 0, null));
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────
@@ -339,7 +350,7 @@ public class SocialService {
     }
 
     private FeedItemDTO toFeedItem(FeedEvent e, User actor, Work work, Badge badge, Take take,
-                                   ReactionSummaryDTO reactions) {
+                                   int commentCount, ReactionSummaryDTO reactions) {
         return new FeedItemDTO(
                 e.getId(),
                 e.getType().name(),
@@ -348,6 +359,8 @@ public class SocialService {
                 work == null ? null : toWorkMini(work),
                 badge == null ? null : new BadgeMiniDTO(badge.getCode(), badge.getName(), badge.getIcon()),
                 take == null ? null : take.getText(),
+                take == null ? null : take.getId(),
+                commentCount,
                 e.getScore(),
                 reactions
         );
