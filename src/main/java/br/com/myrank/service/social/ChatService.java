@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,6 +33,7 @@ public class ChatService {
 
     private static final int BODY_MAX = 2000;
     private static final int NAME_MAX = 80;
+    private static final int DESC_MAX = 300;
     private static final int HISTORY_MAX = 100;
     private static final int GROUP_MAX = 50;
     private static final int IMAGE_URL_MAX = 1000;
@@ -42,6 +44,8 @@ public class ChatService {
             "👍", "❤️", "😂", "😮", "😢",
             "😠", "🎉", "🔥", "👀", "🙏");
 
+    private static final SecureRandom RNG = new SecureRandom();
+
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository memberRepository;
     private final ConversationJoinRequestRepository joinRequestRepository;
@@ -49,6 +53,7 @@ public class ChatService {
     private final MessageReactionRepository reactionRepository;
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public ChatService(ConversationRepository conversationRepository,
                        ConversationMemberRepository memberRepository,
@@ -56,7 +61,8 @@ public class ChatService {
                        MessageRepository messageRepository,
                        MessageReactionRepository reactionRepository,
                        FollowRepository followRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       NotificationService notificationService) {
         this.conversationRepository = conversationRepository;
         this.memberRepository = memberRepository;
         this.joinRequestRepository = joinRequestRepository;
@@ -64,6 +70,7 @@ public class ChatService {
         this.reactionRepository = reactionRepository;
         this.followRepository = followRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     // ── Início de conversa ──────────────────────────────────────────────
@@ -75,7 +82,6 @@ public class ChatService {
         }
         userRepository.findById(otherId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
-        assertMutual(me, otherId);
 
         Conversation conv = conversationRepository.findDirectBetween(ConversationType.DIRECT, me, otherId).orElseGet(() -> {
             Conversation fresh = conversationRepository.save(
@@ -89,11 +95,12 @@ public class ChatService {
 
     @Transactional
     public ChatConversationDTO createGroup(Long me, String nameRaw, List<Long> memberIdsRaw,
-                                           String accessRaw, String imageUrlRaw) {
+                                           String accessRaw, String imageUrlRaw, String descriptionRaw) {
         String name = sanitizeName(nameRaw);
         ConversationAccess access = accessRaw == null || accessRaw.isBlank()
                 ? ConversationAccess.REQUEST : parseAccess(accessRaw);
         String imageUrl = sanitizeImageUrl(imageUrlRaw);
+        String description = sanitizeDescription(descriptionRaw);
 
         LinkedHashSet<Long> ids = new LinkedHashSet<>();
         if (memberIdsRaw != null) memberIdsRaw.forEach(id -> { if (id != null) ids.add(id); });
@@ -106,6 +113,7 @@ public class ChatService {
         Conversation conv = new Conversation(ConversationType.GROUP, name, me);
         conv.setAccess(access);
         conv.setImageUrl(imageUrl);
+        conv.setDescription(description);
         conv = conversationRepository.save(conv);
 
         memberRepository.save(new ConversationMember(conv.getId(), me, ConversationMemberRole.OWNER));
@@ -193,6 +201,7 @@ public class ChatService {
             return new GroupDirectoryEntryDTO(
                     c.getId(),
                     c.getName(),
+                    c.getDescription(),
                     c.getImageUrl(),
                     c.getAccess().name(),
                     Math.toIntExact(counts.getOrDefault(c.getId(), 0L)),
@@ -277,6 +286,7 @@ public class ChatService {
             }
             memberRepository.save(new ConversationMember(convId, targetId, ConversationMemberRole.MEMBER));
             system(convId, me, nameOf(targetId) + " entrou no grupo");
+            notificationService.onJoinRequestApproved(targetId, me, convId);
         }
     }
 
@@ -405,15 +415,35 @@ public class ChatService {
         return oneMessageDTO(msg, me);
     }
 
+    /** Marca lido até a última mensagem. Retorna o id marcado, ou null se nada mudou. */
     @Transactional
-    public void markRead(Long me, Long convId) {
+    public Long markRead(Long me, Long convId) {
         ConversationMember member = assertMember(convId, me);
-        messageRepository.findFirstByConversationIdOrderByIdDesc(convId).ifPresent(last -> {
-            if (member.getLastReadMessageId() == null || last.getId() > member.getLastReadMessageId()) {
-                member.setLastReadMessageId(last.getId());
-                memberRepository.save(member);
-            }
-        });
+        Message last = messageRepository.findFirstByConversationIdOrderByIdDesc(convId).orElse(null);
+        if (last == null) return null;
+        if (member.getLastReadMessageId() == null || last.getId() > member.getLastReadMessageId()) {
+            member.setLastReadMessageId(last.getId());
+            memberRepository.save(member);
+            return last.getId();
+        }
+        return null;
+    }
+
+    /** Nome de quem está numa conversa (valida que participa). Pro "digitando…". */
+    @Transactional(readOnly = true)
+    public String memberName(Long me, Long convId) {
+        assertMember(convId, me);
+        return userRepository.findById(me).map(User::getUsername).orElse("Alguém");
+    }
+
+    /** Heartbeat de presença — chamado no poll de não-lidas (~60s). */
+    @Transactional
+    public void heartbeat(Long me) {
+        try {
+            userRepository.updateLastSeen(me, LocalDateTime.now());
+        } catch (Exception ignored) {
+            // presença é best-effort
+        }
     }
 
     // ── Membros / cargos ───────────────────────────────────────────────
@@ -468,6 +498,7 @@ public class ChatService {
             joinRequestRepository.findByConversationIdAndUserId(convId, id)
                     .ifPresent(joinRequestRepository::delete);
             memberRepository.save(new ConversationMember(convId, id, ConversationMemberRole.MEMBER));
+            notificationService.onAddedToGroup(id, me, convId);
         }
         system(convId, me, nameOf(me) + " adicionou " + humanJoin(
                 found.stream().map(User::getUsername).toList()));
@@ -571,6 +602,21 @@ public class ChatService {
                 }
             }
         }
+        if (dto.description() != null) {
+            String v = dto.description().trim();
+            if (v.isEmpty()) {
+                if (conv.getDescription() != null) {
+                    conv.setDescription(null);
+                    system(convId, me, nameOf(me) + " removeu a descrição do grupo");
+                }
+            } else {
+                String desc = sanitizeDescription(v);
+                if (!desc.equals(conv.getDescription())) {
+                    conv.setDescription(desc);
+                    system(convId, me, nameOf(me) + " atualizou a descrição do grupo");
+                }
+            }
+        }
         if (dto.access() != null) {
             ConversationAccess access = parseAccess(dto.access());
             if (access != conv.getAccess()) {
@@ -583,6 +629,70 @@ public class ChatService {
         }
         conversationRepository.save(conv);
         return toConversationDTO(convId, me);
+    }
+
+    // ── Grupo: link de convite (reutilizável + revogável) ──────────────
+
+    @Transactional(readOnly = true)
+    public String getInviteToken(Long me, Long convId) {
+        Conversation conv = requireInviteManager(me, convId, "veem");
+        return conv.getInviteToken();
+    }
+
+    @Transactional
+    public String rotateInviteToken(Long me, Long convId) {
+        Conversation conv = requireInviteManager(me, convId, "geram");
+        String token = newInviteToken();
+        conv.setInviteToken(token);
+        conversationRepository.save(conv);
+        system(convId, me, nameOf(me) + " gerou um novo link de convite");
+        return token;
+    }
+
+    @Transactional
+    public void revokeInviteToken(Long me, Long convId) {
+        Conversation conv = requireInviteManager(me, convId, "revogam");
+        if (conv.getInviteToken() != null) {
+            conv.setInviteToken(null);
+            conversationRepository.save(conv);
+            system(convId, me, nameOf(me) + " revogou o link de convite");
+        }
+    }
+
+    @Transactional
+    public ChatConversationDTO acceptInvite(Long me, String tokenRaw) {
+        String token = tokenRaw == null ? "" : tokenRaw.trim();
+        if (token.isEmpty()) throw new IllegalArgumentException("Convite inválido.");
+        Conversation conv = conversationRepository.findByInviteToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Esse convite não vale mais."));
+        requireGroup(conv);
+
+        if (!memberRepository.existsByConversationIdAndUserId(conv.getId(), me)) {
+            if (memberRepository.countByConversationId(conv.getId()) >= GROUP_MAX) {
+                throw new IllegalArgumentException("O grupo está cheio.");
+            }
+            joinRequestRepository.findByConversationIdAndUserId(conv.getId(), me)
+                    .ifPresent(joinRequestRepository::delete);
+            memberRepository.save(new ConversationMember(conv.getId(), me, ConversationMemberRole.MEMBER));
+            system(conv.getId(), me, nameOf(me) + " entrou no grupo pelo link de convite");
+        }
+        return toConversationDTO(conv.getId(), me);
+    }
+
+    private Conversation requireInviteManager(Long me, Long convId, String verb) {
+        ConversationMember myMembership = assertMember(convId, me);
+        Conversation conv = getConversation(convId);
+        requireGroup(conv);
+        if (!myMembership.getRole().canEditGroup()) {
+            throw new IllegalArgumentException("Só o dono ou admins " + verb + " o link de convite.");
+        }
+        return conv;
+    }
+
+    private static String newInviteToken() {
+        byte[] buf = new byte[18];
+        RNG.nextBytes(buf);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(buf); // 24 chars
     }
 
     @Transactional
@@ -627,17 +737,21 @@ public class ChatService {
                                          Long me,
                                          int pendingRequests) {
         ChatUserDTO peer = null;
+        Long peerLastReadId = null;
+        LocalDateTime peerLastSeenAt = null;
         if (conv.getType() == ConversationType.DIRECT) {
-            peer = members.stream()
+            ConversationMember peerMember = members.stream()
                     .filter(m -> !m.getUserId().equals(me))
                     .findFirst()
-                    .map(m -> {
-                        User u = users.get(m.getUserId());
-                        return new ChatUserDTO(m.getUserId(),
-                                u != null ? u.getUsername() : "Usuário",
-                                u != null ? u.getAvatarUrl() : null);
-                    })
                     .orElse(null);
+            if (peerMember != null) {
+                User u = users.get(peerMember.getUserId());
+                peer = new ChatUserDTO(peerMember.getUserId(),
+                        u != null ? u.getUsername() : "Usuário",
+                        u != null ? u.getAvatarUrl() : null);
+                peerLastReadId = peerMember.getLastReadMessageId();
+                peerLastSeenAt = u != null ? u.getLastSeenAt() : null;
+            }
         }
 
         String lastSenderName = null;
@@ -658,6 +772,7 @@ public class ChatService {
                 conv.getId(),
                 conv.getType().name(),
                 conv.getName(),
+                conv.getDescription(),
                 conv.getImageUrl(),
                 conv.getAccess().name(),
                 peer,
@@ -669,7 +784,10 @@ public class ChatService {
                 lastMine,
                 lastKind,
                 last != null ? last.getCreatedAt() : conv.getCreatedAt(),
-                unread
+                unread,
+                myMembership.getLastReadMessageId(),
+                peerLastReadId,
+                peerLastSeenAt
         );
     }
 
@@ -726,6 +844,7 @@ public class ChatService {
 
         return new ChatMessageDTO(
                 m.getId(),
+                m.getConversationId(),
                 m.getSenderId(),
                 sender != null ? sender.getUsername() : null,
                 sender != null ? sender.getAvatarUrl() : null,
@@ -758,12 +877,22 @@ public class ChatService {
         }
     }
 
-    private void assertMutual(Long me, Long other) {
-        boolean iFollow = followRepository.existsByFollowerIdAndFollowedId(me, other);
-        boolean followsMe = followRepository.existsByFollowerIdAndFollowedId(other, me);
-        if (!iFollow || !followsMe) {
-            throw new IllegalArgumentException("Vocês precisam se seguir mutuamente pra trocar mensagens.");
-        }
+    /** Usuários que você segue de volta e ainda não tem DM — pra sugerir "diga oi". */
+    @Transactional(readOnly = true)
+    public List<ChatUserDTO> suggestedDirects(Long me) {
+        Set<Long> iFollow = new HashSet<>(followRepository.findFollowedIds(me));
+        Set<Long> followMe = new HashSet<>(followRepository.findFollowerIds(me));
+        iFollow.retainAll(followMe); // mútuos
+        iFollow.remove(me);
+        if (iFollow.isEmpty()) return List.of();
+
+        iFollow.removeAll(conversationRepository.findDirectPeerIds(me, ConversationType.DIRECT));
+        if (iFollow.isEmpty()) return List.of();
+
+        return userRepository.findAllById(iFollow).stream()
+                .sorted(Comparator.comparing(u -> u.getUsername().toLowerCase()))
+                .map(u -> new ChatUserDTO(u.getId(), u.getUsername(), u.getAvatarUrl()))
+                .toList();
     }
 
     private String sanitizeName(String raw) {
@@ -771,6 +900,17 @@ public class ChatService {
         if (name.isEmpty()) throw new IllegalArgumentException("Dê um nome ao grupo.");
         if (name.length() > NAME_MAX) throw new IllegalArgumentException("O nome passa de " + NAME_MAX + " caracteres.");
         return name;
+    }
+
+    /** null = sem descrição; senão valida tamanho. */
+    private String sanitizeDescription(String raw) {
+        if (raw == null) return null;
+        String desc = raw.trim();
+        if (desc.isEmpty()) return null;
+        if (desc.length() > DESC_MAX) {
+            throw new IllegalArgumentException("A descrição passa de " + DESC_MAX + " caracteres.");
+        }
+        return desc;
     }
 
     /** null = sem foto; senão valida https e tamanho. */

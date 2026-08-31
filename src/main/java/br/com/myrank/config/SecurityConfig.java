@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/external/showcase").permitAll()
+                        .requestMatchers("/ws/**").permitAll() // handshake SockJS; o STOMP CONNECT carrega o JWT
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

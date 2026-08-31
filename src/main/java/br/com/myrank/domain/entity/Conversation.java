@@ -26,6 +26,10 @@ public class Conversation {
     @Column(length = 80)
     private String name;
 
+    /** Descrição do grupo (só GROUP). null = sem. */
+    @Column(length = 300)
+    private String description;
+
     /** Foto do grupo (URL). null = usa iniciais. */
     @Column(name = "image_url", length = 1000)
     private String imageUrl;
@@ -34,6 +38,10 @@ public class Conversation {
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false, columnDefinition = "conversation_access")
     private ConversationAccess access = ConversationAccess.CLOSED;
+
+    /** Link de convite do grupo (só GROUP). null = nenhum link ativo. */
+    @Column(name = "invite_token", length = 32)
+    private String inviteToken;
 
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
@@ -62,11 +70,17 @@ public class Conversation {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     public ConversationAccess getAccess() { return access; }
     public void setAccess(ConversationAccess access) { this.access = access; }
+
+    public String getInviteToken() { return inviteToken; }
+    public void setInviteToken(String inviteToken) { this.inviteToken = inviteToken; }
 
     public Long getCreatedBy() { return createdBy; }
     public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }

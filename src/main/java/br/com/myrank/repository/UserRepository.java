@@ -4,13 +4,20 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.enums.AuthProvider;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
+
+    @Modifying
+    @Query("update User u set u.lastSeenAt = :now where u.id = :id")
+    void updateLastSeen(@Param("id") Long id, @Param("now") LocalDateTime now);
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
     Optional<User> findByAuthProviderAndProviderId(AuthProvider authProvider, String providerId);

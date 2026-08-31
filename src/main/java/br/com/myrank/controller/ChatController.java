@@ -3,6 +3,7 @@ package br.com.myrank.controller;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.chat.*;
 import br.com.myrank.security.AuthUtils;
+import br.com.myrank.service.social.ChatRealtimeService;
 import br.com.myrank.service.social.ChatService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,10 +18,12 @@ import java.util.Map;
 public class ChatController {
 
     private final ChatService chatService;
+    private final ChatRealtimeService realtime;
     private final AuthUtils authUtils;
 
-    public ChatController(ChatService chatService, AuthUtils authUtils) {
+    public ChatController(ChatService chatService, ChatRealtimeService realtime, AuthUtils authUtils) {
         this.chatService = chatService;
+        this.realtime = realtime;
         this.authUtils = authUtils;
     }
 
@@ -34,8 +37,10 @@ public class ChatController {
     @PostMapping("/conversations")
     public ResponseEntity<ChatConversationDTO> createGroup(
             @AuthenticationPrincipal UserDetails ud, @RequestBody CreateGroupDTO body) {
-        return ResponseEntity.ok(chatService.createGroup(
-                me(ud), body.name(), body.memberIds(), body.access(), body.imageUrl()));
+        ChatConversationDTO dto = chatService.createGroup(
+                me(ud), body.name(), body.memberIds(), body.access(), body.imageUrl(), body.description());
+        realtime.touch(dto.id());
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/direct/{userId}")
@@ -44,18 +49,60 @@ public class ChatController {
         return ResponseEntity.ok(chatService.startDirect(me(ud), userId));
     }
 
+    /** Quem você segue de volta e ainda não tem DM — pra sugerir "diga oi" na aba Diretas. */
+    @GetMapping("/directs/suggested")
+    public ResponseEntity<List<ChatUserDTO>> suggestedDirects(@AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.ok(chatService.suggestedDirects(me(ud)));
+    }
+
     @PatchMapping("/conversations/{id}")
     public ResponseEntity<ChatConversationDTO> updateGroup(
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
             @RequestBody UpdateGroupDTO body) {
-        return ResponseEntity.ok(chatService.updateGroup(me(ud), id, body));
+        ChatConversationDTO dto = chatService.updateGroup(me(ud), id, body);
+        realtime.touch(id);
+        return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/conversations/{id}")
     public ResponseEntity<Void> delete(@AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
+        realtime.touch(id); // avisa os membros antes de a conversa sumir
         chatService.deleteConversation(me(ud), id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── Link de convite ────────────────────────────────────────────────
+
+    @GetMapping("/conversations/{id}/invite")
+    public ResponseEntity<Map<String, String>> getInvite(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
+        return ResponseEntity.ok(tokenBody(chatService.getInviteToken(me(ud), id)));
+    }
+
+    @PostMapping("/conversations/{id}/invite")
+    public ResponseEntity<Map<String, String>> rotateInvite(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
+        return ResponseEntity.ok(tokenBody(chatService.rotateInviteToken(me(ud), id)));
+    }
+
+    @DeleteMapping("/conversations/{id}/invite")
+    public ResponseEntity<Void> revokeInvite(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
+        chatService.revokeInviteToken(me(ud), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/invite/{token}")
+    public ResponseEntity<ChatConversationDTO> acceptInvite(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable String token) {
+        ChatConversationDTO dto = chatService.acceptInvite(me(ud), token);
+        realtime.touch(dto.id());
+        return ResponseEntity.ok(dto);
+    }
+
+    private static Map<String, String> tokenBody(String token) {
+        return token == null ? Map.of() : Map.of("token", token);
     }
 
     // ── Diretório de grupos ────────────────────────────────────────────
@@ -71,7 +118,9 @@ public class ChatController {
     @PostMapping("/conversations/{id}/join")
     public ResponseEntity<Map<String, String>> join(
             @AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
-        return ResponseEntity.ok(Map.of("state", chatService.joinOrRequest(me(ud), id)));
+        String state = chatService.joinOrRequest(me(ud), id);
+        realtime.touch(id);
+        return ResponseEntity.ok(Map.of("state", state));
     }
 
     @DeleteMapping("/conversations/{id}/join")
@@ -91,6 +140,7 @@ public class ChatController {
     public ResponseEntity<Void> approve(
             @AuthenticationPrincipal UserDetails ud, @PathVariable Long id, @PathVariable Long userId) {
         chatService.resolveJoinRequest(me(ud), id, userId, true);
+        realtime.touch(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -98,6 +148,7 @@ public class ChatController {
     public ResponseEntity<Void> reject(
             @AuthenticationPrincipal UserDetails ud, @PathVariable Long id, @PathVariable Long userId) {
         chatService.resolveJoinRequest(me(ud), id, userId, false);
+        realtime.touch(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -117,7 +168,11 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
             @RequestBody SendMessageDTO body) {
-        return ResponseEntity.ok(chatService.send(me(ud), id, body.body(), body.replyToId()));
+        Long uid = me(ud);
+        ChatMessageDTO dto = chatService.send(uid, id, body.body(), body.replyToId());
+        realtime.broadcast(id, "created", uid, dto);
+        realtime.touch(id);
+        return ResponseEntity.ok(dto);
     }
 
     @PatchMapping("/messages/{messageId}")
@@ -125,13 +180,21 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long messageId,
             @RequestBody EditMessageDTO body) {
-        return ResponseEntity.ok(chatService.editMessage(me(ud), messageId, body.body()));
+        Long uid = me(ud);
+        ChatMessageDTO dto = chatService.editMessage(uid, messageId, body.body());
+        realtime.broadcast(dto.conversationId(), "edited", uid, dto);
+        realtime.touch(dto.conversationId());
+        return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/messages/{messageId}")
     public ResponseEntity<ChatMessageDTO> deleteMessage(
             @AuthenticationPrincipal UserDetails ud, @PathVariable Long messageId) {
-        return ResponseEntity.ok(chatService.deleteMessage(me(ud), messageId));
+        Long uid = me(ud);
+        ChatMessageDTO dto = chatService.deleteMessage(uid, messageId);
+        realtime.broadcast(dto.conversationId(), "deleted", uid, dto);
+        realtime.touch(dto.conversationId());
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/messages/{messageId}/react")
@@ -139,12 +202,24 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long messageId,
             @RequestBody ReactDTO body) {
-        return ResponseEntity.ok(chatService.react(me(ud), messageId, body.emoji()));
+        Long uid = me(ud);
+        ChatMessageDTO dto = chatService.react(uid, messageId, body.emoji());
+        realtime.broadcast(dto.conversationId(), "reacted", uid, dto);
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/conversations/{id}/read")
     public ResponseEntity<Void> markRead(@AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
-        chatService.markRead(me(ud), id);
+        Long uid = me(ud);
+        Long readId = chatService.markRead(uid, id);
+        if (readId != null) realtime.readReceipt(id, uid, readId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/conversations/{id}/typing")
+    public ResponseEntity<Void> typing(@AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
+        Long uid = me(ud);
+        realtime.typing(id, uid, chatService.memberName(uid, id));
         return ResponseEntity.noContent().build();
     }
 
@@ -161,7 +236,9 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
             @RequestBody AddMembersDTO body) {
-        return ResponseEntity.ok(chatService.addMembers(me(ud), id, body.userIds()));
+        List<ConversationMemberDTO> out = chatService.addMembers(me(ud), id, body.userIds());
+        realtime.touch(id);
+        return ResponseEntity.ok(out);
     }
 
     @DeleteMapping("/conversations/{id}/members/{userId}")
@@ -169,7 +246,9 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
             @PathVariable Long userId) {
+        realtime.touch(id); // avisa todo mundo (inclusive quem sai) antes do commit
         chatService.removeMember(me(ud), id, userId);
+        realtime.touch(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -179,14 +258,18 @@ public class ChatController {
             @PathVariable Long id,
             @PathVariable Long userId,
             @RequestBody SetRoleDTO body) {
-        return ResponseEntity.ok(chatService.setRole(me(ud), id, userId, body.role()));
+        List<ConversationMemberDTO> out = chatService.setRole(me(ud), id, userId, body.role());
+        realtime.touch(id);
+        return ResponseEntity.ok(out);
     }
 
     // ── Contador ───────────────────────────────────────────────────────
 
     @GetMapping("/unread-count")
     public ResponseEntity<Map<String, Long>> unreadCount(@AuthenticationPrincipal UserDetails ud) {
-        return ResponseEntity.ok(Map.of("count", chatService.unreadTotal(me(ud))));
+        Long uid = me(ud);
+        chatService.heartbeat(uid); // presença: ~60s de granularidade
+        return ResponseEntity.ok(Map.of("count", chatService.unreadTotal(uid)));
     }
 
     private Long me(UserDetails ud) {

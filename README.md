@@ -151,9 +151,9 @@ Schema is managed by Flyway under
 run automatically on startup.
 
 > **Project convention:** during early development the schema is edited **in
-> place** in the existing `V1__Estrutura_MyRank.sql` file (no incremental
-> `ALTER` migrations). Drop and recreate the database after pulling schema
-> changes:
+> place** across the per-domain `V1__enums.sql` … `V8__ai_insights.sql` files
+> (no incremental `ALTER` migrations — put each change in the file that owns
+> that table). Drop and recreate the database after pulling schema changes:
 >
 > ```bash
 > docker compose down -v && docker compose up -d db
@@ -265,7 +265,7 @@ This is a personal project, but issues and PRs are welcome.
 
 1. Branch from the active development branch.
 2. Keep controllers thin — logic goes in services.
-3. Schema changes: edit `V1__Estrutura_MyRank.sql` in place (see
+3. Schema changes: edit the matching `V*__*.sql` file in place (see
    [Database & Migrations](#database--migrations)) and drop the DB.
 4. Make sure `./mvnw clean package` passes before opening a PR.
 
