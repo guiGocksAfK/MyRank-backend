@@ -41,6 +41,18 @@ public class SocialController {
         return ResponseEntity.ok(socialService.getFollowing(me(ud)));
     }
 
+    @GetMapping("/followers")
+    public ResponseEntity<List<SocialUserDTO>> followers(@AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.ok(socialService.getFollowers(me(ud)));
+    }
+
+    @GetMapping("/followers/recent")
+    public ResponseEntity<List<SocialUserDTO>> recentFollowers(
+            @AuthenticationPrincipal UserDetails ud,
+            @RequestParam(defaultValue = "5") int limit) {
+        return ResponseEntity.ok(socialService.getRecentFollowers(me(ud), limit));
+    }
+
     @GetMapping("/suggestions")
     public ResponseEntity<List<SocialUserDTO>> suggestions(@AuthenticationPrincipal UserDetails ud) {
         return ResponseEntity.ok(socialService.getSuggestions(me(ud)));

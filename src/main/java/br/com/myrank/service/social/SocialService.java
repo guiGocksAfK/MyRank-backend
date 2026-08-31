@@ -107,6 +107,29 @@ public class SocialService {
     }
 
     @Transactional(readOnly = true)
+    public List<SocialUserDTO> getFollowers(Long viewerId) {
+        return userRepository.findAllById(followRepository.findFollowerIds(viewerId)).stream()
+                .sorted(Comparator.comparing(u -> u.getUsername().toLowerCase()))
+                .map(u -> toSocialUser(u, viewerId))
+                .toList();
+    }
+
+    /** Últimos N seguidores, na ordem em que te seguiram. */
+    @Transactional(readOnly = true)
+    public List<SocialUserDTO> getRecentFollowers(Long viewerId, int limit) {
+        List<Long> ids = followRepository.findRecentFollowerIds(
+                viewerId, PageRequest.of(0, Math.max(1, Math.min(limit, 20))));
+        if (ids.isEmpty()) return List.of();
+        Map<Long, User> byId = userRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+        return ids.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .map(u -> toSocialUser(u, viewerId))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<SocialUserDTO> getSuggestions(Long viewerId) {
         List<Long> followed = followRepository.findFollowedIds(viewerId);
         List<Long> excluded = followed.isEmpty() ? List.of(-1L) : followed;
