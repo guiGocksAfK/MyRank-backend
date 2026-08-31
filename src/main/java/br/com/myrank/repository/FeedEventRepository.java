@@ -35,4 +35,6 @@ public interface FeedEventRepository extends JpaRepository<FeedEvent, Long> {
     long countFeed(Collection<Long> userIds, FeedEventType takeType);
 
     boolean existsByTypeAndWorkId(FeedEventType type, Long workId);
+
+    java.util.Optional<FeedEvent> findByTakeId(Long takeId);
 }

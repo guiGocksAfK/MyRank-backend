@@ -17,6 +17,8 @@ public record FeedItemDTO(
         WorkMiniDTO work,
         BadgeMiniDTO badge,
         String takeText,
+        Long takeId,
+        int commentCount,
         BigDecimal score,
         ReactionSummaryDTO reactions
 ) {}
