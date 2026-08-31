@@ -20,6 +20,24 @@ CREATE TABLE follow (
 CREATE INDEX idx_follow_follower ON follow (follower_id);
 CREATE INDEX idx_follow_followed ON follow (followed_id);
 
+-- PEDIDO DE SEGUIR (só existe enquanto o alvo é privado e não aprovou/recusou).
+-- Aprovar → vira linha em `follow` e o pedido é apagado. Recusar/cancelar → apaga.
+CREATE TABLE follow_request (
+    id            BIGSERIAL PRIMARY KEY,
+    requester_id  BIGINT    NOT NULL,
+    target_id     BIGINT    NOT NULL,
+    created_at    TIMESTAMP NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_freq_requester FOREIGN KEY (requester_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_freq_target FOREIGN KEY (target_id)
+        REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uq_follow_request UNIQUE (requester_id, target_id),
+    CONSTRAINT chk_freq_no_self CHECK (requester_id <> target_id)
+);
+
+CREATE INDEX idx_freq_target ON follow_request (target_id);
+
 -- Opinião curta (<=280) presa a uma obra.
 CREATE TABLE takes (
     id          BIGSERIAL PRIMARY KEY,

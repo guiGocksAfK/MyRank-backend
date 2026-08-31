@@ -1,6 +1,7 @@
 package br.com.myrank.service.social;
 
 import br.com.myrank.domain.entity.*;
+import br.com.myrank.domain.enums.FeedEventType;
 import br.com.myrank.domain.enums.ReactionKind;
 import br.com.myrank.dto.*;
 import br.com.myrank.repository.*;
@@ -22,6 +23,7 @@ public class SocialService {
     private static final int TAKE_MAX = 280;
 
     private final FollowRepository followRepository;
+    private final FollowRequestRepository followRequestRepository;
     private final FeedEventRepository feedEventRepository;
     private final FeedReactionRepository feedReactionRepository;
     private final TakeRepository takeRepository;
@@ -33,6 +35,7 @@ public class SocialService {
     private final NotificationService notificationService;
 
     public SocialService(FollowRepository followRepository,
+                         FollowRequestRepository followRequestRepository,
                          FeedEventRepository feedEventRepository,
                          FeedReactionRepository feedReactionRepository,
                          TakeRepository takeRepository,
@@ -43,6 +46,7 @@ public class SocialService {
                          FeedEventService feedEventService,
                          NotificationService notificationService) {
         this.followRepository = followRepository;
+        this.followRequestRepository = followRequestRepository;
         this.feedEventRepository = feedEventRepository;
         this.feedReactionRepository = feedReactionRepository;
         this.takeRepository = takeRepository;
@@ -60,8 +64,9 @@ public class SocialService {
     public SocialSummaryDTO getSummary(Long viewerId) {
         long following = followRepository.countByFollowerId(viewerId);
         long followers = followRepository.countByFollowedId(viewerId);
-        long feedCount = feedEventRepository.countFeed(feedActorIds(viewerId));
-        return new SocialSummaryDTO(following, followers, feedCount);
+        long feedCount = feedEventRepository.countFeed(feedActorIds(viewerId), FeedEventType.TAKE);
+        long pendingRequests = followRequestRepository.countByTargetId(viewerId);
+        return new SocialSummaryDTO(following, followers, feedCount, pendingRequests);
     }
 
     // ── Feed ────────────────────────────────────────────────────────────
@@ -70,7 +75,7 @@ public class SocialService {
     public List<FeedItemDTO> getFeed(Long viewerId, int page, int size) {
         int capped = Math.min(Math.max(size, 1), 50);
         List<FeedEvent> events = feedEventRepository.findFeed(
-                feedActorIds(viewerId), PageRequest.of(Math.max(page, 0), capped));
+                feedActorIds(viewerId), FeedEventType.TAKE, PageRequest.of(Math.max(page, 0), capped));
         if (events.isEmpty()) return List.of();
 
         Map<Long, User> users = byId(userRepository.findAllById(
@@ -143,11 +148,45 @@ public class SocialService {
     public List<SocialUserDTO> searchUsers(Long viewerId, String query) {
         String q = query == null ? "" : query.trim();
         if (q.length() < 2) return List.of();
-        Set<Long> followed = new HashSet<>(followRepository.findFollowedIds(viewerId));
+        // perfis privados também aparecem — pra poder pedir pra seguir; o conteúdo
+        // continua protegido no getProfile.
         return userRepository.searchByUsername(viewerId, q, PageRequest.of(0, MAX_LIST)).stream()
-                .filter(u -> u.isPublic() || followed.contains(u.getId()))
                 .map(u -> toSocialUser(u, viewerId))
                 .toList();
+    }
+
+    // ── Pedidos de seguir (perfis privados) ────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<SocialUserDTO> getFollowRequests(Long viewerId) {
+        List<Long> ids = followRequestRepository.findRequesterIds(viewerId);
+        if (ids.isEmpty()) return List.of();
+        Map<Long, User> byId = userRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+        return ids.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .map(u -> toSocialUser(u, viewerId))
+                .toList();
+    }
+
+    @Transactional
+    public void approveFollowRequest(Long viewerId, Long requesterId) {
+        FollowRequest req = followRequestRepository
+                .findByRequesterIdAndTargetId(requesterId, viewerId)
+                .orElseThrow(() -> new IllegalArgumentException("Pedido não encontrado."));
+        followRequestRepository.delete(req);
+        if (!followRepository.existsByFollowerIdAndFollowedId(requesterId, viewerId)) {
+            followRepository.save(new Follow(requesterId, viewerId));
+        }
+        notificationService.clearFollowRequest(viewerId, requesterId);
+        notificationService.onFollowAccepted(requesterId, viewerId);
+    }
+
+    @Transactional
+    public void rejectFollowRequest(Long viewerId, Long requesterId) {
+        followRequestRepository.deleteByRequesterIdAndTargetId(requesterId, viewerId);
+        notificationService.clearFollowRequest(viewerId, requesterId);
     }
 
     // ── Perfil ──────────────────────────────────────────────────────────
@@ -160,9 +199,19 @@ public class SocialService {
         boolean self = targetId.equals(viewerId);
         boolean following = !self && followRepository.existsByFollowerIdAndFollowedId(viewerId, targetId);
         boolean followsYou = !self && followRepository.existsByFollowerIdAndFollowedId(targetId, viewerId);
+        boolean requested = !self && followRequestRepository.existsByRequesterIdAndTargetId(viewerId, targetId);
 
+        long followerCount = followRepository.countByFollowedId(targetId);
+        long followingCount = followRepository.countByFollowerId(targetId);
+
+        // privado e o viewer não segue → só cabeçalho + contagens
         if (!self && !target.isPublic() && !following) {
-            throw new IllegalArgumentException("Este perfil é privado.");
+            return new SocialProfileDTO(
+                    target.getId(), target.getUsername(), target.getAvatarUrl(), target.getBio(),
+                    target.getPlan().name(), 0, 0.0,
+                    false, followsYou, false, requested, true,
+                    followerCount, followingCount,
+                    List.of(), Map.of(), List.of(), List.of());
         }
 
         List<Work> works = workRepository.findByUserId(targetId);
@@ -183,6 +232,11 @@ public class SocialService {
                 avgScore(works),
                 following,
                 followsYou,
+                target.isPublic(),
+                requested,
+                false,
+                followerCount,
+                followingCount,
                 minis.stream().limit(10).toList(),
                 breakdown,
                 unlockedBadges(targetId),
@@ -192,6 +246,12 @@ public class SocialService {
 
     // ── Follow ──────────────────────────────────────────────────────────
 
+    /**
+     * Alterna o vínculo com `targetId`:
+     *  - já segue        → deixa de seguir
+     *  - alvo público    → segue na hora (+ notificação)
+     *  - alvo privado    → cria pedido pendente (ou cancela, se já pediu)
+     */
     @Transactional
     public SocialUserDTO toggleFollow(Long viewerId, Long targetId) {
         if (targetId.equals(viewerId)) {
@@ -200,13 +260,20 @@ public class SocialService {
         User target = userRepository.findById(targetId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
 
-        followRepository.findByFollowerIdAndFollowedId(viewerId, targetId)
-                .ifPresentOrElse(
-                        followRepository::delete,
-                        () -> {
-                            followRepository.save(new Follow(viewerId, targetId));
-                            notificationService.onFollow(targetId, viewerId);
-                        });
+        Optional<Follow> existing = followRepository.findByFollowerIdAndFollowedId(viewerId, targetId);
+        if (existing.isPresent()) {
+            followRepository.delete(existing.get());
+        } else if (target.isPublic()) {
+            followRepository.save(new Follow(viewerId, targetId));
+            notificationService.onFollow(targetId, viewerId);
+        } else if (followRequestRepository.existsByRequesterIdAndTargetId(viewerId, targetId)) {
+            // já pediu → cancela o pedido
+            followRequestRepository.deleteByRequesterIdAndTargetId(viewerId, targetId);
+            notificationService.clearFollowRequest(targetId, viewerId);
+        } else {
+            followRequestRepository.save(new FollowRequest(viewerId, targetId));
+            notificationService.onFollowRequest(targetId, viewerId);
+        }
 
         return toSocialUser(target, viewerId);
     }
@@ -294,6 +361,9 @@ public class SocialService {
     private SocialUserDTO toSocialUser(User u, Long viewerId) {
         List<Work> works = workRepository.findByUserId(u.getId());
         boolean self = u.getId().equals(viewerId);
+        boolean following = !self && followRepository.existsByFollowerIdAndFollowedId(viewerId, u.getId());
+        boolean requested = !self && !following && !u.isPublic()
+                && followRequestRepository.existsByRequesterIdAndTargetId(viewerId, u.getId());
         return new SocialUserDTO(
                 u.getId(),
                 u.getUsername(),
@@ -302,8 +372,10 @@ public class SocialService {
                 u.getPlan().name(),
                 works.size(),
                 avgScore(works),
-                !self && followRepository.existsByFollowerIdAndFollowedId(viewerId, u.getId()),
-                !self && followRepository.existsByFollowerIdAndFollowedId(u.getId(), viewerId)
+                following,
+                !self && followRepository.existsByFollowerIdAndFollowedId(u.getId(), viewerId),
+                u.isPublic(),
+                requested
         );
     }
 
