@@ -37,13 +37,14 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             """)
     List<Long> findDirectPeerIds(@Param("me") Long me, @Param("direct") ConversationType direct);
 
-    /** Diretório: grupos descobríveis (não-fechados) cujo nome bate com a busca. */
+    /** Diretório: grupos descobríveis (não-fechados) cujo nome bate com a busca, populares primeiro. */
     @Query("""
             select c from Conversation c
             where c.type = :group
               and c.access <> :closed
               and (:q = '' or lower(c.name) like lower(concat('%', :q, '%')))
-            order by c.createdAt desc
+            order by (select count(m) from ConversationMember m where m.conversationId = c.id) desc,
+                     c.createdAt desc
             """)
     List<Conversation> searchDirectory(@Param("group") ConversationType group,
                                        @Param("closed") ConversationAccess closed,
