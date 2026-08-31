@@ -32,6 +32,10 @@ public class TakeComment {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** not null = comentário editado pelo autor. */
+    @Column(name = "edited_at")
+    private LocalDateTime editedAt;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = LocalDateTime.now();
@@ -56,4 +60,6 @@ public class TakeComment {
     public String getText() { return text; }
     public void setText(String text) { this.text = text; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getEditedAt() { return editedAt; }
+    public void setEditedAt(LocalDateTime editedAt) { this.editedAt = editedAt; }
 }

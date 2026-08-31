@@ -114,6 +114,20 @@ public class SocialController {
         return ResponseEntity.ok(socialService.postTake(me(ud), body));
     }
 
+    @PatchMapping("/takes/{takeId}")
+    public ResponseEntity<FeedItemDTO> editTake(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long takeId,
+            @RequestBody PostCommentDTO body) {
+        return ResponseEntity.ok(socialService.editTake(me(ud), takeId, body.text()));
+    }
+
+    @DeleteMapping("/takes/{takeId}")
+    public ResponseEntity<Void> deleteTake(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long takeId) {
+        socialService.deleteTake(me(ud), takeId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/takes/{takeId}/comments")
     public ResponseEntity<List<TakeCommentDTO>> listComments(
             @AuthenticationPrincipal UserDetails ud, @PathVariable Long takeId) {
@@ -126,6 +140,13 @@ public class SocialController {
             @RequestBody PostCommentDTO body) {
         return ResponseEntity.ok(
                 takeCommentService.add(me(ud), takeId, body.text(), body.parentCommentId()));
+    }
+
+    @PatchMapping("/comments/{commentId}")
+    public ResponseEntity<TakeCommentDTO> editComment(
+            @AuthenticationPrincipal UserDetails ud, @PathVariable Long commentId,
+            @RequestBody PostCommentDTO body) {
+        return ResponseEntity.ok(takeCommentService.edit(me(ud), commentId, body.text()));
     }
 
     @DeleteMapping("/comments/{commentId}")

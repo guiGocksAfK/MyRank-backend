@@ -108,6 +108,7 @@ public class SocialService {
                 e.getBadgeId() != null ? badges.get(e.getBadgeId()) : null,
                 e.getTakeId() != null ? takes.get(e.getTakeId()) : null,
                 e.getTakeId() != null ? commentCounts.getOrDefault(e.getTakeId(), 0) : 0,
+                viewerId,
                 summarize(reactionsByEvent.getOrDefault(e.getId(), List.of()), viewerId)
         )).toList();
     }
@@ -338,7 +339,41 @@ public class SocialService {
         notificationService.onTakePosted(event, viewerId);
         User me = userRepository.findById(viewerId).orElseThrow();
 
-        return toFeedItem(event, me, work, null, take, 0, new ReactionSummaryDTO(0, 0, 0, null));
+        return toFeedItem(event, me, work, null, take, 0, viewerId, new ReactionSummaryDTO(0, 0, 0, null));
+    }
+
+    @Transactional
+    public FeedItemDTO editTake(Long viewerId, Long takeId, String textRaw) {
+        Take take = takeRepository.findById(takeId)
+                .orElseThrow(() -> new IllegalArgumentException("Take não encontrado."));
+        if (!take.getUserId().equals(viewerId)) {
+            throw new IllegalArgumentException("Você só pode editar os seus takes.");
+        }
+        String text = textRaw == null ? "" : textRaw.trim();
+        if (text.length() < TAKE_MIN) throw new IllegalArgumentException("O take está curto demais.");
+        if (text.length() > TAKE_MAX) throw new IllegalArgumentException("O take passa de 280 caracteres.");
+
+        take.setText(text);
+        take = takeRepository.save(take); // @PreUpdate bumpa updatedAt
+
+        FeedEvent event = feedEventRepository.findByTakeId(takeId)
+                .orElseThrow(() -> new IllegalArgumentException("Evento do take não encontrado."));
+        Work work = workRepository.findById(take.getWorkId()).orElse(null);
+        User author = userRepository.findById(viewerId).orElseThrow();
+        int comments = (int) takeCommentRepository.countByTakeId(takeId);
+        ReactionSummaryDTO reactions = summarize(
+                feedReactionRepository.findByFeedEventIdIn(List.of(event.getId())), viewerId);
+        return toFeedItem(event, author, work, null, take, comments, viewerId, reactions);
+    }
+
+    @Transactional
+    public void deleteTake(Long viewerId, Long takeId) {
+        Take take = takeRepository.findById(takeId)
+                .orElseThrow(() -> new IllegalArgumentException("Take não encontrado."));
+        if (!take.getUserId().equals(viewerId)) {
+            throw new IllegalArgumentException("Você só pode apagar os seus takes.");
+        }
+        takeRepository.delete(take); // feed_event / comentários / reações / notificações caem por FK cascade
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────
@@ -350,7 +385,10 @@ public class SocialService {
     }
 
     private FeedItemDTO toFeedItem(FeedEvent e, User actor, Work work, Badge badge, Take take,
-                                   int commentCount, ReactionSummaryDTO reactions) {
+                                   int commentCount, Long viewerId, ReactionSummaryDTO reactions) {
+        boolean takeEdited = take != null && take.getUpdatedAt() != null
+                && !take.getUpdatedAt().equals(take.getCreatedAt());
+        boolean canManage = actor != null && actor.getId().equals(viewerId);
         return new FeedItemDTO(
                 e.getId(),
                 e.getType().name(),
@@ -361,6 +399,8 @@ public class SocialService {
                 take == null ? null : take.getText(),
                 take == null ? null : take.getId(),
                 commentCount,
+                takeEdited,
+                canManage,
                 e.getScore(),
                 reactions
         );

@@ -113,6 +113,26 @@ public class TakeCommentService {
     }
 
     @Transactional
+    public TakeCommentDTO edit(Long viewerId, Long commentId, String textRaw) {
+        TakeComment c = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("Comentário não encontrado."));
+        if (!c.getUserId().equals(viewerId)) {
+            throw new IllegalArgumentException("Você só pode editar os seus comentários.");
+        }
+        String text = textRaw == null ? "" : textRaw.trim();
+        if (text.isEmpty()) throw new IllegalArgumentException("O comentário está vazio.");
+        if (text.length() > TEXT_MAX) throw new IllegalArgumentException("O comentário passa de " + TEXT_MAX + " caracteres.");
+
+        c.setText(text);
+        c.setEditedAt(java.time.LocalDateTime.now());
+        commentRepository.save(c);
+
+        Take take = takeRepository.findById(c.getTakeId()).orElseThrow();
+        User author = userRepository.findById(viewerId).orElseThrow();
+        return toDTO(c, Map.of(author.getId(), author), viewerId, take.getUserId(), List.of());
+    }
+
+    @Transactional
     public void delete(Long viewerId, Long commentId) {
         TakeComment c = commentRepository.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("Comentário não encontrado."));
@@ -141,7 +161,8 @@ public class TakeCommentService {
     private TakeCommentDTO toDTO(TakeComment c, Map<Long, User> users, Long viewerId,
                                  Long takeAuthorId, List<TakeCommentDTO> replies) {
         User u = users.get(c.getUserId());
-        boolean canDelete = c.getUserId().equals(viewerId) || takeAuthorId.equals(viewerId);
+        boolean mine = c.getUserId().equals(viewerId);
+        boolean canDelete = mine || takeAuthorId.equals(viewerId);
         return new TakeCommentDTO(
                 c.getId(),
                 c.getTakeId(),
@@ -149,6 +170,8 @@ public class TakeCommentService {
                 u == null ? null : new ActorDTO(u.getId(), u.getUsername(), u.getAvatarUrl()),
                 c.getText(),
                 c.getCreatedAt(),
+                c.getEditedAt() != null,
+                mine,
                 canDelete,
                 replies == null ? List.of() : new ArrayList<>(replies.stream().filter(Objects::nonNull).toList())
         );

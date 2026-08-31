@@ -64,6 +64,7 @@ CREATE TABLE take_comment (
     parent_comment_id BIGINT,
     text              VARCHAR(500) NOT NULL,
     created_at        TIMESTAMP    NOT NULL DEFAULT now(),
+    edited_at         TIMESTAMP,                               -- not null = editado
 
     CONSTRAINT fk_tc_take   FOREIGN KEY (take_id)           REFERENCES takes (id)        ON DELETE CASCADE,
     CONSTRAINT fk_tc_user   FOREIGN KEY (user_id)           REFERENCES users (id)        ON DELETE CASCADE,

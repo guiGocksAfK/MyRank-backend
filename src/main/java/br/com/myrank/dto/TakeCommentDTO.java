@@ -11,6 +11,8 @@ public record TakeCommentDTO(
         ActorDTO author,
         String text,
         LocalDateTime createdAt,
+        boolean edited,
+        boolean canEdit,
         boolean canDelete,
         List<TakeCommentDTO> replies
 ) {}
