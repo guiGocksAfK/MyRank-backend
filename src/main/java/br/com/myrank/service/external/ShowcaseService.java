@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Monta a lista de pôsteres do grid decorativo da home pública, agregando os
- * "populares" das quatro bases externas (TMDB, RAWG, Jikan, Google Books).
+ * "populares" das quatro bases externas (TMDB, RAWG, MyAnimeList, Google Books).
  *
  * Nunca bloqueia o visitante: mantém um snapshot em memória e dispara o refresh
  * em background quando ele passa do TTL. O primeiro visitante pode receber uma
@@ -29,7 +29,7 @@ public class ShowcaseService {
 
     private final TmdbService tmdbService;
     private final RawgService rawgService;
-    private final JikanService jikanService;
+    private final MyAnimeListService myAnimeListService;
     private final GoogleBooksService googleBooksService;
 
     private volatile List<String> snapshot = List.of();
@@ -37,10 +37,10 @@ public class ShowcaseService {
     private final AtomicBoolean refreshing = new AtomicBoolean(false);
 
     public ShowcaseService(TmdbService tmdbService, RawgService rawgService,
-                           JikanService jikanService, GoogleBooksService googleBooksService) {
+                           MyAnimeListService myAnimeListService, GoogleBooksService googleBooksService) {
         this.tmdbService = tmdbService;
         this.rawgService = rawgService;
-        this.jikanService = jikanService;
+        this.myAnimeListService = myAnimeListService;
         this.googleBooksService = googleBooksService;
     }
 
@@ -73,12 +73,12 @@ public class ShowcaseService {
     private List<String> buildPosterList() {
         List<String> tmdb = safe(tmdbService::getShowcasePosters);
         List<String> rawg = safe(rawgService::getShowcasePosters);
-        List<String> jikan = safe(jikanService::getShowcasePosters);
+        List<String> anime = safe(myAnimeListService::getShowcasePosters);
         List<String> books = safe(googleBooksService::getShowcasePosters);
         org.slf4j.LoggerFactory.getLogger(ShowcaseService.class).info(
-                "showcase refresh: tmdb={} rawg={} jikan={} books={}",
-                tmdb.size(), rawg.size(), jikan.size(), books.size());
-        List<List<String>> sources = List.of(tmdb, rawg, jikan, books);
+                "showcase refresh: tmdb={} rawg={} anime={} books={}",
+                tmdb.size(), rawg.size(), anime.size(), books.size());
+        List<List<String>> sources = List.of(tmdb, rawg, anime, books);
 
         LinkedHashSet<String> interleaved = new LinkedHashSet<>();
         int maxLen = sources.stream().mapToInt(List::size).max().orElse(0);

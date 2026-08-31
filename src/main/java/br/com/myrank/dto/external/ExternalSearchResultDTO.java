@@ -2,7 +2,7 @@ package br.com.myrank.dto.external;
 
 /**
  * Resultado leve de busca/autocomplete, devolvido ao frontend.
- * externalId é o id do provedor externo (TMDB, RAWG, Jikan usam números;
+ * externalId é o id do provedor externo (TMDB, RAWG, MyAnimeList usam números;
  * Google Books usa strings alfanuméricas) — String cobre todos os casos.
  * O front reenvia esse id para o endpoint de detalhes quando o usuário
  * seleciona um item, sem precisar tratar formatos diferentes por provedor.

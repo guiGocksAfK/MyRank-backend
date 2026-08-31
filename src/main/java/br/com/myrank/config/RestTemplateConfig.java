@@ -12,9 +12,9 @@ import java.time.Duration;
 public class RestTemplateConfig {
 
     /**
-     * User-Agent identificando o app. Necessário para a Jikan: o Cloudflare dela
-     * responde 504 ("MyAnimeList may be down") para o User-Agent padrão do Java
-     * (ex.: "Java/17.0.12"). Inofensivo para TMDB/RAWG/Google Books.
+     * User-Agent identificando o app. Inofensivo para todas as integrações
+     * (TMDB, RAWG, MyAnimeList, Google Books) e evita bloqueios de WAF que
+     * rejeitam o User-Agent padrão do Java (ex.: "Java/17.0.12").
      */
     private static final String USER_AGENT = "MyRank/1.0 (+https://github.com/guiGocksAfK/MyRank)";
 
