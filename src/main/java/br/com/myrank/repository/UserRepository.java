@@ -18,7 +18,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query("update User u set u.lastSeenAt = :now where u.id = :id")
     void updateLastSeen(@Param("id") Long id, @Param("now") LocalDateTime now);
-    Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
     Optional<User> findByAuthProviderAndProviderId(AuthProvider authProvider, String providerId);
     boolean existsByUsername(String username);

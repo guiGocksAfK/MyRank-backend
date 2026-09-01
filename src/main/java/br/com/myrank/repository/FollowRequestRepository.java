@@ -21,10 +21,6 @@ public interface FollowRequestRepository extends JpaRepository<FollowRequest, Lo
     @Query("select r.requesterId from FollowRequest r where r.targetId = :targetId order by r.createdAt desc")
     List<Long> findRequesterIds(Long targetId);
 
-    /** Dos ids dados, quais `me` já solicitou seguir (pendentes). */
-    @Query("select r.targetId from FollowRequest r where r.requesterId = :me and r.targetId in :targetIds")
-    List<Long> findRequestedTargetIds(Long me, List<Long> targetIds);
-
     /** Todos os ids que `me` já solicitou seguir (pendentes). */
     @Query("select r.targetId from FollowRequest r where r.requesterId = :me")
     List<Long> findRequestedTargetIdsAll(Long me);
