@@ -1,8 +1,10 @@
 package br.com.myrank.service.ai;
 
 import br.com.myrank.domain.entity.Work;
+import br.com.myrank.dto.insight.InsightPayloadDTO;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /** Monta os prompts mandados pro modelo. Espelho do antigo buildPrompt do front. */
 final class InsightPromptBuilder {
@@ -15,6 +17,41 @@ final class InsightPromptBuilder {
             Baseie-se apenas nas obras fornecidas — nunca invente títulos que o usuário
             teria avaliado. Escreva em português do Brasil.
             """;
+
+    /** Chat de follow-up: o usuário conversa sobre a análise que acabou de receber. */
+    static final String CHAT_SYSTEM = """
+            Você é o assistente do MyRank conversando com o usuário sobre a análise de
+            perfil de consumo de mídia que ele acabou de receber. Responda em português
+            do Brasil, de forma direta e útil, em no máximo 2 parágrafos curtos.
+            Baseie-se na análise e nos dados fornecidos; se perguntarem algo fora desse
+            escopo, diga gentilmente que você só pode falar sobre o perfil e as
+            recomendações dele. Nunca invente obras que o usuário teria avaliado.
+            Texto puro, sem markdown, sem títulos.
+            """;
+
+    /** Resumo em texto da análise, usado como contexto do chat. */
+    static String chatContext(InsightPayloadDTO a) {
+        String traits = a.traits() == null ? "—" : a.traits().stream()
+                .map(t -> t.label() + " (" + t.description() + ")")
+                .collect(Collectors.joining("; "));
+        String taste = a.tasteProfile() == null ? "—" : a.tasteProfile().stream()
+                .map(s -> s.name() + " " + s.percent() + "%")
+                .collect(Collectors.joining("; "));
+        var r = a.recommendation();
+        String reco = r == null ? "—"
+                : r.title() + (r.year() != null ? " (" + r.year() + ")" : "")
+                  + (r.category() != null ? ", " + r.category() : "")
+                  + " — " + r.compatPercent() + "% compatível: " + r.reason();
+
+        return """
+                ANÁLISE GERADA PARA O USUÁRIO:
+                Título do perfil: %s
+                Resumo: %s
+                Traços: %s
+                Perfil de gosto: %s
+                Recomendação: %s
+                """.formatted(a.summaryTitle(), a.summaryText(), traits, taste, reco);
+    }
 
     static String user(List<Work> works) {
         StringBuilder list = new StringBuilder();
