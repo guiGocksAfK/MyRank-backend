@@ -29,12 +29,6 @@ public class UserController {
         return ResponseEntity.ok(UserResponseDTO.fromEntity(user));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> getById(@PathVariable Long id) {
-        User user = userService.getUserById(id);
-        return ResponseEntity.ok(UserResponseDTO.fromEntity(user));
-    }
-
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getMe(@AuthenticationPrincipal UserDetails userDetails) {
         User user = authUtils.getUser(userDetails);
