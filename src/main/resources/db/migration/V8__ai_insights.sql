@@ -12,6 +12,9 @@ CREATE TABLE ai_insights (
     model           VARCHAR(60)  NOT NULL,
     work_count      INT          NOT NULL,
     payload         JSONB        NOT NULL,
+    -- chat de follow-up sobre esta análise: array de {role:'USER'|'AI', content, at}.
+    -- Limitado a 3 turnos do usuário (ver InsightService.CHAT_LIMIT).
+    chat_log        JSONB        NOT NULL DEFAULT '[]',
     created_at      TIMESTAMP    NOT NULL DEFAULT now(),
 
     CONSTRAINT fk_ai_insights_user FOREIGN KEY (user_id)
