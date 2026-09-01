@@ -13,7 +13,6 @@ CREATE TABLE ai_insights (
     work_count      INT          NOT NULL,
     payload         JSONB        NOT NULL,
     -- chat de follow-up sobre esta análise: array de {role:'USER'|'AI', content, at}.
-    -- Limitado a 3 turnos do usuário (ver InsightService.CHAT_LIMIT).
     chat_log        JSONB        NOT NULL DEFAULT '[]',
     created_at      TIMESTAMP    NOT NULL DEFAULT now(),
 
@@ -23,3 +22,15 @@ CREATE TABLE ai_insights (
 );
 
 CREATE INDEX idx_ai_insights_user_created ON ai_insights (user_id, created_at DESC);
+
+-- Orçamento diário de mensagens de IA por usuário (gerar análise + cada pergunta
+-- do chat contam 1). window_start = fronteira das 06:00 do dia vigente; quando o
+-- serviço vê um window_start defasado, zera o contador. Ver AiUsageService.
+CREATE TABLE ai_usage (
+    user_id      BIGINT     PRIMARY KEY,
+    window_start TIMESTAMP  NOT NULL,
+    used         INT        NOT NULL DEFAULT 0,
+
+    CONSTRAINT fk_ai_usage_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE
+);

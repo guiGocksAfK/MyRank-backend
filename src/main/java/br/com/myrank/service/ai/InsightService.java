@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,25 +29,24 @@ public class InsightService {
 
     /** Teto de obras mandadas pro modelo — segura o custo de token e o tempo de resposta. */
     private static final int MAX_WORKS = 100;
-    /** Gerações novas por usuário por dia (cache hit não conta). */
-    private static final int DAILY_LIMIT = 5;
-    /** Perguntas de follow-up permitidas por análise. */
-    private static final int CHAT_LIMIT = 3;
     /** Tamanho máximo de uma pergunta do chat. */
     private static final int CHAT_MAX_CHARS = 500;
 
     private final WorkRepository workRepository;
     private final AiInsightRepository insightRepository;
     private final GeminiClient gemini;
+    private final AiUsageService usage;
     private final ObjectMapper objectMapper;
 
     public InsightService(WorkRepository workRepository,
                           AiInsightRepository insightRepository,
                           GeminiClient gemini,
+                          AiUsageService usage,
                           ObjectMapper objectMapper) {
         this.workRepository = workRepository;
         this.insightRepository = insightRepository;
         this.gemini = gemini;
+        this.usage = usage;
         this.objectMapper = objectMapper;
     }
 
@@ -57,13 +55,13 @@ public class InsightService {
     public Optional<InsightResponseDTO> getLatest(Long userId) {
         return insightRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
                 .map(entity -> InsightResponseDTO.of(entity, deserialize(entity), true,
-                        deserializeChat(entity), CHAT_LIMIT));
+                        deserializeChat(entity), usage.remaining(userId), AiUsageService.DAILY_LIMIT));
     }
 
     /**
      * Responde uma pergunta de follow-up sobre a análise {@code insightId}.
-     * Máx. {@link #CHAT_LIMIT} perguntas por análise; o par pergunta/resposta
-     * fica salvo em {@code chat_log}.
+     * Cada pergunta consome 1 do orçamento diário de mensagens de IA; o par
+     * pergunta/resposta fica salvo em {@code chat_log}.
      */
     @Transactional
     public InsightResponseDTO chat(Long userId, Long insightId, String rawQuestion) {
@@ -78,14 +76,9 @@ public class InsightService {
         if (question.length() > CHAT_MAX_CHARS) {
             question = question.substring(0, CHAT_MAX_CHARS);
         }
+        usage.ensureWithinLimit(userId);
 
         List<InsightChatMessageDTO> thread = deserializeChat(insight);
-        long asked = thread.stream().filter(InsightChatMessageDTO::isUser).count();
-        if (asked >= CHAT_LIMIT) {
-            throw new IllegalArgumentException(
-                    "Você já usou as " + CHAT_LIMIT + " perguntas desta análise. Gere uma nova análise para conversar de novo.");
-        }
-
         InsightPayloadDTO analysis = deserialize(insight);
         String answer = gemini.chat(
                 InsightPromptBuilder.CHAT_SYSTEM,
@@ -93,12 +86,13 @@ public class InsightService {
                 thread,
                 question);
 
+        int left = usage.consume(userId);
         thread.add(new InsightChatMessageDTO(InsightChatMessageDTO.USER, question, LocalDateTime.now()));
         thread.add(new InsightChatMessageDTO(InsightChatMessageDTO.AI, answer, LocalDateTime.now()));
         insight.setChatLog(serializeChat(thread));
         insight = insightRepository.save(insight);
 
-        return InsightResponseDTO.of(insight, analysis, true, thread, CHAT_LIMIT);
+        return InsightResponseDTO.of(insight, analysis, true, thread, left, AiUsageService.DAILY_LIMIT);
     }
 
     @Transactional
@@ -113,21 +107,19 @@ public class InsightService {
         if (!req.refresh()) {
             Optional<AiInsight> cached = insightRepository.findByUserIdAndSelectionHash(userId, hash);
             if (cached.isPresent()) {
+                // Reaproveitar do cache não custa mensagem.
                 return InsightResponseDTO.of(cached.get(), deserialize(cached.get()), true,
-                        deserializeChat(cached.get()), CHAT_LIMIT);
+                        deserializeChat(cached.get()), usage.remaining(userId), AiUsageService.DAILY_LIMIT);
             }
         }
 
-        LocalDate today = LocalDate.now();
-        long usedToday = insightRepository.countByUserIdAndCreatedAtAfter(userId, today.atStartOfDay());
-        if (usedToday >= DAILY_LIMIT) {
-            throw new IllegalArgumentException(
-                    "Você atingiu o limite de " + DAILY_LIMIT + " análises por dia. Tente de novo amanhã.");
-        }
+        usage.ensureWithinLimit(userId);
 
         InsightPayloadDTO payload = gemini.analyze(
                 InsightPromptBuilder.SYSTEM,
                 InsightPromptBuilder.user(works));
+
+        int left = usage.consume(userId);
 
         AiInsight entity = insightRepository.findByUserIdAndSelectionHash(userId, hash)
                 .orElseGet(() -> new AiInsight(userId, hash, gemini.model(), works.size(), null));
@@ -137,7 +129,7 @@ public class InsightService {
         entity.setChatLog("[]"); // análise nova → chat de follow-up recomeça do zero
         entity = insightRepository.save(entity);
 
-        return InsightResponseDTO.of(entity, payload, false, List.of(), CHAT_LIMIT);
+        return InsightResponseDTO.of(entity, payload, false, List.of(), left, AiUsageService.DAILY_LIMIT);
     }
 
     /** Obras do usuário; se vierem ids, filtra por eles. Limita a MAX_WORKS (melhores por nota final). */
