@@ -1,5 +1,6 @@
 package br.com.myrank.controller;
 
+import jakarta.validation.Valid;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.insight.InsightChatRequestDTO;
 import br.com.myrank.dto.insight.InsightGenerateRequestDTO;
@@ -27,7 +28,7 @@ public class InsightController {
     @PostMapping("/generate")
     public ResponseEntity<InsightResponseDTO> generate(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody InsightGenerateRequestDTO body) {
+            @Valid @RequestBody InsightGenerateRequestDTO body) {
         User user = authUtils.getUser(userDetails);
         return ResponseEntity.ok(insightService.generate(user.getId(), body));
     }
@@ -42,12 +43,12 @@ public class InsightController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    /** Pergunta de follow-up sobre a análise (máx. 3 por análise). */
+    /** Pergunta de follow-up sobre a análise (consome 1 do orçamento diário de IA). */
     @PostMapping("/{id}/chat")
     public ResponseEntity<InsightResponseDTO> chat(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id,
-            @RequestBody InsightChatRequestDTO body) {
+            @Valid @RequestBody InsightChatRequestDTO body) {
         User user = authUtils.getUser(userDetails);
         return ResponseEntity.ok(insightService.chat(user.getId(), id, body.question()));
     }
