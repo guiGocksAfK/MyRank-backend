@@ -1,6 +1,7 @@
 package br.com.myrank.controller;
 
 import br.com.myrank.domain.entity.User;
+import br.com.myrank.dto.insight.InsightChatRequestDTO;
 import br.com.myrank.dto.insight.InsightGenerateRequestDTO;
 import br.com.myrank.dto.insight.InsightResponseDTO;
 import br.com.myrank.security.AuthUtils;
@@ -39,5 +40,15 @@ public class InsightController {
         return insightService.getLatest(user.getId())
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    /** Pergunta de follow-up sobre a análise (máx. 3 por análise). */
+    @PostMapping("/{id}/chat")
+    public ResponseEntity<InsightResponseDTO> chat(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody InsightChatRequestDTO body) {
+        User user = authUtils.getUser(userDetails);
+        return ResponseEntity.ok(insightService.chat(user.getId(), id, body.question()));
     }
 }

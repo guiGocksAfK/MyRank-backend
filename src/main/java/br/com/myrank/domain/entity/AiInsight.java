@@ -35,6 +35,11 @@ public class AiInsight {
     @Column(nullable = false, columnDefinition = "jsonb")
     private String payload;
 
+    /** Chat de follow-up sobre esta análise (JSON: array de mensagens). Limite de 3 turnos do usuário. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "chat_log", nullable = false, columnDefinition = "jsonb")
+    private String chatLog = "[]";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -69,6 +74,9 @@ public class AiInsight {
 
     public String getPayload() { return payload; }
     public void setPayload(String payload) { this.payload = payload; }
+
+    public String getChatLog() { return chatLog == null ? "[]" : chatLog; }
+    public void setChatLog(String chatLog) { this.chatLog = chatLog; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }
