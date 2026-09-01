@@ -1,5 +1,6 @@
 package br.com.myrank.controller;
 
+import jakarta.validation.Valid;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.UserCreateDTO;
 import br.com.myrank.dto.UserResponseDTO;
@@ -24,7 +25,7 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<UserResponseDTO> create(@RequestBody UserCreateDTO dto) {
+    public ResponseEntity<UserResponseDTO> create(@Valid @RequestBody UserCreateDTO dto) {
         User user = userService.createUser(dto);
         return ResponseEntity.ok(UserResponseDTO.fromEntity(user));
     }
@@ -38,7 +39,7 @@ public class UserController {
     @PutMapping("/me")
     public ResponseEntity<UserResponseDTO> updateMe(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody UserUpdateDTO dto) {
+            @Valid @RequestBody UserUpdateDTO dto) {
         User user = authUtils.getUser(userDetails);
         User updated = userService.updateUser(user.getId(), dto);
         return ResponseEntity.ok(UserResponseDTO.fromEntity(updated));

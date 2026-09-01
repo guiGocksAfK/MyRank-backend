@@ -1,5 +1,6 @@
 package br.com.myrank.controller;
 
+import jakarta.validation.Valid;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.entity.Work;
 import br.com.myrank.dto.WorkCreateDTO;
@@ -29,7 +30,7 @@ public class WorkController {
     @PostMapping
     public ResponseEntity<WorkResponseDTO> create(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody WorkCreateDTO dto) {
+            @Valid @RequestBody WorkCreateDTO dto) {
         User user = authUtils.getUser(userDetails);
         Work work = workService.createWork(user, dto);
         return ResponseEntity.ok(WorkResponseDTO.fromEntity(work));
@@ -58,7 +59,7 @@ public class WorkController {
     public ResponseEntity<WorkResponseDTO> update(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id,
-            @RequestBody WorkUpdateDTO dto) {
+            @Valid @RequestBody WorkUpdateDTO dto) {
         User user = authUtils.getUser(userDetails);
         Work work = workService.updateWork(id, user.getId(), dto);
         return ResponseEntity.ok(WorkResponseDTO.fromEntity(work));
