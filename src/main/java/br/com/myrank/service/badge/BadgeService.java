@@ -10,6 +10,7 @@ import br.com.myrank.service.WorkTypeResolver;
 import br.com.myrank.service.social.FeedEventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +48,17 @@ public class BadgeService {
         this.masterTableGroupRepository = masterTableGroupRepository;
         this.userRepository = userRepository;
         this.feedEventService = feedEventService;
+    }
+
+    /**
+     * Recálculo em segundo plano — chamado pelos CRUDs de obra pra não segurar a
+     * resposta da escrita enquanto reprocessa as 48 badges. Roda no `badgeExecutor`,
+     * em transação própria (o CRUD que disparou já commitou).
+     */
+    @Async("badgeExecutor")
+    @Transactional
+    public void recalculateAsync(Long userId) {
+        recalculate(userId);
     }
 
     /** Recalcula todo o progresso de badges do usuário. Nunca lança pra fora. */
