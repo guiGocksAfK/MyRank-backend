@@ -1,5 +1,6 @@
 package br.com.myrank.controller;
 
+import jakarta.validation.Valid;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.CategoryCreateDTO;
 import br.com.myrank.dto.CategoryResponseDTO;
@@ -28,7 +29,7 @@ public class CategoryController {
     @PostMapping
     public ResponseEntity<CategoryResponseDTO> create(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody CategoryCreateDTO dto) {
+            @Valid @RequestBody CategoryCreateDTO dto) {
         User user = authUtils.getUser(userDetails);
         return ResponseEntity.ok(categoryService.createCategory(user, dto));
     }
@@ -44,7 +45,7 @@ public class CategoryController {
     public ResponseEntity<CategoryResponseDTO> update(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id,
-            @RequestBody CategoryUpdateDTO dto) {
+            @Valid @RequestBody CategoryUpdateDTO dto) {
         User user = authUtils.getUser(userDetails);
         return ResponseEntity.ok(categoryService.updateCategory(id, user.getId(), dto));
     }

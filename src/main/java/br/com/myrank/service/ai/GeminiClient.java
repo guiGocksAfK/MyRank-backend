@@ -1,5 +1,6 @@
 package br.com.myrank.service.ai;
 
+import br.com.myrank.dto.insight.InsightChatMessageDTO;
 import br.com.myrank.dto.insight.InsightPayloadDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -101,6 +102,60 @@ public class GeminiClient {
                     "A IA respondeu num formato inesperado. Tente gerar a análise de novo.");
         }
         return payload;
+    }
+
+    /**
+     * Chat de follow-up sobre uma análise. {@code context} entra como priming,
+     * {@code history} são os turnos anteriores (USER/AI) e {@code question} é a
+     * nova pergunta. Devolve texto puro. Falhas viram 503 amigável.
+     */
+    public String chat(String systemPrompt, String context,
+                       List<InsightChatMessageDTO> history, String question) {
+        if (!isConfigured()) {
+            throw new IllegalStateException(
+                    "O chat da IA não está configurado no servidor. Defina GEMINI_API_KEY e tente de novo.");
+        }
+
+        List<Map<String, Object>> messages = new java.util.ArrayList<>();
+        messages.add(Map.of("role", "system", "content", systemPrompt));
+        messages.add(Map.of("role", "user", "content", context));
+        messages.add(Map.of("role", "assistant", "content",
+                "Entendi. Pode perguntar o que quiser sobre essa análise."));
+        if (history != null) {
+            for (InsightChatMessageDTO m : history) {
+                messages.add(Map.of(
+                        "role", m.isUser() ? "user" : "assistant",
+                        "content", m.content()));
+            }
+        }
+        messages.add(Map.of("role", "user", "content", question));
+
+        Map<String, Object> body = Map.of(
+                "model", model,
+                "temperature", 0.6,
+                "messages", messages
+        );
+
+        String raw;
+        try {
+            raw = http.post()
+                    .uri("/chat/completions")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+        } catch (Exception e) {
+            log.warn("Chat com o Gemini falhou: {}", e.getMessage());
+            throw new IllegalStateException(
+                    "O serviço de IA está instável agora. Tente perguntar de novo em instantes.", e);
+        }
+
+        String answer = extractContent(raw).trim();
+        if (answer.startsWith("```")) {
+            answer = answer.replaceAll("^```(?:\\w+)?\\s*", "").replaceAll("\\s*```$", "").trim();
+        }
+        return answer;
     }
 
     /** choices[0].message.content da resposta estilo OpenAI. */

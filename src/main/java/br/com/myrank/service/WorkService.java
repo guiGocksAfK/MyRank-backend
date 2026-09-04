@@ -53,7 +53,7 @@ public class WorkService {
 
         Work saved = workRepository.save(work);
         feedEventService.recordAdded(saved);
-        badgeService.recalculate(user.getId());
+        badgeService.recalculateAsync(user.getId());
         return saved;
     }
 
@@ -107,7 +107,7 @@ public class WorkService {
         if (previousScore == null || previousScore.compareTo(saved.getScore()) != 0) {
             feedEventService.recordRated(saved);
         }
-        badgeService.recalculate(userId);
+        badgeService.recalculateAsync(userId);
         return saved;
     }
 
@@ -120,7 +120,7 @@ public class WorkService {
         }
 
         workRepository.delete(work);
-        badgeService.recalculate(userId);
+        badgeService.recalculateAsync(userId);
     }
 
     // Nota_Final = Nota_Original + Log10(Minutos / 60)

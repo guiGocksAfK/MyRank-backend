@@ -1,5 +1,6 @@
 package br.com.myrank.controller;
 
+import jakarta.validation.Valid;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.*;
 import br.com.myrank.security.AuthUtils;
@@ -104,20 +105,20 @@ public class SocialController {
     public ResponseEntity<ReactionSummaryDTO> react(
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long eventId,
-            @RequestBody ReactRequestDTO body) {
+            @Valid @RequestBody ReactRequestDTO body) {
         return ResponseEntity.ok(socialService.react(me(ud), eventId, body.kind()));
     }
 
     @PostMapping("/takes")
     public ResponseEntity<FeedItemDTO> postTake(
-            @AuthenticationPrincipal UserDetails ud, @RequestBody PostTakeDTO body) {
+            @AuthenticationPrincipal UserDetails ud, @Valid @RequestBody PostTakeDTO body) {
         return ResponseEntity.ok(socialService.postTake(me(ud), body));
     }
 
     @PatchMapping("/takes/{takeId}")
     public ResponseEntity<FeedItemDTO> editTake(
             @AuthenticationPrincipal UserDetails ud, @PathVariable Long takeId,
-            @RequestBody PostCommentDTO body) {
+            @Valid @RequestBody PostCommentDTO body) {
         return ResponseEntity.ok(socialService.editTake(me(ud), takeId, body.text()));
     }
 
@@ -137,7 +138,7 @@ public class SocialController {
     @PostMapping("/takes/{takeId}/comments")
     public ResponseEntity<TakeCommentDTO> addComment(
             @AuthenticationPrincipal UserDetails ud, @PathVariable Long takeId,
-            @RequestBody PostCommentDTO body) {
+            @Valid @RequestBody PostCommentDTO body) {
         return ResponseEntity.ok(
                 takeCommentService.add(me(ud), takeId, body.text(), body.parentCommentId()));
     }
@@ -145,7 +146,7 @@ public class SocialController {
     @PatchMapping("/comments/{commentId}")
     public ResponseEntity<TakeCommentDTO> editComment(
             @AuthenticationPrincipal UserDetails ud, @PathVariable Long commentId,
-            @RequestBody PostCommentDTO body) {
+            @Valid @RequestBody PostCommentDTO body) {
         return ResponseEntity.ok(takeCommentService.edit(me(ud), commentId, body.text()));
     }
 

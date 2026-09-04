@@ -2,18 +2,21 @@ package br.com.myrank.service.ai;
 
 import br.com.myrank.domain.entity.AiInsight;
 import br.com.myrank.domain.entity.Work;
+import br.com.myrank.dto.insight.InsightChatMessageDTO;
 import br.com.myrank.dto.insight.InsightGenerateRequestDTO;
 import br.com.myrank.dto.insight.InsightPayloadDTO;
 import br.com.myrank.dto.insight.InsightResponseDTO;
 import br.com.myrank.repository.AiInsightRepository;
 import br.com.myrank.repository.WorkRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
@@ -26,21 +29,24 @@ public class InsightService {
 
     /** Teto de obras mandadas pro modelo — segura o custo de token e o tempo de resposta. */
     private static final int MAX_WORKS = 100;
-    /** Gerações novas por usuário por dia (cache hit não conta). */
-    private static final int DAILY_LIMIT = 5;
+    /** Tamanho máximo de uma pergunta do chat. */
+    private static final int CHAT_MAX_CHARS = 500;
 
     private final WorkRepository workRepository;
     private final AiInsightRepository insightRepository;
     private final GeminiClient gemini;
+    private final AiUsageService usage;
     private final ObjectMapper objectMapper;
 
     public InsightService(WorkRepository workRepository,
                           AiInsightRepository insightRepository,
                           GeminiClient gemini,
+                          AiUsageService usage,
                           ObjectMapper objectMapper) {
         this.workRepository = workRepository;
         this.insightRepository = insightRepository;
         this.gemini = gemini;
+        this.usage = usage;
         this.objectMapper = objectMapper;
     }
 
@@ -48,7 +54,45 @@ public class InsightService {
     @Transactional(readOnly = true)
     public Optional<InsightResponseDTO> getLatest(Long userId) {
         return insightRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
-                .map(entity -> InsightResponseDTO.of(entity, deserialize(entity), true));
+                .map(entity -> InsightResponseDTO.of(entity, deserialize(entity), true,
+                        deserializeChat(entity), usage.remaining(userId), AiUsageService.DAILY_LIMIT));
+    }
+
+    /**
+     * Responde uma pergunta de follow-up sobre a análise {@code insightId}.
+     * Cada pergunta consome 1 do orçamento diário de mensagens de IA; o par
+     * pergunta/resposta fica salvo em {@code chat_log}.
+     */
+    @Transactional
+    public InsightResponseDTO chat(Long userId, Long insightId, String rawQuestion) {
+        AiInsight insight = insightRepository.findById(insightId)
+                .filter(i -> i.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalArgumentException("Análise não encontrada."));
+
+        String question = rawQuestion == null ? "" : rawQuestion.trim();
+        if (question.isEmpty()) {
+            throw new IllegalArgumentException("Escreva uma pergunta.");
+        }
+        if (question.length() > CHAT_MAX_CHARS) {
+            question = question.substring(0, CHAT_MAX_CHARS);
+        }
+        usage.ensureWithinLimit(userId);
+
+        List<InsightChatMessageDTO> thread = deserializeChat(insight);
+        InsightPayloadDTO analysis = deserialize(insight);
+        String answer = gemini.chat(
+                InsightPromptBuilder.CHAT_SYSTEM,
+                InsightPromptBuilder.chatContext(analysis),
+                thread,
+                question);
+
+        int left = usage.consume(userId);
+        thread.add(new InsightChatMessageDTO(InsightChatMessageDTO.USER, question, LocalDateTime.now()));
+        thread.add(new InsightChatMessageDTO(InsightChatMessageDTO.AI, answer, LocalDateTime.now()));
+        insight.setChatLog(serializeChat(thread));
+        insight = insightRepository.save(insight);
+
+        return InsightResponseDTO.of(insight, analysis, true, thread, left, AiUsageService.DAILY_LIMIT);
     }
 
     @Transactional
@@ -63,29 +107,29 @@ public class InsightService {
         if (!req.refresh()) {
             Optional<AiInsight> cached = insightRepository.findByUserIdAndSelectionHash(userId, hash);
             if (cached.isPresent()) {
-                return InsightResponseDTO.of(cached.get(), deserialize(cached.get()), true);
+                // Reaproveitar do cache não custa mensagem.
+                return InsightResponseDTO.of(cached.get(), deserialize(cached.get()), true,
+                        deserializeChat(cached.get()), usage.remaining(userId), AiUsageService.DAILY_LIMIT);
             }
         }
 
-        LocalDate today = LocalDate.now();
-        long usedToday = insightRepository.countByUserIdAndCreatedAtAfter(userId, today.atStartOfDay());
-        if (usedToday >= DAILY_LIMIT) {
-            throw new IllegalArgumentException(
-                    "Você atingiu o limite de " + DAILY_LIMIT + " análises por dia. Tente de novo amanhã.");
-        }
+        usage.ensureWithinLimit(userId);
 
         InsightPayloadDTO payload = gemini.analyze(
                 InsightPromptBuilder.SYSTEM,
                 InsightPromptBuilder.user(works));
+
+        int left = usage.consume(userId);
 
         AiInsight entity = insightRepository.findByUserIdAndSelectionHash(userId, hash)
                 .orElseGet(() -> new AiInsight(userId, hash, gemini.model(), works.size(), null));
         entity.setModel(gemini.model());
         entity.setWorkCount(works.size());
         entity.setPayload(serialize(payload));
+        entity.setChatLog("[]"); // análise nova → chat de follow-up recomeça do zero
         entity = insightRepository.save(entity);
 
-        return InsightResponseDTO.of(entity, payload, false);
+        return InsightResponseDTO.of(entity, payload, false, List.of(), left, AiUsageService.DAILY_LIMIT);
     }
 
     /** Obras do usuário; se vierem ids, filtra por eles. Limita a MAX_WORKS (melhores por nota final). */
@@ -129,6 +173,29 @@ public class InsightService {
             return objectMapper.readValue(entity.getPayload(), InsightPayloadDTO.class);
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao ler a análise salva.", e);
+        }
+    }
+
+    private String serializeChat(List<InsightChatMessageDTO> thread) {
+        try {
+            return objectMapper.writeValueAsString(thread);
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao salvar o chat da análise.", e);
+        }
+    }
+
+    /** Chat salvo em {@code chat_log}; tolera nulo/vazio devolvendo lista mutável vazia. */
+    private List<InsightChatMessageDTO> deserializeChat(AiInsight entity) {
+        String raw = entity.getChatLog();
+        if (raw == null || raw.isBlank() || raw.equals("[]")) {
+            return new ArrayList<>();
+        }
+        try {
+            List<InsightChatMessageDTO> parsed = objectMapper.readValue(
+                    raw, new TypeReference<List<InsightChatMessageDTO>>() {});
+            return new ArrayList<>(parsed);
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
     }
 }

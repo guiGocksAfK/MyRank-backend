@@ -14,8 +14,6 @@ public interface FeedReactionRepository extends JpaRepository<FeedReaction, Long
 
     Optional<FeedReaction> findByFeedEventIdAndUserId(Long feedEventId, Long userId);
 
-    long countByFeedEventIdAndKind(Long feedEventId, ReactionKind kind);
-
     /** Reações de um tipo feitas por gente que NÃO é o dono do post. */
     long countByFeedEventIdAndKindAndUserIdNot(Long feedEventId, ReactionKind kind, Long userId);
 

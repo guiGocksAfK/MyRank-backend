@@ -1,12 +1,22 @@
 package br.com.myrank.dto;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDate;
 
+/** Update parcial: campo null = não mexe. */
 public record WorkUpdateDTO(
+        @Size(max = 300, message = "O título é longo demais.")
         String title,
-        String imageUrl,
-        String creator,
+
+        @Size(max = 1000) String imageUrl,
+        @Size(max = 200) String creator,
         LocalDate releaseDate,
-        Integer timeMinutes,
-        Double score
+
+        @Min(0) @Max(1_000_000) Integer timeMinutes,
+        @DecimalMin("0.0") @DecimalMax("10.0") Double score
 ) {}

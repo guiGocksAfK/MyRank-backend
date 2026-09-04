@@ -1,5 +1,6 @@
 package br.com.myrank.controller;
 
+import jakarta.validation.Valid;
 import br.com.myrank.domain.entity.MasterTableGroup;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.MasterTableGroupCreateDTO;
@@ -29,7 +30,7 @@ public class MasterTableGroupController {
     @PostMapping
     public ResponseEntity<MasterTableGroupResponseDTO> create(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody MasterTableGroupCreateDTO dto) {
+            @Valid @RequestBody MasterTableGroupCreateDTO dto) {
         User user = authUtils.getUser(userDetails);
         MasterTableGroup group = groupService.createGroup(user, dto);
         return ResponseEntity.ok(MasterTableGroupResponseDTO.fromEntity(group));
@@ -48,7 +49,7 @@ public class MasterTableGroupController {
     public ResponseEntity<MasterTableGroupResponseDTO> update(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id,
-            @RequestBody MasterTableGroupUpdateDTO dto) {
+            @Valid @RequestBody MasterTableGroupUpdateDTO dto) {
         User user = authUtils.getUser(userDetails);
         MasterTableGroup group = groupService.updateGroup(id, user.getId(), dto);
         return ResponseEntity.ok(MasterTableGroupResponseDTO.fromEntity(group));

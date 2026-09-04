@@ -1,5 +1,6 @@
 package br.com.myrank.controller;
 
+import jakarta.validation.Valid;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.chat.*;
 import br.com.myrank.security.AuthUtils;
@@ -36,7 +37,7 @@ public class ChatController {
 
     @PostMapping("/conversations")
     public ResponseEntity<ChatConversationDTO> createGroup(
-            @AuthenticationPrincipal UserDetails ud, @RequestBody CreateGroupDTO body) {
+            @AuthenticationPrincipal UserDetails ud, @Valid @RequestBody CreateGroupDTO body) {
         ChatConversationDTO dto = chatService.createGroup(
                 me(ud), body.name(), body.memberIds(), body.access(), body.imageUrl(), body.description());
         realtime.touch(dto.id());
@@ -59,7 +60,7 @@ public class ChatController {
     public ResponseEntity<ChatConversationDTO> updateGroup(
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
-            @RequestBody UpdateGroupDTO body) {
+            @Valid @RequestBody UpdateGroupDTO body) {
         ChatConversationDTO dto = chatService.updateGroup(me(ud), id, body);
         realtime.touch(id);
         return ResponseEntity.ok(dto);
@@ -167,7 +168,7 @@ public class ChatController {
     public ResponseEntity<ChatMessageDTO> send(
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
-            @RequestBody SendMessageDTO body) {
+            @Valid @RequestBody SendMessageDTO body) {
         Long uid = me(ud);
         ChatMessageDTO dto = chatService.send(uid, id, body.body(), body.replyToId());
         realtime.broadcast(id, "created", uid, dto);
@@ -179,7 +180,7 @@ public class ChatController {
     public ResponseEntity<ChatMessageDTO> editMessage(
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long messageId,
-            @RequestBody EditMessageDTO body) {
+            @Valid @RequestBody EditMessageDTO body) {
         Long uid = me(ud);
         ChatMessageDTO dto = chatService.editMessage(uid, messageId, body.body());
         realtime.broadcast(dto.conversationId(), "edited", uid, dto);
@@ -201,7 +202,7 @@ public class ChatController {
     public ResponseEntity<ChatMessageDTO> react(
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long messageId,
-            @RequestBody ReactDTO body) {
+            @Valid @RequestBody ReactDTO body) {
         Long uid = me(ud);
         ChatMessageDTO dto = chatService.react(uid, messageId, body.emoji());
         realtime.broadcast(dto.conversationId(), "reacted", uid, dto);
@@ -235,7 +236,7 @@ public class ChatController {
     public ResponseEntity<List<ConversationMemberDTO>> addMembers(
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
-            @RequestBody AddMembersDTO body) {
+            @Valid @RequestBody AddMembersDTO body) {
         List<ConversationMemberDTO> out = chatService.addMembers(me(ud), id, body.userIds());
         realtime.touch(id);
         return ResponseEntity.ok(out);
@@ -257,7 +258,7 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
             @PathVariable Long userId,
-            @RequestBody SetRoleDTO body) {
+            @Valid @RequestBody SetRoleDTO body) {
         List<ConversationMemberDTO> out = chatService.setRole(me(ud), id, userId, body.role());
         realtime.touch(id);
         return ResponseEntity.ok(out);
