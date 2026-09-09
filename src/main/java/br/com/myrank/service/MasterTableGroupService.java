@@ -9,6 +9,7 @@ import br.com.myrank.repository.CategoryRepository;
 import br.com.myrank.repository.MasterTableGroupRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -58,6 +59,18 @@ public class MasterTableGroupService {
             group.setCategories(resolveOwnedCategories(userId, dto.categoryIds()));
         }
 
+        return groupRepository.save(group);
+    }
+
+    public MasterTableGroup updateOrder(Long groupId, Long userId, List<String> order) {
+        MasterTableGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Agrupamento não encontrado."));
+
+        if (!group.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Você não tem permissão para editar esse agrupamento.");
+        }
+
+        group.setManualOrder(order == null ? new ArrayList<>() : order);
         return groupRepository.save(group);
     }
 

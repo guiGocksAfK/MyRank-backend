@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import br.com.myrank.domain.entity.MasterTableGroup;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.MasterTableGroupCreateDTO;
+import br.com.myrank.dto.MasterTableGroupOrderDTO;
 import br.com.myrank.dto.MasterTableGroupResponseDTO;
 import br.com.myrank.dto.MasterTableGroupUpdateDTO;
 import br.com.myrank.security.AuthUtils;
@@ -52,6 +53,16 @@ public class MasterTableGroupController {
             @Valid @RequestBody MasterTableGroupUpdateDTO dto) {
         User user = authUtils.getUser(userDetails);
         MasterTableGroup group = groupService.updateGroup(id, user.getId(), dto);
+        return ResponseEntity.ok(MasterTableGroupResponseDTO.fromEntity(group));
+    }
+
+    @PutMapping("/{id}/order")
+    public ResponseEntity<MasterTableGroupResponseDTO> updateOrder(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody MasterTableGroupOrderDTO dto) {
+        User user = authUtils.getUser(userDetails);
+        MasterTableGroup group = groupService.updateOrder(id, user.getId(), dto.order());
         return ResponseEntity.ok(MasterTableGroupResponseDTO.fromEntity(group));
     }
 

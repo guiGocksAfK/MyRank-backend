@@ -9,6 +9,7 @@ public record MasterTableGroupResponseDTO(
         Long id,
         String name,
         List<Long> categoryIds,
+        List<String> manualOrder,
         LocalDateTime createdAt
 ) {
     public static MasterTableGroupResponseDTO fromEntity(MasterTableGroup group) {
@@ -16,6 +17,7 @@ public record MasterTableGroupResponseDTO(
                 group.getId(),
                 group.getName(),
                 group.getCategories().stream().map(c -> c.getId()).toList(),
+                group.getManualOrder(),
                 group.getCreatedAt()
         );
     }
