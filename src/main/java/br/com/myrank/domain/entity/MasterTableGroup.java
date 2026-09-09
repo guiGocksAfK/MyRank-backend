@@ -1,9 +1,13 @@
 package br.com.myrank.domain.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -23,6 +27,11 @@ public class MasterTableGroup {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    /** Ordem manual (drag-and-drop) do ranking unificado: lista de "categoriaId:obraId". */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "manual_order", nullable = false, columnDefinition = "jsonb")
+    private List<String> manualOrder = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -54,4 +63,11 @@ public class MasterTableGroup {
 
     public Set<Category> getCategories() { return categories; }
     public void setCategories(Set<Category> categories) { this.categories = categories; }
+
+    public List<String> getManualOrder() {
+        return manualOrder == null ? new ArrayList<>() : manualOrder;
+    }
+    public void setManualOrder(List<String> manualOrder) {
+        this.manualOrder = manualOrder == null ? new ArrayList<>() : manualOrder;
+    }
 }
