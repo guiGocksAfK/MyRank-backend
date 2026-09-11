@@ -127,6 +127,7 @@ public class InsightService {
         entity.setWorkCount(works.size());
         entity.setPayload(serialize(payload));
         entity.setChatLog("[]"); // análise nova → chat de follow-up recomeça do zero
+        entity.setUpdatedAt(LocalDateTime.now()); // "gerado há X" reflete esta geração
         entity = insightRepository.save(entity);
 
         return InsightResponseDTO.of(entity, payload, false, List.of(), left, AiUsageService.DAILY_LIMIT);

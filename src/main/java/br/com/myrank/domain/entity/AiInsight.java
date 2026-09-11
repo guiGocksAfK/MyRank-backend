@@ -43,9 +43,14 @@ public class AiInsight {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** Momento da última geração da análise. "Gerar novamente" atualiza; chat não. */
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = LocalDateTime.now();
+        if (updatedAt == null) updatedAt = createdAt;
     }
 
     public AiInsight() {}
@@ -79,4 +84,7 @@ public class AiInsight {
     public void setChatLog(String chatLog) { this.chatLog = chatLog; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt == null ? createdAt : updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

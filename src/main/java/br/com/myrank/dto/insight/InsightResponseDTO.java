@@ -34,7 +34,7 @@ public record InsightResponseDTO(
                 entity.getModel(),
                 entity.getWorkCount(),
                 cached,
-                entity.getCreatedAt(),
+                entity.getUpdatedAt(),
                 chat == null ? List.of() : chat,
                 dailyRemaining,
                 dailyLimit
