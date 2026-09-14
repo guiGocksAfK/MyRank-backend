@@ -88,6 +88,10 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
+        // Navegador reaproveita o preflight (OPTIONS) por até 2h (teto do Chrome) em vez
+        // de mandar um antes de cada chamada autenticada — menos ida e volta e menos
+        // conexão pendurada quando o Render está acordando.
+        configuration.setMaxAge(7200L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
