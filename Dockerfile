@@ -1,4 +1,6 @@
-FROM maven:3.9-eclipse-temurin-17-alpine AS build
+# Imagens sem "-alpine": as variantes Alpine do Temurin 17 só existem pra amd64,
+# e a VM Always Free da Oracle (Ampere A1) é ARM64. Estas são multi-arquitetura.
+FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
@@ -8,7 +10,7 @@ RUN mvn dependency:go-offline
 COPY src ./src
 RUN mvn package -DskipTests
 
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
