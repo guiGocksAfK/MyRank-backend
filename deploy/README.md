@@ -1,12 +1,17 @@
 # Deploy na Oracle Cloud (Always Free)
 
-API em Docker numa VM ARM da Oracle, com o Caddy na frente cuidando do HTTPS.
+API em Docker numa VM ARM da Oracle, atrás do **Caddy compartilhado** da VM
+(fica em `~/infra`, atende todos os projetos e cuida do HTTPS).
 O banco continua no **Neon**. O front continua na **Vercel**.
 
 ```
-Vercel (front) ──HTTPS──▶ Caddy :443 ──▶ api :8080 ──▶ Neon (Postgres)
-                          └──────── VM Oracle ────────┘
+Vercel (front) ──HTTPS──▶ Caddy :443 ──▶ myrank-api :8080 ──▶ Neon (Postgres)
+                          └────────── VM Oracle (rede `web`) ─┘
 ```
+
+O Caddy acha a API pelo `container_name` (`myrank-api`), e os dois conversam
+pela rede Docker `web`. Se a VM for recriada do zero, crie a rede antes de tudo:
+`docker network create web`.
 
 ## 1. Conta na Oracle
 
@@ -64,11 +69,24 @@ cd MyRank-backend
 bash deploy/setup-vm.sh
 exit                       # entre de novo no SSH
 
-cd MyRank-backend/deploy
+docker network create web  # uma vez por VM
+cd ~/infra                 # Caddy compartilhado (docker-compose.yml + Caddyfile)
+docker compose up -d
+
+cd ~/MyRank-backend/deploy
 cp .env.example .env
 nano .env                  # preencha tudo (valores atuais: painel do Render → Environment)
 docker compose up -d --build
 docker compose logs -f api # espere o "Started MyRankApplication"
+```
+
+O `~/infra/Caddyfile` precisa de um bloco pro domínio deste projeto:
+
+```
+myrank.duckdns.org {
+	encode zstd gzip
+	reverse_proxy myrank-api:8080
+}
 ```
 
 Teste: `https://SEU_DOMINIO/api/health` deve responder `{"status":"ok"}`.

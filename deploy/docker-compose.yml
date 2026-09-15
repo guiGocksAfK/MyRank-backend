@@ -1,4 +1,5 @@
-# Produção na VM da Oracle: API + Caddy (HTTPS automático via Let's Encrypt).
+# Produção na VM da Oracle: só a API. O HTTPS fica com o Caddy compartilhado
+# (~/infra na VM), que atende todos os projetos da VM pelo domínio de cada um.
 # O banco continua no Neon — nada de Postgres aqui.
 #
 #   cd deploy && docker compose up -d --build
@@ -8,6 +9,7 @@
 services:
   api:
     build: ..
+    container_name: myrank-api # é por este nome que o Caddy encontra a API
     restart: unless-stopped
     env_file: .env
     environment:
@@ -19,23 +21,9 @@ services:
     mem_limit: 4g
     expose:
       - "8080" # só na rede interna; quem fala com a internet é o Caddy
+    networks:
+      - web
 
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    depends_on:
-      - api
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      API_DOMAIN: ${API_DOMAIN}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data # certificados — não apagar
-      - caddy_config:/config
-
-volumes:
-  caddy_data:
-  caddy_config:
+networks:
+  web:
+    external: true # criada uma vez: docker network create web
