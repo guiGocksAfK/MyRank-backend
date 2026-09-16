@@ -1,8 +1,10 @@
 package br.com.myrank.config;
 
+import br.com.myrank.security.BotAuthenticationFilter;
 import br.com.myrank.security.CustomUserDetailsService;
 import br.com.myrank.security.JwtAuthenticationFilter;
 import br.com.myrank.security.RateLimitFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,6 +31,7 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitFilter rateLimitFilter;
+    private final BotAuthenticationFilter botAuthenticationFilter;
 
     /** Lista separada por vírgula; em prod inclui a origem do Vercel. */
     @Value("${cors.allowed-origins:http://localhost:5173}")
@@ -36,10 +39,35 @@ public class SecurityConfig {
 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
                           JwtAuthenticationFilter jwtAuthenticationFilter,
-                          RateLimitFilter rateLimitFilter) {
+                          RateLimitFilter rateLimitFilter,
+                          BotAuthenticationFilter botAuthenticationFilter) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.rateLimitFilter = rateLimitFilter;
+        this.botAuthenticationFilter = botAuthenticationFilter;
+    }
+
+    /**
+     * Sendo {@code @Component} + {@code OncePerRequestFilter}, o Boot registra esses
+     * filtros TAMBÉM na cadeia de servlet filters, fora do Security — e a instância de
+     * fora roda antes de toda a cadeia do Security, “ganhando” do posicionamento
+     * declarado aqui (o {@code OncePerRequestFilter} faz a segunda passagem virar no-op).
+     * Para o rate limit conseguir enxergar o atributo posto pelo filtro do bot, os dois
+     * precisam rodar na ordem declarada abaixo — logo, auto-registro desligado.
+     */
+    @Bean
+    public FilterRegistrationBean<BotAuthenticationFilter> botFilterRegistration(
+            BotAuthenticationFilter filter) {
+        FilterRegistrationBean<BotAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(RateLimitFilter filter) {
+        FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -76,7 +104,10 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Antes do Jwt — e, por consequência, antes do RateLimitFilter — para que
+                // o atributo com o discord_id já exista quando o rate limit montar a chave.
+                .addFilterBefore(botAuthenticationFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
