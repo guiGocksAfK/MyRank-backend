@@ -20,6 +20,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     void updateLastSeen(@Param("id") Long id, @Param("now") LocalDateTime now);
     Optional<User> findByEmail(String email);
     Optional<User> findByAuthProviderAndProviderId(AuthProvider authProvider, String providerId);
+    Optional<User> findByDiscordId(String discordId);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
     boolean existsByUsernameAndIdNot(String username, Long id);

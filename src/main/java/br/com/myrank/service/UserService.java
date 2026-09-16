@@ -100,8 +100,37 @@ public class UserService {
 
     public User findOrCreateFromOAuth(OAuthUserInfo info, AuthProvider provider) {
         return userRepository.findByAuthProviderAndProviderId(provider, info.providerId())
-                .map(user -> userRepository.save(updateOAuthProfile(user, info)))
+                .map(user -> userRepository.save(updateOAuthProfile(user, info, provider)))
                 .orElseGet(() -> createOrLinkOAuthUser(info, provider));
+    }
+
+    /**
+     * Grava o snowflake do Discord em users.discord_id — sempre que o login vier do
+     * Discord, inclusive numa conta LOCAL/GOOGLE. É o que resolve o caso híbrido: o
+     * auth_provider continua sendo o original (o método de login não muda), mas
+     * passamos a saber qual Discord é aquele usuário — que é o que o bot precisa.
+     */
+    private void linkDiscordId(User user, OAuthUserInfo info, AuthProvider provider) {
+        if (provider != AuthProvider.DISCORD) {
+            return;
+        }
+        String discordId = info.providerId();
+        if (discordId == null || discordId.isBlank()) {
+            return;
+        }
+        if (discordId.equals(user.getDiscordId())) {
+            return;
+        }
+
+        // O índice único rejeitaria com 500; aqui a mensagem é acionável.
+        userRepository.findByDiscordId(discordId).ifPresent(owner -> {
+            if (!owner.getId().equals(user.getId())) {
+                throw new IllegalArgumentException(
+                        "Esta conta do Discord já está vinculada a outro usuário do MyRank.");
+            }
+        });
+
+        user.setDiscordId(discordId);
     }
 
     private User createOrLinkOAuthUser(OAuthUserInfo info, AuthProvider provider) {
@@ -114,7 +143,7 @@ public class UserService {
                 }
 
                 user.setProviderId(info.providerId());
-                return userRepository.save(updateOAuthProfile(user, info));
+                return userRepository.save(updateOAuthProfile(user, info, provider));
             }
         }
 
@@ -124,6 +153,7 @@ public class UserService {
         user.setAuthProvider(provider);
         user.setProviderId(info.providerId());
         user.setAvatarUrl(info.avatarUrl());
+        linkDiscordId(user, info, provider);
 
         UserStats stats = new UserStats(user);
         user.setUserStats(stats);
@@ -133,7 +163,9 @@ public class UserService {
         return savedUser;
     }
 
-    private User updateOAuthProfile(User user, OAuthUserInfo info) {
+    private User updateOAuthProfile(User user, OAuthUserInfo info, AuthProvider provider) {
+        linkDiscordId(user, info, provider);
+
         // só preenche a partir do OAuth se o usuário ainda não escolheu uma foto —
         // assim a URL definida por ele não é sobrescrita a cada login
         boolean hasOwnPhoto = user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank();

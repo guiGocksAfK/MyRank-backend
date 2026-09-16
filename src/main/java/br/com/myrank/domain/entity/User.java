@@ -34,6 +34,14 @@ public class User {
     @Column(name = "provider_id", length = 255)
     private String providerId;
 
+    /**
+     * Snowflake do Discord vinculado à conta — independente de {@code authProvider}.
+     * Preenchido em todo login pelo Discord, inclusive quando a conta é LOCAL/GOOGLE.
+     * É por aqui que o bot de Discord resolve qual usuário do MyRank está falando.
+     */
+    @Column(name = "discord_id", length = 32, unique = true)
+    private String discordId;
+
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;
 
@@ -96,6 +104,9 @@ public class User {
 
     public String getProviderId() { return providerId; }
     public void setProviderId(String providerId) { this.providerId = providerId; }
+
+    public String getDiscordId() { return discordId; }
+    public void setDiscordId(String discordId) { this.discordId = discordId; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }

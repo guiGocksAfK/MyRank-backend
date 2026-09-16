@@ -17,7 +17,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * sensíveis a abuso: login/OAuth (brute-force), registro (spam de conta) e o
  * proxy pras APIs externas (que gasta as nossas quotas de TMDB/RAWG/MAL/Books).
  *
- * Chave = {@code request.getRemoteAddr()} — NÃO confia em X-Forwarded-For (é
+ * Chave = {@code request.getRemoteAddr()} (ou o usuário do Discord, quando a
+ * requisição vem do bot — ver {@link #clientKey}) — NÃO confia em X-Forwarded-For (é
  * spoofável). Atrás de proxy em prod, configure
  * {@code server.forward-headers-strategy=framework} pra que o remoteAddr venha certo.
  */
@@ -58,7 +59,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         if (windows.size() > MAX_KEYS) windows.clear();
 
-        String key = rule.prefix() + '|' + request.getRemoteAddr();
+        String key = rule.prefix() + '|' + clientKey(request);
         long now = System.currentTimeMillis();
         Window w = windows.computeIfAbsent(key, k -> new Window(now));
 
@@ -79,6 +80,20 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    /**
+     * O bot de Discord inteiro sai de um IP só (a VM da Oracle): contar por IP faria o
+     * teto virar global — duas pessoas usando ao mesmo tempo derrubariam a busca para
+     * todo mundo. Quando o {@link BotAuthenticationFilter} já resolveu de quem é a
+     * requisição, a chave passa a ser o usuário do Discord.
+     */
+    private String clientKey(HttpServletRequest req) {
+        Object discordId = req.getAttribute(BotAuthenticationFilter.DISCORD_ID_ATTRIBUTE);
+        if (discordId instanceof String id && !id.isBlank()) {
+            return "discord:" + id;
+        }
+        return req.getRemoteAddr();
     }
 
     private Rule match(HttpServletRequest req) {
