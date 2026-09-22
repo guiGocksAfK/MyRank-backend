@@ -21,6 +21,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     Optional<User> findByAuthProviderAndProviderId(AuthProvider authProvider, String providerId);
     Optional<User> findByDiscordId(String discordId);
+
+    Optional<User> findByEmailVerificationTokenHash(String emailVerificationTokenHash);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
     boolean existsByUsernameAndIdNot(String username, Long id);

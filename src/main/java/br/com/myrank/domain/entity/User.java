@@ -42,6 +42,20 @@ public class User {
     @Column(name = "discord_id", length = 32, unique = true)
     private String discordId;
 
+    /**
+     * Conta LOCAL só pode logar com isso true (clicou no link do email). Contas
+     * criadas pelo Google/Discord já nascem true — o provedor verificou o email.
+     */
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
+
+    /** SHA-256 (hex) do token do link de confirmação — o token em si nunca é salvo. */
+    @Column(name = "email_verification_token_hash", length = 64)
+    private String emailVerificationTokenHash;
+
+    @Column(name = "email_verification_expires_at")
+    private LocalDateTime emailVerificationExpiresAt;
+
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;
 
@@ -107,6 +121,15 @@ public class User {
 
     public String getDiscordId() { return discordId; }
     public void setDiscordId(String discordId) { this.discordId = discordId; }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public String getEmailVerificationTokenHash() { return emailVerificationTokenHash; }
+    public void setEmailVerificationTokenHash(String emailVerificationTokenHash) { this.emailVerificationTokenHash = emailVerificationTokenHash; }
+
+    public LocalDateTime getEmailVerificationExpiresAt() { return emailVerificationExpiresAt; }
+    public void setEmailVerificationExpiresAt(LocalDateTime emailVerificationExpiresAt) { this.emailVerificationExpiresAt = emailVerificationExpiresAt; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
