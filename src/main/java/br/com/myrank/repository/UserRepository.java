@@ -41,4 +41,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
             order by u.username asc
             """)
     List<User> searchByUsername(Long viewerId, String q, Pageable pageable);
+
+    /**
+     * DELETE direto no banco: as FKs para users são todas ON DELETE CASCADE e levam
+     * obras, takes, follows, mensagens etc. Pelo JPA o Hibernate tentaria carregar e
+     * apagar cada associação mapeada antes.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "DELETE FROM users WHERE id = :id", nativeQuery = true)
+    void hardDeleteById(@Param("id") Long id);
 }

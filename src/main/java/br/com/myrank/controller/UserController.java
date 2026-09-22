@@ -2,10 +2,12 @@ package br.com.myrank.controller;
 
 import jakarta.validation.Valid;
 import br.com.myrank.domain.entity.User;
+import br.com.myrank.dto.AccountDeleteRequestDTO;
 import br.com.myrank.dto.UserCreateDTO;
 import br.com.myrank.dto.UserResponseDTO;
 import br.com.myrank.dto.UserUpdateDTO;
 import br.com.myrank.security.AuthUtils;
+import br.com.myrank.service.AccountDeletionService;
 import br.com.myrank.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,10 +19,12 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final AccountDeletionService accountDeletionService;
     private final AuthUtils authUtils;
 
-    public UserController(UserService userService, AuthUtils authUtils) {
+    public UserController(UserService userService, AccountDeletionService accountDeletionService, AuthUtils authUtils) {
         this.userService = userService;
+        this.accountDeletionService = accountDeletionService;
         this.authUtils = authUtils;
     }
 
@@ -43,5 +47,15 @@ public class UserController {
         User user = authUtils.getUser(userDetails);
         User updated = userService.updateUser(user.getId(), dto);
         return ResponseEntity.ok(UserResponseDTO.fromEntity(updated));
+    }
+
+    /** Exclui a conta de vez. Pede o username digitado e, se a conta tiver, a senha. */
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteMe(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody AccountDeleteRequestDTO dto) {
+        User user = authUtils.getUser(userDetails);
+        accountDeletionService.deleteAccount(user, dto);
+        return ResponseEntity.noContent().build();
     }
 }
