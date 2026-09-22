@@ -550,6 +550,35 @@ public class ChatService {
         }
     }
 
+    /**
+     * Exclusão de conta: DMs somem (a outra ponta não tem com quem falar), e de cada
+     * grupo o usuário sai como numa saída normal — o dono passa pro próximo da
+     * hierarquia e grupo vazio é apagado. Tem que rodar antes de apagar o usuário:
+     * conversations.created_by é ON DELETE CASCADE e levaria o grupo de todo mundo junto.
+     */
+    @Transactional
+    public void releaseForAccountDeletion(Long userId) {
+        for (ConversationMember membership : memberRepository.findByUserId(userId)) {
+            Conversation conv = getConversation(membership.getConversationId());
+            if (conv.getType() == ConversationType.DIRECT) {
+                conversationRepository.delete(conv);
+            } else {
+                removeMember(userId, conv.getId(), userId);
+            }
+        }
+
+        // Grupos que ele criou e de que já tinha saído continuam com created_by = ele.
+        for (Conversation conv : conversationRepository.findByCreatedBy(userId)) {
+            memberRepository.findByConversationId(conv.getId()).stream()
+                    .filter(cm -> cm.getRole() == ConversationMemberRole.OWNER)
+                    .findFirst()
+                    .ifPresentOrElse(owner -> {
+                        conv.setCreatedBy(owner.getUserId());
+                        conversationRepository.save(conv);
+                    }, () -> conversationRepository.delete(conv));
+        }
+    }
+
     @Transactional
     public List<ConversationMemberDTO> setRole(Long me, Long convId, Long targetId, String roleRaw) {
         ConversationMember myMembership = assertMember(convId, me);

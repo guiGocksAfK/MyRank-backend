@@ -38,6 +38,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
     Optional<Conversation> findByInviteToken(String inviteToken);
 
+    List<Conversation> findByCreatedBy(Long createdBy);
+
     /** Ids dos usuários com quem `me` já tem uma conversa DIRECT. */
     @Query("""
             select distinct m2.userId
