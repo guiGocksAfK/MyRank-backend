@@ -13,7 +13,9 @@ public record UserResponseDTO(
         String plan,
         boolean isPublic,
         String language,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        /** Conta só com Google/Discord não tem senha — a exclusão não pede senha. */
+        boolean hasPassword
 ) {
     public static UserResponseDTO fromEntity(User user) {
         return new UserResponseDTO(
@@ -25,7 +27,8 @@ public record UserResponseDTO(
                 user.getPlan().name(),
                 user.isPublic(),
                 user.getLanguage(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getPasswordHash() != null && !user.getPasswordHash().isBlank()
         );
     }
 }
