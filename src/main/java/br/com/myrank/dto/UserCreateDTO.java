@@ -16,5 +16,9 @@ public record UserCreateDTO(
 
         @NotBlank(message = "Informe uma senha.")
         @Size(min = 8, max = 100, message = "A senha deve ter pelo menos 8 caracteres.")
-        String password
+        String password,
+
+        /** Opcional (PT | EN | ES): idioma da conta e do email de confirmação. */
+        @Size(max = 5)
+        String language
 ) {}

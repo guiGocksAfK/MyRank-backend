@@ -34,6 +34,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Rule[] RULES = {
             new Rule("/api/auth/login", "POST", 10),
             new Rule("/api/auth/oauth/", "POST", 15),
+            new Rule("/api/auth/verify-email", "POST", 10),
+            new Rule("/api/auth/resend-verification", "POST", 3), // cada chamada manda um email
             new Rule("/api/users", "POST", 5),      // registro
             new Rule("/api/external/", null, 40),
     };
