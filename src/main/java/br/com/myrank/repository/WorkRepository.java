@@ -15,15 +15,16 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
      * é seguro. `left` pra não sumir obra com categoria nula.
      */
 
-    @Query("select w from Work w left join fetch w.category where w.category.id = :categoryId")
+    @Query("select w from Work w left join fetch w.category left join fetch w.subcategory where w.category.id = :categoryId")
     List<Work> findByCategoryId(Long categoryId);
 
-    @Query("select w from Work w left join fetch w.category where w.user.id = :userId")
+    @Query("select w from Work w left join fetch w.category left join fetch w.subcategory where w.user.id = :userId")
     List<Work> findByUserId(Long userId);
 
     @Query("""
             select w from Work w
             left join fetch w.category
+            left join fetch w.subcategory
             where w.user.id = :userId
             order by w.finalScore desc
             """)
