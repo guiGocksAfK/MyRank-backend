@@ -1,11 +1,13 @@
 package br.com.myrank.service;
 
 import br.com.myrank.domain.entity.Category;
+import br.com.myrank.domain.entity.Subcategory;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.entity.Work;
 import br.com.myrank.dto.WorkCreateDTO;
 import br.com.myrank.dto.WorkUpdateDTO;
 import br.com.myrank.repository.CategoryRepository;
+import br.com.myrank.repository.SubcategoryRepository;
 import br.com.myrank.repository.WorkRepository;
 import br.com.myrank.service.badge.BadgeService;
 import br.com.myrank.service.social.FeedEventService;
@@ -20,13 +22,16 @@ public class WorkService {
 
     private final WorkRepository workRepository;
     private final CategoryRepository categoryRepository;
+    private final SubcategoryRepository subcategoryRepository;
     private final BadgeService badgeService;
     private final FeedEventService feedEventService;
 
     public WorkService(WorkRepository workRepository, CategoryRepository categoryRepository,
+                       SubcategoryRepository subcategoryRepository,
                        BadgeService badgeService, FeedEventService feedEventService) {
         this.workRepository = workRepository;
         this.categoryRepository = categoryRepository;
+        this.subcategoryRepository = subcategoryRepository;
         this.badgeService = badgeService;
         this.feedEventService = feedEventService;
     }
@@ -48,6 +53,9 @@ public class WorkService {
         work.setReleaseDate(dto.releaseDate());
         work.setTimeMinutes(dto.timeMinutes());
         work.setScore(BigDecimal.valueOf(dto.score()));
+        if (dto.subcategoryId() != null && dto.subcategoryId() != 0) {
+            work.setSubcategory(resolveSubcategory(dto.subcategoryId(), category));
+        }
 
         applyScoreCalculation(work);
 
@@ -100,6 +108,11 @@ public class WorkService {
         if (dto.score() != null) {
             work.setScore(BigDecimal.valueOf(dto.score()));
         }
+        if (dto.subcategoryId() != null) {
+            work.setSubcategory(dto.subcategoryId() == 0
+                    ? null
+                    : resolveSubcategory(dto.subcategoryId(), work.getCategory()));
+        }
 
         applyScoreCalculation(work);
 
@@ -121,6 +134,16 @@ public class WorkService {
 
         workRepository.delete(work);
         badgeService.recalculateAsync(userId);
+    }
+
+    /** A subcategoria tem que ser da tabela da obra — o que também garante que é do mesmo dono. */
+    private Subcategory resolveSubcategory(Long subcategoryId, Category category) {
+        Subcategory subcategory = subcategoryRepository.findById(subcategoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Subcategoria não encontrada."));
+        if (!subcategory.getCategory().getId().equals(category.getId())) {
+            throw new IllegalArgumentException("Essa subcategoria é de outra tabela.");
+        }
+        return subcategory;
     }
 
     // Nota_Final = Nota_Original + Log10(Minutos / 60)

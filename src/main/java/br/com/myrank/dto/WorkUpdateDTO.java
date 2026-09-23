@@ -18,5 +18,7 @@ public record WorkUpdateDTO(
         LocalDate releaseDate,
 
         @Min(0) @Max(1_000_000) Integer timeMinutes,
-        @DecimalMin("0.0") @DecimalMax("10.0") Double score
+        @DecimalMin("0.0") @DecimalMax("10.0") Double score,
+        /** null = não mexe; 0 = tira da subcategoria; outro = move pra essa subcategoria. */
+        Long subcategoryId
 ) {}

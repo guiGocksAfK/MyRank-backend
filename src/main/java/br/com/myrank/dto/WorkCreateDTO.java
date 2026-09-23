@@ -22,5 +22,7 @@ public record WorkCreateDTO(
         LocalDate releaseDate,
 
         @Min(0) @Max(1_000_000) int timeMinutes,
-        @DecimalMin("0.0") @DecimalMax("10.0") double score
+        @DecimalMin("0.0") @DecimalMax("10.0") double score,
+        /** Opcional: subcategoria da mesma tabela. */
+        Long subcategoryId
 ) {}
