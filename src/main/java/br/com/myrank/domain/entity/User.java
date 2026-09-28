@@ -56,6 +56,12 @@ public class User {
     @Column(name = "email_verification_expires_at")
     private LocalDateTime emailVerificationExpiresAt;
 
+    @Column(name = "account_deletion_code_hash", length = 64)
+    private String accountDeletionCodeHash;
+
+    @Column(name = "account_deletion_code_expires_at")
+    private LocalDateTime accountDeletionCodeExpiresAt;
+
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;
 
@@ -130,6 +136,10 @@ public class User {
 
     public LocalDateTime getEmailVerificationExpiresAt() { return emailVerificationExpiresAt; }
     public void setEmailVerificationExpiresAt(LocalDateTime emailVerificationExpiresAt) { this.emailVerificationExpiresAt = emailVerificationExpiresAt; }
+    public String getAccountDeletionCodeHash() { return accountDeletionCodeHash; }
+    public void setAccountDeletionCodeHash(String accountDeletionCodeHash) { this.accountDeletionCodeHash = accountDeletionCodeHash; }
+    public LocalDateTime getAccountDeletionCodeExpiresAt() { return accountDeletionCodeExpiresAt; }
+    public void setAccountDeletionCodeExpiresAt(LocalDateTime accountDeletionCodeExpiresAt) { this.accountDeletionCodeExpiresAt = accountDeletionCodeExpiresAt; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }

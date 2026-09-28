@@ -76,17 +76,22 @@ public class InsightService {
         if (question.length() > CHAT_MAX_CHARS) {
             question = question.substring(0, CHAT_MAX_CHARS);
         }
-        usage.ensureWithinLimit(userId);
-
         List<InsightChatMessageDTO> thread = deserializeChat(insight);
         InsightPayloadDTO analysis = deserialize(insight);
-        String answer = gemini.chat(
-                InsightPromptBuilder.CHAT_SYSTEM,
-                InsightPromptBuilder.chatContext(analysis),
-                thread,
-                question);
+        AiUsageService.Reservation reservation = usage.reserve(userId);
+        String answer;
+        try {
+            answer = gemini.chat(
+                    InsightPromptBuilder.CHAT_SYSTEM,
+                    InsightPromptBuilder.chatContext(analysis),
+                    thread,
+                    question);
+        } catch (RuntimeException e) {
+            usage.release(userId, reservation);
+            throw e;
+        }
 
-        int left = usage.consume(userId);
+        int left = reservation.remaining();
         thread.add(new InsightChatMessageDTO(InsightChatMessageDTO.USER, question, LocalDateTime.now()));
         thread.add(new InsightChatMessageDTO(InsightChatMessageDTO.AI, answer, LocalDateTime.now()));
         insight.setChatLog(serializeChat(thread));
@@ -113,13 +118,18 @@ public class InsightService {
             }
         }
 
-        usage.ensureWithinLimit(userId);
+        AiUsageService.Reservation reservation = usage.reserve(userId);
+        InsightPayloadDTO payload;
+        try {
+            payload = gemini.analyze(
+                    InsightPromptBuilder.SYSTEM,
+                    InsightPromptBuilder.user(works));
+        } catch (RuntimeException e) {
+            usage.release(userId, reservation);
+            throw e;
+        }
 
-        InsightPayloadDTO payload = gemini.analyze(
-                InsightPromptBuilder.SYSTEM,
-                InsightPromptBuilder.user(works));
-
-        int left = usage.consume(userId);
+        int left = reservation.remaining();
 
         AiInsight entity = insightRepository.findByUserIdAndSelectionHash(userId, hash)
                 .orElseGet(() -> new AiInsight(userId, hash, gemini.model(), works.size(), null));

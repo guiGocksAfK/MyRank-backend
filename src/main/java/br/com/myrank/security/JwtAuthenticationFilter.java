@@ -1,5 +1,7 @@
 package br.com.myrank.security;
 
+import br.com.myrank.domain.entity.User;
+import br.com.myrank.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,15 +23,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+    private final UserRepository userRepository;
 
     private static final List<AntPathRequestMatcher> PUBLIC_ROUTES = List.of(
             new AntPathRequestMatcher("/api/auth/**"),
             new AntPathRequestMatcher("/api/users", "POST")
     );
 
-    public JwtAuthenticationFilter(JwtService jwtService, CustomUserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtService jwtService, CustomUserDetailsService userDetailsService,
+                                   UserRepository userRepository) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -55,12 +60,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String token = authHeader.substring(7);
 
         try {
-            final String email = jwtService.extractUsername(token);
+            final Long userId = jwtService.extractUserId(token);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                User user = userRepository.findById(userId).orElseThrow();
+                UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
 
-                if (jwtService.isTokenValid(token, email)) {
+                if (jwtService.isTokenValid(token, userId)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities()
                     );

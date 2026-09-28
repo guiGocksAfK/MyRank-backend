@@ -49,7 +49,7 @@ public class AuthController {
                 .orElseThrow(() -> new BadCredentialsException("Email ou senha inválidos."));
 
         if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
-            throw new BadCredentialsException("Esta conta usa login social. Entre com Google ou Discord.");
+            throw new BadCredentialsException("Email ou senha inválidos.");
         }
 
         try {
@@ -65,7 +65,7 @@ public class AuthController {
             throw new EmailNotVerifiedException();
         }
 
-        String token = jwtService.generateToken(user.getEmail());
+        String token = jwtService.generateToken(user.getId());
         return ResponseEntity.ok(new LoginResponseDTO(token, user.getUsername()));
     }
 
@@ -73,7 +73,7 @@ public class AuthController {
     @PostMapping("/verify-email")
     public ResponseEntity<LoginResponseDTO> verifyEmail(@Valid @RequestBody EmailVerifyRequestDTO dto) {
         User user = emailVerificationService.verify(dto.token());
-        String token = jwtService.generateToken(user.getEmail());
+        String token = jwtService.generateToken(user.getId());
         return ResponseEntity.ok(new LoginResponseDTO(token, user.getUsername()));
     }
 

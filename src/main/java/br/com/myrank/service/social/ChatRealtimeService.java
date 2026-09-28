@@ -38,8 +38,7 @@ public class ChatRealtimeService {
     public void broadcast(Long convId, String type, Long actorId, ChatMessageDTO dto) {
         if (convId == null) return;
         try {
-            messaging.convertAndSend("/topic/conversation." + convId,
-                    new ChatRealtimeEvent(type, convId, actorId, sanitize(dto)));
+            sendToCurrentMembers(convId, new ChatRealtimeEvent(type, convId, actorId, sanitize(dto)));
         } catch (Exception e) {
             log.warn("broadcast({}, {}) falhou: {}", convId, type, e.getMessage());
         }
@@ -49,7 +48,7 @@ public class ChatRealtimeService {
     public void typing(Long convId, Long actorId, String actorName) {
         if (convId == null) return;
         try {
-            messaging.convertAndSend("/topic/conversation." + convId, Map.of(
+            sendToCurrentMembers(convId, Map.of(
                     "type", "typing", "conversationId", convId,
                     "actorId", actorId, "actorName", actorName == null ? "" : actorName));
         } catch (Exception e) {
@@ -61,7 +60,7 @@ public class ChatRealtimeService {
     public void readReceipt(Long convId, Long actorId, Long lastReadId) {
         if (convId == null || lastReadId == null) return;
         try {
-            messaging.convertAndSend("/topic/conversation." + convId, Map.of(
+            sendToCurrentMembers(convId, Map.of(
                     "type", "read", "conversationId", convId,
                     "actorId", actorId, "lastReadId", lastReadId));
         } catch (Exception e) {
@@ -84,6 +83,17 @@ public class ChatRealtimeService {
         } catch (Exception e) {
             log.warn("touch({}) falhou: {}", convId, e.getMessage());
         }
+    }
+
+    /** Consulta a participação a cada envio; uma inscrição antiga não recebe eventos após expulsão. */
+    private void sendToCurrentMembers(Long convId, Object event) {
+        List<Long> memberIds = memberRepository.findMemberIds(convId);
+        if (memberIds.isEmpty()) return;
+        userRepository.findAllById(memberIds).forEach(u -> {
+            if (u.getEmail() != null) {
+                messaging.convertAndSendToUser(u.getEmail(), "/queue/chat-events", event);
+            }
+        });
     }
 
     /** Zera os flags "mine" — cada cliente recalcula pelo próprio id. */

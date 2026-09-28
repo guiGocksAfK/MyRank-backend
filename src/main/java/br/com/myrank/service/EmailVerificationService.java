@@ -59,9 +59,8 @@ public class EmailVerificationService {
         String link = frontendUrl + "/confirmar-email?token=" + token;
 
         if (!emailClient.isConfigured()) {
-            // Dev local sem Brevo: o link sai no log pra dar pra testar o fluxo.
-            log.warn("BREVO_API_KEY/MAIL_FROM_EMAIL não configurados — link de confirmação do usuário {}: {}",
-                    user.getId(), link);
+            log.warn("BREVO_API_KEY/MAIL_FROM_EMAIL não configurados — confirmação de email indisponível para o usuário {}",
+                    user.getId());
             return;
         }
 

@@ -4,9 +4,13 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.enums.AuthProvider;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.service.email.BrevoEmailClient;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -98,5 +102,25 @@ class EmailVerificationServiceTest {
         service.resend("novo@myrank.dev");
 
         verify(emailClient, never()).send(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void semEmailConfigurado_naoRegistraLinkNemToken() {
+        when(emailClient.isConfigured()).thenReturn(false);
+        Logger logger = (Logger) LoggerFactory.getLogger(EmailVerificationService.class);
+        ListAppender<ILoggingEvent> events = new ListAppender<>();
+        events.start();
+        logger.addAppender(events);
+        try {
+            service.issueAndSend(pendingUser());
+            assertThat(events.list).hasSize(1);
+            assertThat(events.list.get(0).getFormattedMessage())
+                    .contains("confirmação de email indisponível")
+                    .doesNotContain("confirmar-email", "token=", "https://");
+            verify(emailClient, never()).send(anyString(), anyString(), anyString());
+        } finally {
+            logger.detachAppender(events);
+            events.stop();
+        }
     }
 }
