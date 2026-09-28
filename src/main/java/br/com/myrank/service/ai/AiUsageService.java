@@ -1,10 +1,13 @@
 package br.com.myrank.service.ai;
 
-import br.com.myrank.domain.entity.AiUsage;
 import br.com.myrank.repository.AiUsageRepository;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -22,10 +25,14 @@ public class AiUsageService {
     private static final int RESET_HOUR = 6;
 
     private final AiUsageRepository repository;
+    private final NamedParameterJdbcTemplate jdbc;
 
-    public AiUsageService(AiUsageRepository repository) {
+    public AiUsageService(AiUsageRepository repository, NamedParameterJdbcTemplate jdbc) {
         this.repository = repository;
+        this.jdbc = jdbc;
     }
+
+    public record Reservation(LocalDateTime windowStart, int remaining) {}
 
     /** Início da janela vigente: as {@link #RESET_HOUR}h de hoje, ou de ontem se ainda não deu essa hora. */
     private LocalDateTime currentWindowStart() {
@@ -46,36 +53,45 @@ public class AiUsageService {
                 .orElse(DAILY_LIMIT);
     }
 
-    /** Barra a operação (→ 400) se o usuário já bateu o limite do dia. Não consome. */
-    @Transactional(readOnly = true)
-    public void ensureWithinLimit(Long userId) {
-        if (remaining(userId) <= 0) {
+    /**
+     * Reserva uma chamada antes do pedido ao provedor. O upsert do PostgreSQL é
+     * atômico mesmo quando várias requisições chegam ao mesmo tempo ou em instâncias
+     * diferentes do backend. A transação precisa terminar antes da chamada externa.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Reservation reserve(Long userId) {
+        LocalDateTime window = currentWindowStart();
+        String sql = """
+                INSERT INTO ai_usage (user_id, window_start, used)
+                VALUES (:userId, :windowStart, 1)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    window_start = CASE WHEN ai_usage.window_start < EXCLUDED.window_start
+                                        THEN EXCLUDED.window_start ELSE ai_usage.window_start END,
+                    used = CASE WHEN ai_usage.window_start < EXCLUDED.window_start
+                                THEN 1 ELSE ai_usage.used + 1 END
+                WHERE ai_usage.window_start < EXCLUDED.window_start OR ai_usage.used < :limit
+                RETURNING used
+                """;
+        var params = new MapSqlParameterSource()
+                .addValue("userId", userId)
+                .addValue("windowStart", Timestamp.valueOf(window))
+                .addValue("limit", DAILY_LIMIT);
+        var used = jdbc.query(sql, params, (rs, rowNum) -> rs.getInt("used"));
+        if (used.isEmpty()) {
             throw new IllegalArgumentException(limitMessage());
         }
+        return new Reservation(window, DAILY_LIMIT - used.get(0));
     }
 
-    /**
-     * Consome uma mensagem do orçamento. Lança {@link IllegalArgumentException}
-     * (→ 400) se o usuário já bateu o limite do dia. Devolve o que sobrou.
-     */
-    @Transactional
-    public int consume(Long userId) {
-        LocalDateTime window = currentWindowStart();
-        AiUsage usage = repository.findById(userId)
-                .orElseGet(() -> new AiUsage(userId, window, 0));
-
-        if (usage.getWindowStart().isBefore(window)) { // janela virou → zera
-            usage.setWindowStart(window);
-            usage.setUsed(0);
-        }
-
-        if (usage.getUsed() >= DAILY_LIMIT) {
-            throw new IllegalArgumentException(limitMessage());
-        }
-
-        usage.setUsed(usage.getUsed() + 1);
-        repository.save(usage);
-        return DAILY_LIMIT - usage.getUsed();
+    /** Uma falha do provedor não consome a cota; não mexe numa janela já renovada. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void release(Long userId, Reservation reservation) {
+        jdbc.update("""
+                UPDATE ai_usage SET used = used - 1
+                WHERE user_id = :userId AND window_start = :windowStart AND used > 0
+                """, new MapSqlParameterSource()
+                .addValue("userId", userId)
+                .addValue("windowStart", Timestamp.valueOf(reservation.windowStart())));
     }
 
     private String limitMessage() {

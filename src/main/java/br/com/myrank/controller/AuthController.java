@@ -49,7 +49,7 @@ public class AuthController {
                 .orElseThrow(() -> new BadCredentialsException("Email ou senha inválidos."));
 
         if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
-            throw new BadCredentialsException("Esta conta usa login social. Entre com Google ou Discord.");
+            throw new BadCredentialsException("Email ou senha inválidos.");
         }
 
         try {

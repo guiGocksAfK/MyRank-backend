@@ -297,6 +297,15 @@ public class SocialService {
     public ReactionSummaryDTO react(Long viewerId, Long feedEventId, String kindRaw) {
         FeedEvent event = feedEventRepository.findById(feedEventId)
                 .orElseThrow(() -> new IllegalArgumentException("Item do feed não encontrado."));
+        if (event.getType() != FeedEventType.TAKE) {
+            throw new IllegalArgumentException("Item do feed não encontrado.");
+        }
+        User author = userRepository.findById(event.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("Item do feed não encontrado."));
+        if (!event.getUserId().equals(viewerId) && !author.isPublic()
+                && !followRepository.existsByFollowerIdAndFollowedId(viewerId, author.getId())) {
+            throw new IllegalArgumentException("Item do feed não encontrado.");
+        }
         ReactionKind kind = ReactionKind.fromClient(kindRaw);
 
         ReactionKind[] previous = { null };
@@ -413,9 +422,10 @@ public class SocialService {
     }
 
     private SocialUserDTO toSocialUser(User u, Long viewerId) {
-        List<Work> works = workRepository.findByUserId(u.getId());
         boolean self = u.getId().equals(viewerId);
         boolean following = !self && followRepository.existsByFollowerIdAndFollowedId(viewerId, u.getId());
+        boolean canSeeWorks = self || u.isPublic() || following;
+        List<Work> works = canSeeWorks ? workRepository.findByUserId(u.getId()) : List.of();
         boolean requested = !self && !following && !u.isPublic()
                 && followRequestRepository.existsByRequesterIdAndTargetId(viewerId, u.getId());
         return new SocialUserDTO(
