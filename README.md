@@ -271,5 +271,5 @@ This is a personal project, but issues and PRs are welcome.
 
 ## License
 
-No license has been chosen yet — all rights reserved by the author until one is
-added.
+© 2026 Guilherme Gocks. All rights reserved.
+This source code is shared for portfolio purposes only and may not be copied, modified or redistributed without permission.
