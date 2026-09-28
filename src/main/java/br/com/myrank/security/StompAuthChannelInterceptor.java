@@ -1,7 +1,6 @@
 package br.com.myrank.security;
 
 import br.com.myrank.domain.entity.User;
-import br.com.myrank.repository.ConversationMemberRepository;
 import br.com.myrank.repository.UserRepository;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -15,32 +14,27 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Autentica o frame CONNECT do STOMP pelo header Authorization (mesmo JWT do REST)
- * e barra SUBSCRIBE em /topic/conversation.{id} de quem não é membro da conversa.
+ * e só permite os canais privados do próprio usuário.
  * O cliente não publica eventos no broker; o servidor os envia após validar o REST.
  */
 @Component
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
-    private static final Pattern CONV_TOPIC = Pattern.compile("^/topic/conversation\\.(\\d+)$");
     private static final String UID_ATTR = "myrank_uid";
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
     private final UserRepository userRepository;
-    private final ConversationMemberRepository memberRepository;
 
     public StompAuthChannelInterceptor(JwtService jwtService,
                                        CustomUserDetailsService userDetailsService,
-                                       UserRepository userRepository,
-                                       ConversationMemberRepository memberRepository) {
+                                       UserRepository userRepository) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
-        this.memberRepository = memberRepository;
     }
 
     @Override
@@ -64,35 +58,30 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             throw new MessagingException("Sessão de chat sem token.");
         }
         String token = bearer.substring(7);
-        String email;
+        Long uid;
         try {
-            email = jwtService.extractUsername(token);
+            uid = jwtService.extractUserId(token);
         } catch (Exception e) {
             throw new MessagingException("Token de chat inválido.");
         }
-        if (email == null || !jwtService.isTokenValid(token, email)) {
+        User user = uid == null ? null : userRepository.findById(uid).orElse(null);
+        if (user == null || !jwtService.isTokenValid(token, user.getId())) {
             throw new MessagingException("Token de chat inválido.");
         }
-        UserDetails ud = userDetailsService.loadUserByUsername(email);
+        UserDetails ud = userDetailsService.loadUserByUsername(user.getEmail());
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(ud, null, ud.getAuthorities());
         accessor.setUser(auth);
 
-        Long uid = userRepository.findByEmail(email).map(User::getId).orElse(null);
         Map<String, Object> attrs = accessor.getSessionAttributes();
-        if (attrs != null && uid != null) attrs.put(UID_ATTR, uid);
+        if (attrs != null) attrs.put(UID_ATTR, uid);
     }
 
     private void authorizeSubscription(StompHeaderAccessor accessor) {
         String dest = accessor.getDestination();
-        if (dest == null) return;
-        var m = CONV_TOPIC.matcher(dest);
-        if (!m.matches()) return; // /user/queue/** é privado por destino, não precisa de checagem
-
-        Long convId = Long.valueOf(m.group(1));
-        Long uid = currentUid(accessor);
-        if (uid == null || !memberRepository.existsByConversationIdAndUserId(convId, uid)) {
-            throw new MessagingException("Você não participa dessa conversa.");
+        if (currentUid(accessor) == null
+                || !("/user/queue/chat".equals(dest) || "/user/queue/chat-events".equals(dest))) {
+            throw new MessagingException("Assinatura de chat não permitida.");
         }
     }
 

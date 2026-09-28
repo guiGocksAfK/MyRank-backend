@@ -1,7 +1,7 @@
 package br.com.myrank.dto.chat;
 
 /**
- * Evento empurrado em /topic/conversation.{id}.
+ * Evento entregue aos membros atuais pelo canal privado /user/queue/chat-events.
  * type: created | edited | deleted | reacted.
  * Os flags "mine" da mensagem vêm zerados — cada cliente recalcula pelo senderId.
  */
