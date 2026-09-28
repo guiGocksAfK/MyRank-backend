@@ -10,5 +10,9 @@ public record AccountDeleteRequestDTO(
 
         @NotBlank(message = "Digite seu nome de usuário para confirmar.")
         @Size(max = 50)
-        String confirmUsername
+        String confirmUsername,
+
+        /** Obrigatório para contas sem senha; enviado ao email cadastrado. */
+        @Size(max = 20)
+        String deletionCode
 ) {}

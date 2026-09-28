@@ -49,7 +49,13 @@ public class UserController {
         return ResponseEntity.ok(UserResponseDTO.fromEntity(updated));
     }
 
-    /** Exclui a conta de vez. Pede o username digitado e, se a conta tiver, a senha. */
+    /** Envia confirmação por email para contas que não têm senha. */
+    @PostMapping("/me/deletion-code")
+    public ResponseEntity<Void> requestDeletionCode(@AuthenticationPrincipal UserDetails userDetails) {
+        accountDeletionService.issueDeletionCode(authUtils.getUser(userDetails));
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteMe(
             @AuthenticationPrincipal UserDetails userDetails,
