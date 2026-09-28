@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 /**
  * Autentica o frame CONNECT do STOMP pelo header Authorization (mesmo JWT do REST)
  * e barra SUBSCRIBE em /topic/conversation.{id} de quem não é membro da conversa.
+ * O cliente não publica eventos no broker; o servidor os envia após validar o REST.
  */
 @Component
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
@@ -51,6 +52,8 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             authenticate(accessor);
         } else if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
             authorizeSubscription(accessor);
+        } else if (StompCommand.SEND.equals(accessor.getCommand())) {
+            throw new MessagingException("Publicação direta no chat não permitida.");
         }
         return message;
     }
