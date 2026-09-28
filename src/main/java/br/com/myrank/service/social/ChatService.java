@@ -592,6 +592,10 @@ public class ChatService {
         if (target.getRole() == ConversationMemberRole.OWNER) {
             throw new IllegalArgumentException("Não dá pra mudar o cargo do dono.");
         }
+        if (myMembership.getRole() != ConversationMemberRole.OWNER
+                && myMembership.getRole().rank() >= target.getRole().rank()) {
+            throw new IllegalArgumentException("Você só altera o cargo de quem está abaixo de você.");
+        }
         if (target.getRole() == newRole) return listMembers(me, convId);
 
         boolean promote = newRole.rank() < target.getRole().rank();
