@@ -18,6 +18,11 @@ public class Work {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    /** Opcional; sempre da mesma categoria da obra (validado no WorkService). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subcategory_id")
+    private Subcategory subcategory;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -74,6 +79,9 @@ public class Work {
 
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }
+
+    public Subcategory getSubcategory() { return subcategory; }
+    public void setSubcategory(Subcategory subcategory) { this.subcategory = subcategory; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
