@@ -8,6 +8,7 @@ import br.com.myrank.dto.SubcategoryRequestDTO;
 import br.com.myrank.domain.entity.Category;
 import br.com.myrank.domain.entity.Subcategory;
 import br.com.myrank.domain.entity.User;
+import br.com.myrank.domain.enums.TableTemplate;
 import br.com.myrank.repository.CategoryRepository;
 import br.com.myrank.repository.SubcategoryRepository;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class CategoryService {
         Category category = new Category();
         category.setUser(user);
         category.setName(dto.getName());
+        category.setTemplate(dto.getTemplate() == null ? TableTemplate.CUSTOM : dto.getTemplate());
         category.setDefault(false); // categorias criadas via API nunca são default
 
         Category saved = categoryRepository.save(category);
@@ -74,6 +76,7 @@ public class CategoryService {
             category.setName(newName);
         }
 
+        if (dto.getTemplate() != null) category.setTemplate(dto.getTemplate());
         Category saved = categoryRepository.save(category);
         return toResponseDTO(saved, subcategoriesOf(saved.getId()));
     }
@@ -150,20 +153,21 @@ public class CategoryService {
                 .stream().map(SubcategoryDTO::fromEntity).toList();
     }
 
-    // dentro da classe CategoryService, adiciona esse método
-
     public void createDefaultCategories(User user) {
-        List<String> defaults = List.of(
-                "🎬 Filmes",
-                "🎮 Jogos",
-                "📚 Livros",
-                "📺 Séries & Animes"
+        record DefaultTable(String name, TableTemplate template) {}
+        List<DefaultTable> defaults = List.of(
+                new DefaultTable("🎬 Filmes", TableTemplate.MOVIE),
+                new DefaultTable("🎮 Jogos", TableTemplate.GAME),
+                new DefaultTable("📚 Livros", TableTemplate.BOOK),
+                new DefaultTable("📺 Séries", TableTemplate.TV),
+                new DefaultTable("🎌 Animes", TableTemplate.ANIME)
         );
 
-        for (String name : defaults) {
+        for (DefaultTable table : defaults) {
             Category category = new Category();
             category.setUser(user);
-            category.setName(name);
+            category.setName(table.name());
+            category.setTemplate(table.template());
             category.setDefault(true);
             categoryRepository.save(category);
         }
@@ -174,6 +178,7 @@ public class CategoryService {
         return new CategoryResponseDTO(
                 category.getId(),
                 category.getName(),
+                category.getTemplate(),
                 category.isDefault(),
                 category.getCreatedAt(),
                 subcategories

@@ -2,6 +2,7 @@ package br.com.myrank.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import br.com.myrank.domain.enums.TableTemplate;
 
 public class CategoryUpdateDTO {
 
@@ -9,8 +10,13 @@ public class CategoryUpdateDTO {
     @Size(max = 60, message = "O nome deve ter no máximo 60 caracteres.")
     private String name;
 
+    /** null mantém o template, inclusive ao renomear a tabela. */
+    private TableTemplate template;
+
     public CategoryUpdateDTO() {}
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    public TableTemplate getTemplate() { return template; }
+    public void setTemplate(TableTemplate template) { this.template = template; }
 }
