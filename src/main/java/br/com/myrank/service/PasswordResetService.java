@@ -4,13 +4,13 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.auth.ForgotPasswordResponseDTO;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.service.email.BrevoEmailClient;
+import br.com.myrank.service.email.EmailLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.util.HtmlUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -118,48 +118,53 @@ public class PasswordResetService {
         }
     }
 
-    /** Texto do email no idioma da conta (PT | EN | ES). */
-    private record EmailText(String subject, String greeting, String body, String button, String footer) {
+    /** Texto do email no idioma da conta (PT | EN | ES); o visual vem do EmailLayout. */
+    private record EmailText(String subject, String preheader, String greeting, String intro, String button,
+                             String safetyTitle, String safetyText, String note,
+                             String fallbackLabel, String footer) {
 
         static EmailText of(String language) {
             return switch (language == null ? "PT" : language) {
                 case "EN" -> new EmailText(
-                        "Reset your MyRank password",
+                        "Your link to create a new password",
+                        "The link is valid for 15 minutes.",
                         "Hi, %s!",
-                        "We got a request to reset your MyRank password. Click the button below to choose a new one.",
-                        "Choose a new password",
-                        "The link expires in 15 minutes and can be used once. If you didn't ask for this, just ignore this email: your password stays the same.");
+                        "We got a request to reset the password of your MyRank account. If it was you, just choose a new one.",
+                        "Create new password",
+                        "Wasn't you?",
+                        "Your account is safe. Without clicking the button, nothing changes and your password stays the same.",
+                        "The link is valid for 15 minutes and works only once.",
+                        "Button not working? Copy and paste this link into your browser:",
+                        "You got this email because someone asked to reset the password of your MyRank account.");
                 case "ES" -> new EmailText(
-                        "Restablece tu contraseña de MyRank",
+                        "Tu enlace para crear una nueva contraseña",
+                        "El enlace vale por 15 minutos.",
                         "¡Hola, %s!",
-                        "Recibimos un pedido para restablecer tu contraseña de MyRank. Haz clic en el botón de abajo para elegir una nueva.",
-                        "Elegir nueva contraseña",
-                        "El enlace caduca en 15 minutos y se puede usar una vez. Si no lo pediste, ignora este email: tu contraseña sigue igual.");
+                        "Recibimos un pedido para restablecer la contraseña de tu cuenta de MyRank. Si fuiste tú, solo elige una nueva.",
+                        "Crear nueva contraseña",
+                        "¿No fuiste tú?",
+                        "Tu cuenta está segura. Sin hacer clic en el botón, nada cambia y tu contraseña sigue igual.",
+                        "El enlace vale por 15 minutos y funciona una sola vez.",
+                        "¿El botón no funciona? Copia y pega este enlace en tu navegador:",
+                        "Recibiste este email porque alguien pidió restablecer la contraseña de tu cuenta de MyRank.");
                 default -> new EmailText(
-                        "Redefina sua senha do MyRank",
+                        "Seu link pra criar uma nova senha",
+                        "O link vale por 15 minutos.",
                         "Olá, %s!",
-                        "Recebemos um pedido para redefinir sua senha do MyRank. Clique no botão abaixo para escolher uma nova.",
-                        "Escolher nova senha",
-                        "O link expira em 15 minutos e só pode ser usado uma vez. Se você não pediu isso, é só ignorar este email: sua senha continua a mesma.");
+                        "Recebemos um pedido pra redefinir a senha da sua conta no MyRank. Se foi você, é só escolher uma nova.",
+                        "Criar nova senha",
+                        "Não foi você?",
+                        "Sua conta está segura. Sem clicar no botão, nada muda e sua senha continua a mesma.",
+                        "O link vale por 15 minutos e só funciona uma vez.",
+                        "O botão não funcionou? Copie e cole este link no navegador:",
+                        "Você recebeu este email porque pediram a redefinição de senha da sua conta no MyRank.");
             };
         }
 
         String html(String username, String link) {
-            String safeLink = HtmlUtils.htmlEscape(link);
-            return """
-                    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1a1a1a">
-                      <h2 style="margin:0 0 16px">My<span style="color:#d4af37">Rank</span></h2>
-                      <p style="font-size:16px">%s</p>
-                      <p style="font-size:15px;line-height:1.5">%s</p>
-                      <p style="margin:28px 0">
-                        <a href="%s" style="background:#d4af37;color:#111;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold">%s</a>
-                      </p>
-                      <p style="font-size:13px;color:#666;line-height:1.5">%s</p>
-                      <p style="font-size:12px;color:#999;word-break:break-all">%s</p>
-                    </div>
-                    """.formatted(
-                    greeting.formatted(HtmlUtils.htmlEscape(username)),
-                    body, safeLink, button, footer, safeLink);
+            return EmailLayout.render(new EmailLayout.Content(
+                    preheader, greeting.formatted(username), intro, button, link,
+                    null, safetyTitle, safetyText, note, fallbackLabel, footer));
         }
     }
 }

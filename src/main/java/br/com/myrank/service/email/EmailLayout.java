@@ -24,18 +24,31 @@ public final class EmailLayout {
      * @param button        texto do botão
      * @param link          destino do botão
      * @param outro         parágrafo depois do botão (pode ser null)
+     * @param safetyTitle   título do aviso "não foi você?" (em destaque)
+     * @param safetyText    texto do aviso: sem clicar no botão, nada acontece
      * @param note          observação curta, ex.: validade do link (pode ser null)
      * @param fallbackLabel "O botão não funcionou? Copie este link:"
      * @param footer        por que a pessoa recebeu o email
      */
     public record Content(String preheader, String greeting, String intro, String button, String link,
-                          String outro, String note, String fallbackLabel, String footer) {}
+                          String outro, String safetyTitle, String safetyText, String note,
+                          String fallbackLabel, String footer) {}
 
     public static String render(Content c) {
         String link = esc(c.link());
         String outro = c.outro() == null ? "" : """
                 <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333">%s</p>
                 """.formatted(esc(c.outro()));
+        // aviso de segurança em destaque: caixinha clara com borda dourada
+        String safety = c.safetyTitle() == null ? "" : """
+                <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="margin:4px 0 20px">
+                  <tr>
+                    <td style="background:#f7f7f7;border-left:3px solid #d4af37;border-radius:6px;padding:14px 16px;font-size:14px;line-height:1.55;color:#333333">
+                      <strong style="color:#111111">%s</strong> %s
+                    </td>
+                  </tr>
+                </table>
+                """.formatted(esc(c.safetyTitle()), esc(c.safetyText()));
         String note = c.note() == null ? "" : """
                 <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#777777">%s</p>
                 """.formatted(esc(c.note()));
@@ -72,6 +85,7 @@ public final class EmailLayout {
                               </table>
                               %s
                               %s
+                              %s
                             </td>
                           </tr>
                           <tr>
@@ -92,7 +106,7 @@ public final class EmailLayout {
                 FONT,
                 FONT, esc(c.greeting()), esc(c.intro()),
                 link, FONT, esc(c.button()),
-                outro, note,
+                outro, safety, note,
                 FONT, esc(c.fallbackLabel()), link, link, esc(c.footer()));
     }
 

@@ -28,7 +28,7 @@ import java.util.HexFormat;
 public class EmailVerificationService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailVerificationService.class);
-    private static final Duration TOKEN_TTL = Duration.ofHours(24);
+    private static final Duration TOKEN_TTL = Duration.ofMinutes(15);
 
     private final UserRepository userRepository;
     private final BrevoEmailClient emailClient;
@@ -109,7 +109,8 @@ public class EmailVerificationService {
 
     /** Texto do email no idioma da conta (PT | EN | ES); o visual vem do EmailLayout. */
     private record EmailText(String subject, String preheader, String greeting, String intro, String button,
-                             String outro, String note, String fallbackLabel, String footer) {
+                             String outro, String safetyTitle, String safetyText, String note,
+                             String fallbackLabel, String footer) {
 
         static EmailText of(String language) {
             return switch (language == null ? "PT" : language) {
@@ -120,9 +121,11 @@ public class EmailVerificationService {
                         "Your MyRank is almost ready. We just need to confirm this email is yours.",
                         "Confirm my email",
                         "Then it's all yours: build your tables, give your scores and find out what they say about your taste.",
-                        "The link is valid for 24 hours.",
+                        "Didn't create a MyRank account?",
+                        "Relax and just ignore this email. Without clicking the button, no account is activated with your address.",
+                        "The link is valid for 15 minutes.",
                         "Button not working? Copy and paste this link into your browser:",
-                        "You got this email because you created a MyRank account. If it wasn't you, just ignore it.");
+                        "You got this email because this address was used to create a MyRank account.");
                 case "ES" -> new EmailText(
                         "Un clic y tu ranking empieza",
                         "Confirma tu email y empieza a armar tus tablas.",
@@ -130,9 +133,11 @@ public class EmailVerificationService {
                         "Tu MyRank está casi listo. Solo falta confirmar que este email es tuyo.",
                         "Confirmar mi email",
                         "Después es cosa tuya: arma tus tablas, pon tus notas y descubre lo que dicen de tu gusto.",
-                        "El enlace vale por 24 horas.",
+                        "¿No creaste una cuenta en MyRank?",
+                        "Tranquilo, ignora este email. Sin hacer clic en el botón, no se activa ninguna cuenta con tu dirección.",
+                        "El enlace vale por 15 minutos.",
                         "¿El botón no funciona? Copia y pega este enlace en tu navegador:",
-                        "Recibiste este email porque creaste una cuenta en MyRank. Si no fuiste tú, ignóralo.");
+                        "Recibiste este email porque esta dirección se usó para crear una cuenta en MyRank.");
                 default -> new EmailText(
                         "Falta um clique pro seu ranking começar",
                         "Confirme seu email e comece a montar suas tabelas.",
@@ -140,16 +145,18 @@ public class EmailVerificationService {
                         "Seu MyRank está quase pronto. Só falta confirmar que este email é seu.",
                         "Confirmar meu email",
                         "Depois é com você: monte suas tabelas, dê suas notas e descubra o que elas dizem sobre o seu gosto.",
-                        "O link vale por 24 horas.",
+                        "Não criou uma conta no MyRank?",
+                        "Pode ficar tranquilo e ignorar este email. Sem clicar no botão, nenhuma conta é ativada com o seu endereço.",
+                        "O link vale por 15 minutos.",
                         "O botão não funcionou? Copie e cole este link no navegador:",
-                        "Você recebeu este email porque criou uma conta no MyRank. Se não foi você, é só ignorar.");
+                        "Você recebeu este email porque este endereço foi usado pra criar uma conta no MyRank.");
             };
         }
 
         String html(String username, String link) {
             return EmailLayout.render(new EmailLayout.Content(
                     preheader, greeting.formatted(username), intro, button, link,
-                    outro, note, fallbackLabel, footer));
+                    outro, safetyTitle, safetyText, note, fallbackLabel, footer));
         }
     }
 }
