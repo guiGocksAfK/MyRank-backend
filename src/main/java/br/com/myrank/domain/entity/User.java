@@ -62,6 +62,13 @@ public class User {
     @Column(name = "account_deletion_code_expires_at")
     private LocalDateTime accountDeletionCodeExpiresAt;
 
+    /** SHA-256 (hex) do token do link de redefinição de senha — o token em si nunca é salvo. */
+    @Column(name = "password_reset_token_hash", length = 64)
+    private String passwordResetTokenHash;
+
+    @Column(name = "password_reset_expires_at")
+    private LocalDateTime passwordResetExpiresAt;
+
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;
 
@@ -140,6 +147,11 @@ public class User {
     public void setAccountDeletionCodeHash(String accountDeletionCodeHash) { this.accountDeletionCodeHash = accountDeletionCodeHash; }
     public LocalDateTime getAccountDeletionCodeExpiresAt() { return accountDeletionCodeExpiresAt; }
     public void setAccountDeletionCodeExpiresAt(LocalDateTime accountDeletionCodeExpiresAt) { this.accountDeletionCodeExpiresAt = accountDeletionCodeExpiresAt; }
+
+    public String getPasswordResetTokenHash() { return passwordResetTokenHash; }
+    public void setPasswordResetTokenHash(String passwordResetTokenHash) { this.passwordResetTokenHash = passwordResetTokenHash; }
+    public LocalDateTime getPasswordResetExpiresAt() { return passwordResetExpiresAt; }
+    public void setPasswordResetExpiresAt(LocalDateTime passwordResetExpiresAt) { this.passwordResetExpiresAt = passwordResetExpiresAt; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
