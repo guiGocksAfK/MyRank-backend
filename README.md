@@ -33,7 +33,7 @@ This repository contains the **Spring Boot API**. The React client lives in
 - **Works & rankings** — CRUD for rated works, per-category tables and a unified
   cross-category ranking. Final score blends the user's rating with a
   time-invested bonus (`score + log10(minutes / 60)`).
-- **Categories & master groups** — default tables (Games, Anime, Movies, Series)
+- **Categories & master groups** — default tables (Movies, Games, Books, Series, Anime)
   plus custom categories, grouped into "master tables".
 - **Profile & avatar** — bio, plan, visibility and an uploadable profile picture
   (stored in Postgres, served from a public endpoint with cache headers).
@@ -150,14 +150,16 @@ Schema is managed by Flyway under
 [`src/main/resources/db/migration`](src/main/resources/db/migration). Migrations
 run automatically on startup.
 
-> **Project convention:** during early development the schema is edited **in
-> place** across the per-domain `V1__enums.sql` … `V8__ai_insights.sql` files
-> (no incremental `ALTER` migrations — put each change in the file that owns
-> that table). Drop and recreate the database after pulling schema changes:
->
-> ```bash
-> docker compose down -v && docker compose up -d db
-> ```
+V1–V8 consolidate the original sixteen migrations. Once applied, migration
+files are immutable; add the next version for every schema change. Existing
+databases keep their data and must not be dropped to apply a change.
+
+V9 introduces explicit table and item templates plus JSONB item `details`.
+Names and emojis are presentation only. The legacy mixed Series & Anime table
+is split using known image providers; items without reliable provenance stay
+in their original custom table, marked for review. See
+[`docs/templates-phase1.md`](docs/templates-phase1.md) for the API contract,
+migration behavior and isolated validation command.
 
 ## API Reference
 
@@ -265,8 +267,8 @@ This is a personal project, but issues and PRs are welcome.
 
 1. Branch from the active development branch.
 2. Keep controllers thin — logic goes in services.
-3. Schema changes: edit the matching `V*__*.sql` file in place (see
-   [Database & Migrations](#database--migrations)) and drop the DB.
+3. Schema changes: add a new versioned migration (see
+   [Database & Migrations](#database--migrations)); preserve existing data.
 4. Make sure `./mvnw clean package` passes before opening a PR.
 
 ## License
