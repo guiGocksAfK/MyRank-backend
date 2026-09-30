@@ -4,15 +4,13 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.enums.AuthProvider;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.service.email.BrevoEmailClient;
+import br.com.myrank.support.MutableClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -132,17 +130,5 @@ class SignupCodeServiceTest {
         assertThatThrownBy(() -> otherKey.emailFromPass(pass)).isInstanceOf(IllegalArgumentException.class);
         clock.advance(Duration.ofMinutes(31));
         assertThatThrownBy(() -> service.emailFromPass(pass)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    private static final class MutableClock extends Clock {
-        private Instant now;
-
-        MutableClock(Instant start) { this.now = start; }
-
-        void advance(Duration d) { now = now.plus(d); }
-
-        @Override public Instant instant() { return now; }
-        @Override public ZoneId getZone() { return ZoneOffset.UTC; }
-        @Override public Clock withZone(ZoneId zone) { return this; }
     }
 }
