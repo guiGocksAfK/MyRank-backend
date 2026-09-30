@@ -6,6 +6,7 @@ import br.com.myrank.repository.UserRepository;
 import br.com.myrank.security.JwtService;
 import br.com.myrank.service.EmailVerificationService;
 import br.com.myrank.service.OAuthService;
+import br.com.myrank.service.PasswordResetService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -23,7 +24,8 @@ class AuthControllerSecurityTest {
         UserRepository users = mock(UserRepository.class);
         AuthController controller = new AuthController(
                 mock(AuthenticationManager.class), mock(JwtService.class), users,
-                mock(OAuthService.class), mock(EmailVerificationService.class));
+                mock(OAuthService.class), mock(EmailVerificationService.class),
+                mock(PasswordResetService.class));
         User social = new User();
         social.setEmail("social@example.com");
         when(users.findByEmail("social@example.com")).thenReturn(Optional.of(social));
