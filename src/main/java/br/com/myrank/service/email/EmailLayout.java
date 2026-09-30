@@ -21,8 +21,9 @@ public final class EmailLayout {
      * @param preheader     linha que aparece ao lado do assunto na caixa de entrada
      * @param greeting      "Olá, fulano!" (já com o nome)
      * @param intro         parágrafo antes do botão
-     * @param button        texto do botão
-     * @param link          destino do botão
+     * @param button        texto do botão (null = sem botão)
+     * @param link          destino do botão (null = sem botão e sem link de reserva)
+     * @param code          código em destaque no lugar do botão (pode ser null)
      * @param outro         parágrafo depois do botão (pode ser null)
      * @param safetyTitle   título do aviso "não foi você?" (em destaque)
      * @param safetyText    texto do aviso: sem clicar no botão, nada acontece
@@ -31,11 +32,38 @@ public final class EmailLayout {
      * @param footer        por que a pessoa recebeu o email
      */
     public record Content(String preheader, String greeting, String intro, String button, String link,
-                          String outro, String safetyTitle, String safetyText, String note,
+                          String code, String outro, String safetyTitle, String safetyText, String note,
                           String fallbackLabel, String footer) {}
 
     public static String render(Content c) {
         String link = esc(c.link());
+        // ação principal: botão dourado, código em destaque, ou nada (email só de aviso)
+        String action;
+        if (c.code() != null) {
+            action = """
+                    <p style="margin:24px 0;padding:16px 20px;background:#f7f7f7;border-radius:10px;text-align:center;font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;font-size:30px;font-weight:700;letter-spacing:6px;color:#111111">%s</p>
+                    """.formatted(esc(c.code()));
+        } else if (c.link() != null) {
+            action = """
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0">
+                      <tr>
+                        <td style="background:#d4af37;border-radius:999px">
+                          <a href="%s" style="display:inline-block;padding:14px 30px;font-family:%s;font-size:15px;font-weight:700;color:#111111;text-decoration:none;border-radius:999px">%s</a>
+                        </td>
+                      </tr>
+                    </table>
+                    """.formatted(link, FONT, esc(c.button()));
+        } else {
+            action = "<div style=\"height:12px\"></div>";
+        }
+        String fallback = c.link() == null ? "" : """
+                %s<br>
+                <a href="%s" style="color:#999999;word-break:break-all">%s</a>
+                <p style="margin:14px 0 0">%s</p>
+                """.formatted(esc(c.fallbackLabel()), link, link, esc(c.footer()));
+        String footer = c.link() == null
+                ? "<p style=\"margin:0\">%s</p>".formatted(esc(c.footer()))
+                : fallback;
         String outro = c.outro() == null ? "" : """
                 <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333">%s</p>
                 """.formatted(esc(c.outro()));
@@ -76,13 +104,7 @@ public final class EmailLayout {
                             <td style="padding:32px 32px 12px;font-family:%s">
                               <p style="margin:0 0 12px;font-size:20px;font-weight:700;color:#111111">%s</p>
                               <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#333333">%s</p>
-                              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0">
-                                <tr>
-                                  <td style="background:#d4af37;border-radius:999px">
-                                    <a href="%s" style="display:inline-block;padding:14px 30px;font-family:%s;font-size:15px;font-weight:700;color:#111111;text-decoration:none;border-radius:999px">%s</a>
-                                  </td>
-                                </tr>
-                              </table>
+                              %s
                               %s
                               %s
                               %s
@@ -90,9 +112,7 @@ public final class EmailLayout {
                           </tr>
                           <tr>
                             <td style="padding:18px 32px 26px;border-top:1px solid #eeeeee;font-family:%s;font-size:12px;line-height:1.6;color:#999999">
-                              %s<br>
-                              <a href="%s" style="color:#999999;word-break:break-all">%s</a>
-                              <p style="margin:14px 0 0">%s</p>
+                              %s
                             </td>
                           </tr>
                         </table>
@@ -105,9 +125,9 @@ public final class EmailLayout {
                 esc(c.preheader()),
                 FONT,
                 FONT, esc(c.greeting()), esc(c.intro()),
-                link, FONT, esc(c.button()),
+                action,
                 outro, safety, note,
-                FONT, esc(c.fallbackLabel()), link, link, esc(c.footer()));
+                FONT, footer);
     }
 
     private static String esc(String value) {

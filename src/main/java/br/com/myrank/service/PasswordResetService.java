@@ -163,7 +163,7 @@ public class PasswordResetService {
 
         String html(String username, String link) {
             return EmailLayout.render(new EmailLayout.Content(
-                    preheader, greeting.formatted(username), intro, button, link,
+                    preheader, greeting.formatted(username), intro, button, link, null,
                     null, safetyTitle, safetyText, note, fallbackLabel, footer));
         }
     }

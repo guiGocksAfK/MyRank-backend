@@ -155,7 +155,7 @@ public class EmailVerificationService {
 
         String html(String username, String link) {
             return EmailLayout.render(new EmailLayout.Content(
-                    preheader, greeting.formatted(username), intro, button, link,
+                    preheader, greeting.formatted(username), intro, button, link, null,
                     outro, safetyTitle, safetyText, note, fallbackLabel, footer));
         }
     }
