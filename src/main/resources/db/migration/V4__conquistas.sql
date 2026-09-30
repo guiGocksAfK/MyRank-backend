@@ -1,12 +1,12 @@
 -- =========================================================
--- MyRank — Badges (catálogo) + user_badges (progresso por usuário)
+-- MyRank — Conquistas (badges)
 -- =========================================================
+-- O catálogo é sincronizado no startup a partir do enum BadgeDefinition
+-- (BadgeCatalogInitializer): `code` é a chave estável que liga cada linha à
+-- regra de cálculo em Java. user_badges guarda o progresso de cada pessoa.
 
--- Catálogo de badges. As linhas são sincronizadas no startup a partir do
--- enum BadgeDefinition (BadgeCatalogInitializer) — `code` é a chave estável
--- que liga cada linha à sua regra de cálculo em Java.
 CREATE TABLE badges (
-    id              BIGSERIAL PRIMARY KEY,
+    id              BIGSERIAL    PRIMARY KEY,
     code            VARCHAR(60)  NOT NULL,
     bucket          VARCHAR(20)  NOT NULL,
     name            VARCHAR(150) NOT NULL,

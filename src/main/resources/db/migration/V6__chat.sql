@@ -1,9 +1,14 @@
 -- =========================================================
 -- MyRank — Chat unificado (DM + grupo)
--- DIRECT = conversa de 2 membros (DM). GROUP = nome + N membros + 1 OWNER.
--- Não-lidas por membro via cursor last_read_message_id.
--- Real-time via STOMP/WebSocket (com polling de fallback).
 -- =========================================================
+-- DIRECT = conversa de 2 membros. GROUP = nome + N membros + 1 OWNER.
+-- Não lidas por membro via cursor last_read_message_id. Tempo real via
+-- STOMP/WebSocket, com polling de reserva.
+
+CREATE TYPE conversation_type        AS ENUM ('DIRECT', 'GROUP');
+CREATE TYPE conversation_member_role AS ENUM ('OWNER', 'ADMIN', 'MOD', 'MEMBER');
+CREATE TYPE conversation_access      AS ENUM ('OPEN', 'REQUEST', 'CLOSED');
+CREATE TYPE message_kind             AS ENUM ('USER', 'SYSTEM');
 
 CREATE TABLE conversations (
     id           BIGSERIAL           PRIMARY KEY,
