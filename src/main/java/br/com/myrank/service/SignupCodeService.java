@@ -54,11 +54,8 @@ public class SignupCodeService {
 
     public SignupCodeService(UserRepository userRepository,
                              BrevoEmailClient emailClient,
-                             @Value("${jwt.secret:}") String jwtSecret) {
-        this(userRepository, emailClient, jwtSecret, Clock.systemUTC());
-    }
-
-    SignupCodeService(UserRepository userRepository, BrevoEmailClient emailClient, String jwtSecret, Clock clock) {
+                             @Value("${jwt.secret:}") String jwtSecret,
+                             Clock clock) {
         this.userRepository = userRepository;
         this.emailClient = emailClient;
         this.passKey = Keys.hmacShaKeyFor(sha256Bytes("signup-pass:" + jwtSecret));
