@@ -9,6 +9,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.util.Map;
+import br.com.myrank.domain.enums.TableTemplate;
 
 public record WorkCreateDTO(
         @NotNull Long categoryId,
@@ -24,5 +26,7 @@ public record WorkCreateDTO(
         @Min(0) @Max(1_000_000) int timeMinutes,
         @DecimalMin("0.0") @DecimalMax("10.0") double score,
         /** Opcional: subcategoria da mesma tabela. */
-        Long subcategoryId
+        Long subcategoryId,
+        TableTemplate template,
+        Map<String, Object> details
 ) {}

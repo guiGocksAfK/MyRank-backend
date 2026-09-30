@@ -47,6 +47,8 @@ public class WorkService {
         Work work = new Work();
         work.setCategory(category);
         work.setUser(user);
+        work.setTemplate(dto.template() == null ? category.getTemplate() : dto.template());
+        work.setDetails(dto.details());
         work.setTitle(dto.title());
         work.setImageUrl(dto.imageUrl());
         work.setCreator(dto.creator());
@@ -89,6 +91,9 @@ public class WorkService {
         }
 
         BigDecimal previousScore = work.getScore();
+
+        if (dto.template() != null) work.setTemplate(dto.template());
+        if (dto.details() != null) work.setDetails(dto.details());
 
         if (dto.title() != null && !dto.title().isBlank()) {
             work.setTitle(dto.title());

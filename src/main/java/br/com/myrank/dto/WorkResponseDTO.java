@@ -5,6 +5,8 @@ import br.com.myrank.domain.entity.Work;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
+import br.com.myrank.domain.enums.TableTemplate;
 
 public record WorkResponseDTO(
         Long id,
@@ -21,7 +23,9 @@ public record WorkResponseDTO(
         BigDecimal score,
         BigDecimal timeBonusScore,
         BigDecimal finalScore,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        TableTemplate template,
+        Map<String, Object> details
 ) {
     public static WorkResponseDTO fromEntity(Work work) {
         return new WorkResponseDTO(
@@ -39,7 +43,9 @@ public record WorkResponseDTO(
                 work.getScore(),
                 work.getTimeBonusScore(),
                 work.getFinalScore(),
-                work.getCreatedAt()
+                work.getCreatedAt(),
+                work.getTemplate(),
+                work.getDetails()
         );
     }
 }
