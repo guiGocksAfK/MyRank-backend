@@ -1,6 +1,11 @@
 package br.com.myrank.domain.entity;
 
 import jakarta.persistence.*;
+import br.com.myrank.domain.enums.TableTemplate;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,6 +31,15 @@ public class Work {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    /** Salvo no item: tabelas livres podem reunir conteúdos de tipos diferentes. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private TableTemplate template = TableTemplate.CUSTOM;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private Map<String, Object> details = new LinkedHashMap<>();
 
     @Column(nullable = false, length = 255)
     private String title;
@@ -85,6 +99,13 @@ public class Work {
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+
+    public TableTemplate getTemplate() { return template; }
+    public void setTemplate(TableTemplate template) { this.template = template; }
+    public Map<String, Object> getDetails() { return details; }
+    public void setDetails(Map<String, Object> details) {
+        this.details = details == null ? new LinkedHashMap<>() : new LinkedHashMap<>(details);
+    }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

@@ -1,6 +1,7 @@
 package br.com.myrank.domain.entity;
 
 import jakarta.persistence.*;
+import br.com.myrank.domain.enums.TableTemplate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,6 +18,10 @@ public class Category {
 
     @Column(nullable = false, length = 100)
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private TableTemplate template = TableTemplate.CUSTOM;
 
     @Column(name = "is_default", nullable = false)
     private boolean isDefault = false;
@@ -40,6 +45,9 @@ public class Category {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public TableTemplate getTemplate() { return template; }
+    public void setTemplate(TableTemplate template) { this.template = template; }
 
     public boolean isDefault() { return isDefault; }
     public void setDefault(boolean isDefault) { this.isDefault = isDefault; }
