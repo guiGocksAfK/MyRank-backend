@@ -38,6 +38,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("/api/auth/resend-verification", "POST", 3), // cada chamada manda um email
             new Rule("/api/auth/forgot-password", "POST", 3),     // idem
             new Rule("/api/auth/reset-password", "POST", 10),
+            new Rule("/api/auth/signup/code", "POST", 3),         // cada chamada manda um email
+            new Rule("/api/auth/signup/verify", "POST", 10),
             new Rule("/api/users", "POST", 5),      // registro
             new Rule("/api/users/me/deletion-code", "POST", 3),
             new Rule("/api/users/me", "DELETE", 5), // exclusão de conta confere senha

@@ -5,6 +5,7 @@ import br.com.myrank.dto.auth.LoginRequestDTO;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.security.JwtService;
 import br.com.myrank.service.EmailVerificationService;
+import br.com.myrank.service.SignupCodeService;
 import br.com.myrank.service.OAuthService;
 import br.com.myrank.service.PasswordResetService;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class AuthControllerSecurityTest {
         AuthController controller = new AuthController(
                 mock(AuthenticationManager.class), mock(JwtService.class), users,
                 mock(OAuthService.class), mock(EmailVerificationService.class),
-                mock(PasswordResetService.class));
+                mock(PasswordResetService.class), mock(SignupCodeService.class));
         User social = new User();
         social.setEmail("social@example.com");
         when(users.findByEmail("social@example.com")).thenReturn(Optional.of(social));
