@@ -65,7 +65,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             throw new MessagingException("Token de chat inválido.");
         }
         User user = uid == null ? null : userRepository.findById(uid).orElse(null);
-        if (user == null || !jwtService.isTokenValid(token, user.getId())) {
+        if (user == null || !jwtService.isTokenValid(token, user)) {
             throw new MessagingException("Token de chat inválido.");
         }
         UserDetails ud = userDetailsService.loadUserByUsername(user.getEmail());
