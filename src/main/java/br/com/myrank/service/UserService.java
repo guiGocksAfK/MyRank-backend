@@ -20,23 +20,22 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final CategoryService categoryService;
-    private final EmailVerificationService emailVerificationService;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       CategoryService categoryService, EmailVerificationService emailVerificationService) {
+                       CategoryService categoryService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.categoryService = categoryService;
-        this.emailVerificationService = emailVerificationService;
     }
 
     /**
-     * Cria a conta com senha ainda não confirmada e manda o link por email. Um
-     * cadastro pendente (nunca confirmado) com o mesmo email pode ser refeito: sem
-     * isso, quem digitasse o email de outra pessoa travaria o cadastro do dono.
+     * Cria a conta com senha. O email já chega confirmado (quem chama conferiu o
+     * passe do código), então a conta nasce ativa. Um cadastro pendente do fluxo
+     * antigo (nunca confirmado) com o mesmo email é reaproveitado e passa a ser de
+     * quem acabou de provar a posse do email.
      */
-    public User createUser(UserCreateDTO dto) {
-        Optional<User> pending = userRepository.findByEmail(dto.email())
+    public User createUser(UserCreateDTO dto, String email) {
+        Optional<User> pending = userRepository.findByEmail(email)
                 .filter(existing -> existing.getAuthProvider() == AuthProvider.LOCAL && !existing.isEmailVerified());
 
         boolean usernameTaken = pending
@@ -45,16 +44,18 @@ public class UserService {
         if (usernameTaken) {
             throw new IllegalArgumentException("Username já está em uso.");
         }
-        if (pending.isEmpty() && userRepository.existsByEmail(dto.email())) {
+        if (pending.isEmpty() && userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email já está em uso.");
         }
 
         User user = pending.orElseGet(User::new);
         user.setUsername(dto.username());
-        user.setEmail(dto.email());
+        user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(dto.password()));
         user.setAuthProvider(AuthProvider.LOCAL);
-        user.setEmailVerified(false);
+        user.setEmailVerified(true);
+        user.setEmailVerificationTokenHash(null);
+        user.setEmailVerificationExpiresAt(null);
         if (dto.language() != null && LANGUAGES.contains(dto.language().trim().toUpperCase())) {
             user.setLanguage(dto.language().trim().toUpperCase());
         }
@@ -69,7 +70,6 @@ public class UserService {
             categoryService.createDefaultCategories(savedUser);
         }
 
-        emailVerificationService.issueAndSend(savedUser);
         return savedUser;
     }
 
