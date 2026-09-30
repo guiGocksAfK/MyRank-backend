@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record SignupVerifyRequestDTO(
+public record CodeVerifyRequestDTO(
         @NotBlank(message = "Informe seu email.")
         @Email(message = "Email inválido.")
         @Size(max = 254)
