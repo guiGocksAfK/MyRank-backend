@@ -4,12 +4,12 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.enums.AuthProvider;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.service.email.BrevoEmailClient;
+import br.com.myrank.service.email.EmailLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.util.HtmlUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -107,48 +107,49 @@ public class EmailVerificationService {
         }
     }
 
-    /** Texto do email no idioma da conta (PT | EN | ES). */
-    private record EmailText(String subject, String greeting, String body, String button, String footer) {
+    /** Texto do email no idioma da conta (PT | EN | ES); o visual vem do EmailLayout. */
+    private record EmailText(String subject, String preheader, String greeting, String intro, String button,
+                             String outro, String note, String fallbackLabel, String footer) {
 
         static EmailText of(String language) {
             return switch (language == null ? "PT" : language) {
                 case "EN" -> new EmailText(
-                        "Confirm your MyRank email",
+                        "One click and your ranking begins",
+                        "Confirm your email and start building your tables.",
                         "Hi, %s!",
-                        "Click the button below to confirm your email and activate your MyRank account.",
-                        "Confirm email",
-                        "The link expires in 24 hours. If you didn't create this account, just ignore this email.");
+                        "Your MyRank is almost ready. We just need to confirm this email is yours.",
+                        "Confirm my email",
+                        "Then it's all yours: build your tables, give your scores and find out what they say about your taste.",
+                        "The link is valid for 24 hours.",
+                        "Button not working? Copy and paste this link into your browser:",
+                        "You got this email because you created a MyRank account. If it wasn't you, just ignore it.");
                 case "ES" -> new EmailText(
-                        "Confirma tu email de MyRank",
+                        "Un clic y tu ranking empieza",
+                        "Confirma tu email y empieza a armar tus tablas.",
                         "¡Hola, %s!",
-                        "Haz clic en el botón de abajo para confirmar tu email y activar tu cuenta de MyRank.",
-                        "Confirmar email",
-                        "El enlace caduca en 24 horas. Si no creaste esta cuenta, ignora este email.");
+                        "Tu MyRank está casi listo. Solo falta confirmar que este email es tuyo.",
+                        "Confirmar mi email",
+                        "Después es cosa tuya: arma tus tablas, pon tus notas y descubre lo que dicen de tu gusto.",
+                        "El enlace vale por 24 horas.",
+                        "¿El botón no funciona? Copia y pega este enlace en tu navegador:",
+                        "Recibiste este email porque creaste una cuenta en MyRank. Si no fuiste tú, ignóralo.");
                 default -> new EmailText(
-                        "Confirme seu email no MyRank",
+                        "Falta um clique pro seu ranking começar",
+                        "Confirme seu email e comece a montar suas tabelas.",
                         "Olá, %s!",
-                        "Clique no botão abaixo para confirmar seu email e ativar sua conta no MyRank.",
-                        "Confirmar email",
-                        "O link expira em 24 horas. Se você não criou esta conta, é só ignorar este email.");
+                        "Seu MyRank está quase pronto. Só falta confirmar que este email é seu.",
+                        "Confirmar meu email",
+                        "Depois é com você: monte suas tabelas, dê suas notas e descubra o que elas dizem sobre o seu gosto.",
+                        "O link vale por 24 horas.",
+                        "O botão não funcionou? Copie e cole este link no navegador:",
+                        "Você recebeu este email porque criou uma conta no MyRank. Se não foi você, é só ignorar.");
             };
         }
 
         String html(String username, String link) {
-            String safeLink = HtmlUtils.htmlEscape(link);
-            return """
-                    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1a1a1a">
-                      <h2 style="margin:0 0 16px">My<span style="color:#d4af37">Rank</span></h2>
-                      <p style="font-size:16px">%s</p>
-                      <p style="font-size:15px;line-height:1.5">%s</p>
-                      <p style="margin:28px 0">
-                        <a href="%s" style="background:#d4af37;color:#111;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold">%s</a>
-                      </p>
-                      <p style="font-size:13px;color:#666;line-height:1.5">%s</p>
-                      <p style="font-size:12px;color:#999;word-break:break-all">%s</p>
-                    </div>
-                    """.formatted(
-                    greeting.formatted(HtmlUtils.htmlEscape(username)),
-                    body, safeLink, button, footer, safeLink);
+            return EmailLayout.render(new EmailLayout.Content(
+                    preheader, greeting.formatted(username), intro, button, link,
+                    outro, note, fallbackLabel, footer));
         }
     }
 }
