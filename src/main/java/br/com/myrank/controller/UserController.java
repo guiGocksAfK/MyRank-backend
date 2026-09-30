@@ -49,7 +49,7 @@ public class UserController {
         return ResponseEntity.ok(UserResponseDTO.fromEntity(updated));
     }
 
-    /** Envia confirmação por email para contas que não têm senha. */
+    /** Manda o código de confirmação da exclusão pro email da conta (toda conta usa). */
     @PostMapping("/me/deletion-code")
     public ResponseEntity<Void> requestDeletionCode(@AuthenticationPrincipal UserDetails userDetails) {
         accountDeletionService.issueDeletionCode(authUtils.getUser(userDetails));
