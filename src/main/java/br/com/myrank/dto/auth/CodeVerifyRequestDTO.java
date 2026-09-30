@@ -1,0 +1,16 @@
+package br.com.myrank.dto.auth;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record CodeVerifyRequestDTO(
+        @NotBlank(message = "Informe seu email.")
+        @Email(message = "Email inválido.")
+        @Size(max = 254)
+        String email,
+
+        @NotBlank(message = "Informe o código.")
+        @Size(max = 12)
+        String code
+) {}

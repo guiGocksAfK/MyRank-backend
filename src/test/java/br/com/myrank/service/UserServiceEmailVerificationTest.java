@@ -24,13 +24,12 @@ class UserServiceEmailVerificationTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     private final CategoryService categoryService = mock(CategoryService.class);
-    private final EmailVerificationService emailVerificationService = mock(EmailVerificationService.class);
 
     private UserService service;
 
     @BeforeEach
     void setUp() {
-        service = new UserService(userRepository, passwordEncoder, categoryService, emailVerificationService);
+        service = new UserService(userRepository, passwordEncoder, categoryService);
         when(passwordEncoder.encode(any())).thenAnswer(inv -> "hash:" + inv.getArgument(0));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
     }
@@ -47,29 +46,31 @@ class UserServiceEmailVerificationTest {
     }
 
     @Test
-    void cadastroNovo_nasceNaoConfirmado_eMandaOLink() {
+    void cadastroNovo_jaNasceConfirmado() {
         when(userRepository.findByEmail("novo@myrank.dev")).thenReturn(Optional.empty());
 
-        User user = service.createUser(new UserCreateDTO("novo", "novo@myrank.dev", "senha1234", "en"));
+        User user = service.createUser(new UserCreateDTO("passe", "novo", "senha1234", "en"), "novo@myrank.dev");
 
-        assertThat(user.isEmailVerified()).isFalse();
+        assertThat(user.isEmailVerified()).isTrue();
+        assertThat(user.getEmail()).isEqualTo("novo@myrank.dev");
         assertThat(user.getLanguage()).isEqualTo("EN");
         verify(categoryService).createDefaultCategories(user);
-        verify(emailVerificationService).issueAndSend(user);
     }
 
     @Test
-    void cadastroPendenteComMesmoEmail_podeSerRefeito() {
+    void cadastroPendenteDoFluxoAntigo_eReaproveitado_eConfirmado() {
         User pending = localUser(false);
+        pending.setEmailVerificationTokenHash("hash-do-link-antigo");
         when(userRepository.findByEmail("dono@myrank.dev")).thenReturn(Optional.of(pending));
 
-        User user = service.createUser(new UserCreateDTO("outronome", "dono@myrank.dev", "senha-nova", null));
+        User user = service.createUser(new UserCreateDTO("passe", "outronome", "senha-nova", null), "dono@myrank.dev");
 
         assertThat(user).isSameAs(pending);
         assertThat(user.getUsername()).isEqualTo("outronome");
         assertThat(user.getPasswordHash()).isEqualTo("hash:senha-nova");
+        assertThat(user.isEmailVerified()).isTrue();
+        assertThat(user.getEmailVerificationTokenHash()).isNull();
         verify(categoryService, never()).createDefaultCategories(any());
-        verify(emailVerificationService).issueAndSend(pending);
     }
 
     @Test
@@ -77,7 +78,7 @@ class UserServiceEmailVerificationTest {
         when(userRepository.findByEmail("dono@myrank.dev")).thenReturn(Optional.of(localUser(true)));
         when(userRepository.existsByEmail("dono@myrank.dev")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.createUser(new UserCreateDTO("x", "dono@myrank.dev", "senha1234", null)))
+        assertThatThrownBy(() -> service.createUser(new UserCreateDTO("passe", "xyz", "senha1234", null), "dono@myrank.dev"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Email já está em uso.");
     }
