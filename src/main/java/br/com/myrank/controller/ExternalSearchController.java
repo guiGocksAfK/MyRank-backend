@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * Endpoints de busca em bases externas: TMDB (filmes/séries), RAWG (jogos),
- * MyAnimeList (anime), Google Books (livros), Deezer/iTunes (músicas e álbuns).
+ * MyAnimeList (animes e mangás), Google Books (livros), Deezer/iTunes (músicas e álbuns).
  * Protegido pela mesma SecurityConfig já existente (usuário precisa estar logado).
  */
 @RestController
@@ -70,6 +70,11 @@ public class ExternalSearchController {
         return ResponseEntity.ok(myAnimeListService.searchAnime(query));
     }
 
+    @GetMapping("/search/manga")
+    public ResponseEntity<List<ExternalSearchResultDTO>> searchManga(@RequestParam String query) {
+        return ResponseEntity.ok(myAnimeListService.searchManga(query));
+    }
+
     @GetMapping("/search/books")
     public ResponseEntity<List<ExternalSearchResultDTO>> searchBooks(@RequestParam String query) {
         return ResponseEntity.ok(googleBooksService.searchBooks(query));
@@ -113,6 +118,11 @@ public class ExternalSearchController {
     @GetMapping("/anime/{id}")
     public ResponseEntity<ExternalWorkDetailsDTO> getAnimeDetails(@PathVariable Long id) {
         return ResponseEntity.ok(myAnimeListService.getAnimeDetails(id));
+    }
+
+    @GetMapping("/manga/{id}")
+    public ResponseEntity<ExternalWorkDetailsDTO> getMangaDetails(@PathVariable Long id) {
+        return ResponseEntity.ok(myAnimeListService.getMangaDetails(id));
     }
 
     @GetMapping("/books/{id}")
