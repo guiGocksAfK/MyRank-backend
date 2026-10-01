@@ -5,6 +5,7 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.CategoryCreateDTO;
 import br.com.myrank.dto.CategoryResponseDTO;
 import br.com.myrank.dto.CategoryUpdateDTO;
+import br.com.myrank.dto.CustomFieldRequestDTO;
 import br.com.myrank.dto.SubcategoryDTO;
 import br.com.myrank.dto.SubcategoryRequestDTO;
 import br.com.myrank.security.AuthUtils;
@@ -50,6 +51,15 @@ public class CategoryController {
             @Valid @RequestBody CategoryUpdateDTO dto) {
         User user = authUtils.getUser(userDetails);
         return ResponseEntity.ok(categoryService.updateCategory(id, user.getId(), dto));
+    }
+
+    @PutMapping("/{id}/custom-fields")
+    public ResponseEntity<CategoryResponseDTO> updateCustomFields(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody List<CustomFieldRequestDTO> fields) {
+        User user = authUtils.getUser(userDetails);
+        return ResponseEntity.ok(categoryService.updateCustomFields(id, user.getId(), fields));
     }
 
     @DeleteMapping("/{id}")

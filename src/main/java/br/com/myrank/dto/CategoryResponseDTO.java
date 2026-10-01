@@ -3,6 +3,7 @@ package br.com.myrank.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 import br.com.myrank.domain.enums.TableTemplate;
+import br.com.myrank.domain.model.CustomField;
 
 public class CategoryResponseDTO {
 
@@ -12,6 +13,7 @@ public class CategoryResponseDTO {
     private boolean isDefault;
     private LocalDateTime createdAt;
     private List<SubcategoryDTO> subcategories = List.of();
+    private List<CustomField> customFields = List.of();
 
     public CategoryResponseDTO() {}
 
@@ -41,4 +43,7 @@ public class CategoryResponseDTO {
 
     public List<SubcategoryDTO> getSubcategories() { return subcategories; }
     public void setSubcategories(List<SubcategoryDTO> subcategories) { this.subcategories = subcategories; }
+
+    public List<CustomField> getCustomFields() { return customFields; }
+    public void setCustomFields(List<CustomField> customFields) { this.customFields = List.copyOf(customFields); }
 }
