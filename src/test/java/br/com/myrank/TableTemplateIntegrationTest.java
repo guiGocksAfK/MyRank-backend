@@ -108,6 +108,17 @@ class TableTemplateIntegrationTest {
     }
 
     @Test
+    void musicaEAlbum_naoGanhamBonusDeTempo() {
+        User owner = user();
+        Long tableId = table(owner, "🎵 Músicas", MUSIC, ALBUM, MOVIE).getId();
+        Work track = works.createWork(owner, newWork(tableId, MUSIC, null));  // 120 min
+        Work movie = works.createWork(owner, newWork(tableId, MOVIE, null));  // 120 min
+        assertEquals(0, track.getTimeBonusScore().signum());
+        assertEquals(0, track.getScore().compareTo(track.getFinalScore()));
+        assertTrue(movie.getTimeBonusScore().signum() > 0);
+    }
+
+    @Test
     void tabelaSemTipoInformado_viraPersonalizada() {
         User owner = user();
         CategoryCreateDTO dto = new CategoryCreateDTO();
