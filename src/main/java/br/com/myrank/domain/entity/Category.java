@@ -1,8 +1,11 @@
 package br.com.myrank.domain.entity;
 
 import br.com.myrank.domain.enums.TableTemplate;
+import br.com.myrank.domain.model.CustomField;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -36,6 +39,11 @@ public class Category {
     @BatchSize(size = 100)
     private List<TableTemplate> templates = new ArrayList<>();
 
+    /** Campos próprios da tabela, usados apenas pelas obras com template CUSTOM. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "custom_fields", nullable = false, columnDefinition = "jsonb")
+    private List<CustomField> customFields = new ArrayList<>();
+
     @Column(name = "is_default", nullable = false)
     private boolean isDefault = false;
 
@@ -63,6 +71,11 @@ public class Category {
     public void setTemplates(List<TableTemplate> templates) {
         this.templates.clear();
         this.templates.addAll(templates);
+    }
+
+    public List<CustomField> getCustomFields() { return customFields; }
+    public void setCustomFields(List<CustomField> customFields) {
+        this.customFields = new ArrayList<>(customFields);
     }
 
     public boolean isDefault() { return isDefault; }
