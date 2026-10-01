@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Rate limiting em memória, janela fixa de 1 minuto, por IP. Cobre os endpoints
  * sensíveis a abuso: login/OAuth (brute-force), registro (spam de conta) e o
- * proxy pras APIs externas (que gasta as nossas quotas de TMDB/RAWG/MAL/Books).
+ * proxy pras APIs externas (TMDB/RAWG/MAL/Books/Deezer/iTunes).
  *
  * Chave = {@code request.getRemoteAddr()} (ou o usuário do Discord, quando a
  * requisição vem do bot — ver {@link #clientKey}) — NÃO confia em X-Forwarded-For (é
@@ -44,6 +44,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("/api/users", "POST", 5),      // registro
             new Rule("/api/users/me/deletion-code", "POST", 3),
             new Rule("/api/users/me", "DELETE", 5), // exclusão de conta confere senha
+            // Buscas e detalhes de músicas e álbuns compartilham o teto das demais integrações.
             new Rule("/api/external/", null, 40),
     };
 
