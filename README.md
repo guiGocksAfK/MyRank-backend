@@ -154,10 +154,10 @@ V1–V8 consolidate the original sixteen migrations. Once applied, migration
 files are immutable; add the next version for every schema change. Existing
 databases keep their data and must not be dropped to apply a change.
 
-V9 introduces explicit table and item templates plus JSONB item `details`.
-Names and emojis are presentation only. The legacy mixed Series & Anime table
-is split using known image providers; items without reliable provenance stay
-in their original custom table, marked for review. See
+V9 introduces content templates: a table has one or more (e.g. Games + Series),
+each item stores its own and JSONB `details`. Names and emojis are presentation
+only. The legacy Series & Anime table becomes a mixed Series + Anime table, with
+no items moved. See
 [`docs/templates-phase1.md`](docs/templates-phase1.md) for the API contract,
 migration behavior and isolated validation command.
 

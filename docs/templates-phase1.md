@@ -1,78 +1,59 @@
 # Templates — fase 1
 
-Esta entrega prepara o modelo para músicas, álbuns, mangás e campos
-personalizados. As integrações e cards dessas fases ainda não fazem parte dela.
+Template é o tipo do conteúdo: `movie`, `tv`, `anime`, `game`, `book` ou
+`custom` (Personalizado, preenchido à mão). Ele decide a busca, o card e as
+conquistas. Nome e emoji da tabela são só apresentação. As próximas fases
+acrescentam `music`, `album` e `manga`.
 
-## Contrato
+## Regras
 
-`categories.template` define o template padrão da tabela. `works.template`
-guarda a classificação do próprio item, permitindo misturar conteúdos em
-tabelas livres. Renomear uma tabela ou trocar seu template não reclassifica
-os itens já salvos.
+- **Uma tabela tem um ou mais templates**, escolhidos na criação, na ordem em
+  que a pessoa marcou (ex.: Jogos + Séries + Animes). Personalizado também pode
+  entrar na mistura.
+- **Cada item guarda o próprio template**, que precisa ser um dos da tabela.
+  Numa tabela de um tipo só, o item herda; numa mista, a pessoa escolhe.
+- **Mudar os templates depois:** adicionar pode sempre; tirar só se nenhum item
+  da tabela usar aquele template. A tabela precisa de pelo menos um.
+- **Valores validados no código** (enum `TableTemplate`), não no banco: template
+  novo não exige migration.
+- **`details`** (JSON) guarda dados específicos do template, como de onde o item
+  veio (`provider`, `externalId`). Sempre um objeto, até 8 KB.
 
-Valores JSON: `movie`, `tv`, `game`, `book`, `anime`, `custom`. O banco guarda
-os mesmos valores em maiúsculas. Identificadores desconhecidos retornam 400.
+## API
 
-- POST `/api/categories`: `{ "name": "🎬 Favoritos", "template": "movie" }`.
-  Sem template, cria uma tabela `custom`.
-- PUT `/api/categories/{id}`: aceita `name` e `template`. Template omitido
-  mantém o valor atual.
-- POST `/api/works`: aceita `template` e `details`, além dos campos existentes.
-  Template omitido usa o padrão da tabela; details omitido vira `{}`.
-- PUT `/api/works/{id}`: template ou details omitidos/null mantêm o conteúdo;
-  `details: {}` limpa os detalhes. Um objeto substitui os detalhes anteriores.
-- As respostas de categorias e obras incluem o template. Obras também
-  retornam `details`, incluindo objetos aninhados.
-
-O formulário usa o template da tabela como seleção inicial da busca. Após
-selecionar uma sugestão, salva `details.provider` e `details.externalId`.
-Edições comuns preservam os detalhes. Trocar o tipo no formulário limpa a
-proveniência da seleção anterior. Perfil, criadores, conquistas, feed e
-notificações usam o template do item, sem analisar o nome da tabela.
+- POST `/api/categories`: `{ "name": "🎮 Jogos e séries", "templates": ["game", "tv"] }`.
+  Sem `templates`, a tabela é `custom`.
+- PUT `/api/categories/{id}`: `name` e, opcionalmente, `templates`. Sem
+  `templates`, mantém os atuais.
+- POST `/api/works`: `template` e `details`, além dos campos existentes.
+  `template` pode faltar só em tabela de um tipo só.
+- PUT `/api/works/{id}`: `template` e `details` null mantêm o que há; `details: {}`
+  limpa; um objeto substitui.
+- Categorias respondem `templates` (lista); obras respondem `template` e `details`.
 
 ## V9 e dados antigos
 
-V1–V8 não foram alteradas. A V9 é transacional no PostgreSQL e adiciona as
-colunas e constraints sem recriar tabelas. O backfill usa o emoji/nome antigo
-uma única vez; essa inferência não existe no código da aplicação.
+A V9 cria `category_templates` (tabela, posição, template) e as colunas
+`works.template` e `works.details`. As tabelas existentes são classificadas uma
+única vez pelo nome antigo (emoji primeiro, depois palavras); daí em diante o
+nome não decide nada.
 
-Na tabela mista Séries & Animes, capas do MyAnimeList identificam animes e
-capas do TMDB identificam séries. Obras de outros tipos ou sem informação
-suficiente ficam na tabela original livre. As não classificadas recebem
-`details.legacyClassificationRequired: true`, e podem ser classificadas pelo
-seletor de tipo já existente ao editar o item.
+A antiga "Séries & Animes" vira **uma tabela mista** com Séries + Animes, sem
+mover nenhum item: o que tem capa do MyAnimeList vira anime, o resto vira série.
+Notas, subdivisões, ordem manual e takes ficam intactos.
 
-Sem obras ambíguas, a tabela original vira Séries conservando o ID; Animes
-recebe sua própria tabela. Com obras ambíguas, a tabela original permanece
-intacta e ambas as tabelas específicas são criadas. Os itens identificados
-são movidos com suas subdivisões equivalentes. IDs de obras, notas, datas,
-takes e referências sociais são preservados. Os grupos que incluíam a tabela
-mista passam a incluir as tabelas separadas; a ordem de desempate é remapeada.
+Cadastros novos recebem cinco tabelas: Filmes, Jogos, Livros, Séries e Animes,
+uma para cada tipo. A escolha das tabelas no primeiro acesso fica para a fase 6.
 
-Cadastros novos recebem cinco tabelas: Filmes, Jogos, Livros, Séries e Animes.
-A escolha das tabelas no primeiro acesso fica para a fase 6.
+## Testes
 
-## Aplicação e validação
+`TableTemplateMigrationTest` aplica V1–V8 num schema descartável, insere dados
+no formato antigo e roda a V9. `TableTemplateIntegrationTest` cobre tabela
+mista, herança do tipo, troca de templates e limite do `details`. Os dois
+precisam de um Postgres; para rodar a suíte inteira num banco descartável:
 
-Em um banco que já registra V1–V8, basta iniciar o backend atualizado: Flyway
-aplica a V9. Não use baseline para pular a V9. Bancos ainda no histórico
-antigo V1–V16 precisam concluir o procedimento do squash documentado em
-`application.properties` antes de aplicar esta versão. Faça backup antes de
-atualizar um banco com dados, e publique o frontend correspondente depois do backend.
-
-Os testes de migration criam um schema temporário, aplicam V1–V8, inserem
-fixtures legadas e aplicam V9. Conferem casos vazios, com origem conhecida e
-ambíguos, subdivisões, referências sociais, notas e ordem do ranking.
-Os testes de persistência conferem renomeação, mudança de template,
-tabelas mistas, detalhes aninhados e updates parciais.
-
-Para executar toda a suíte em um banco descartável local:
-
-```powershell
-docker exec myrank-db createdb -U postgres myrank_phase1_test
-.\mvnw.cmd "-Dspring.datasource.url=jdbc:postgresql://localhost:5432/myrank_phase1_test" "-Dspring.datasource.username=postgres" "-Dspring.datasource.password=postgres" clean package
-docker exec myrank-db dropdb -U postgres myrank_phase1_test
+```bash
+docker run -d --name mr-test-db -e POSTGRES_PASSWORD=x -e POSTGRES_DB=myrank_test -p 55432:5432 postgres:15
+./mvnw test -Dspring.datasource.url=jdbc:postgresql://localhost:55432/myrank_test -Dspring.datasource.username=postgres -Dspring.datasource.password=x
+docker rm -f mr-test-db
 ```
-
-O nome acima é exclusivo de teste. Nunca substitua o nome por `myrank` no
-comando de remoção. No frontend: `npm run build` e `npm run lint`.

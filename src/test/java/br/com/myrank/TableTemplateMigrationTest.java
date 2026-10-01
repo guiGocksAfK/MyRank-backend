@@ -12,12 +12,16 @@ import java.sql.Statement;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Aplica V1–V8 num schema descartável, insere dados no formato antigo e roda a V9.
+ * Precisa de um Postgres (o mesmo dos testes de contexto).
+ */
 @SpringBootTest
 class TableTemplateMigrationTest {
     @Autowired DataSource dataSource;
 
     @Test
-    void v9PreservesLegacyItemsSubcategoriesSocialReferencesAndRankingOrder() throws Exception {
+    void v9ClassificaAsTabelasAntigas_eTransformaSeriesEAnimesEmTabelaMista() throws Exception {
         String schema = "template_migration_test_" + Long.toUnsignedString(System.nanoTime());
         try {
             Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
@@ -25,67 +29,62 @@ class TableTemplateMigrationTest {
             try (Connection connection = dataSource.getConnection(); Statement sql = connection.createStatement()) {
                 sql.execute("SET search_path TO " + schema);
                 sql.execute("""
-                    INSERT INTO users(id, username) VALUES (100, 'legacy_known'), (200, 'legacy_unknown'), (300, 'legacy_empty');
+                    INSERT INTO users(id, username) VALUES (100, 'legado');
                     INSERT INTO categories(id, user_id, name, is_default) VALUES
                         (100, 100, '📺 Séries & Animes', true),
                         (101, 100, '🎬 Favoritos', false),
-                        (102, 100, '📦 Filmes e livros', false),
-                        (200, 200, '📺 Séries & Animes', true),
-                        (300, 300, '📺 Séries & Animes', true);
-                    SELECT setval('categories_id_seq', 300);
-                    INSERT INTO subcategories(id, category_id, name) VALUES (100, 100, 'Favoritas'), (200, 200, 'Favoritas');
-                    SELECT setval('subcategories_id_seq', 200);
+                        (102, 100, 'Livros que reli', false),
+                        (103, 100, '📦 Restaurantes', false);
+                    INSERT INTO subcategories(id, category_id, name) VALUES (100, 100, 'Favoritas');
                     INSERT INTO works(id, category_id, subcategory_id, user_id, title, image_url, score, final_score) VALUES
-                        (100, 100, 100, 100, 'Série conhecida', 'https://image.tmdb.org/t/p/w500/tv.jpg', 9, 9),
-                        (101, 100, 100, 100, 'Anime conhecido', 'https://cdn.myanimelist.net/images/anime/a.jpg', 8, 8),
-                        (200, 200, 200, 200, 'Item sem origem', null, 7, 7),
-                        (201, 200, 200, 200, 'Anime identificado', 'https://cdn.myanimelist.net/images/anime/b.jpg', 10, 10),
-                        (202, 200, 200, 200, 'Série identificada', 'https://image.tmdb.org/t/p/w500/series.jpg', 8, 8);
+                        (100, 100, 100, 100, 'Série', 'https://image.tmdb.org/t/p/w500/tv.jpg', 9, 9),
+                        (101, 100, 100, 100, 'Anime', 'https://cdn.myanimelist.net/images/anime/a.jpg', 8, 8),
+                        (102, 100, null, 100, 'Sem capa', null, 7, 7),
+                        (103, 101, null, 100, 'Filme', null, 6, 6),
+                        (104, 103, null, 100, 'Pizzaria', 'https://cdn.myanimelist.net/x.jpg', 5, 5);
                     INSERT INTO master_table_groups(id, user_id, name, manual_order) VALUES
-                        (100, 100, 'Unificado', '["100:101", "100:100"]'),
-                        (200, 200, 'Unificado', '["200:200", "200:201", "200:202"]');
-                    INSERT INTO master_table_categories(master_table_id, category_id) VALUES (100, 100), (200, 200);
+                        (100, 100, 'Unificado', '["100:101", "100:100"]');
+                    INSERT INTO master_table_categories(master_table_id, category_id) VALUES (100, 100);
                     INSERT INTO takes(id, user_id, work_id, text) VALUES (100, 100, 101, 'Continua aqui');
-                    INSERT INTO feed_events(user_id, type, work_id, take_id) VALUES (100, 'TAKE', 101, 100);
                     """);
             }
             var result = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load().migrate();
             assertEquals(1, result.migrationsExecuted);
             try (Connection connection = dataSource.getConnection(); Statement sql = connection.createStatement()) {
                 sql.execute("SET search_path TO " + schema);
-                assertEquals("5", value(sql, "SELECT count(*) FROM works"));
-                assertEquals("TV", value(sql, "SELECT template FROM categories WHERE id = 100"));
-                assertEquals("MOVIE", value(sql, "SELECT template FROM categories WHERE id = 101"));
-                assertEquals("CUSTOM", value(sql, "SELECT template FROM categories WHERE id = 102"));
+                // A tabela mista continua uma só, agora com dois tipos na ordem Séries, Animes.
+                assertEquals("TV,ANIME", value(sql, templatesOf(100)));
+                assertEquals("MOVIE", value(sql, templatesOf(101)));
+                assertEquals("BOOK", value(sql, templatesOf(102)));
+                assertEquals("CUSTOM", value(sql, templatesOf(103)));
+                assertEquals("4", value(sql, "SELECT count(*) FROM categories"));
+
+                // Itens: capa do MyAnimeList vira anime só onde a tabela tem Animes.
+                assertEquals("TV", value(sql, "SELECT template FROM works WHERE id = 100"));
                 assertEquals("ANIME", value(sql, "SELECT template FROM works WHERE id = 101"));
-                assertEquals("100", value(sql, "SELECT category_id FROM works WHERE id = 100"));
-                assertEquals("8.00", value(sql, "SELECT score FROM works WHERE id = 101"));
+                assertEquals("TV", value(sql, "SELECT template FROM works WHERE id = 102"));
+                assertEquals("MOVIE", value(sql, "SELECT template FROM works WHERE id = 103"));
+                assertEquals("CUSTOM", value(sql, "SELECT template FROM works WHERE id = 104"));
+
+                // Nada saiu do lugar.
+                assertEquals("100", value(sql, "SELECT category_id FROM works WHERE id = 101"));
+                assertEquals("100", value(sql, "SELECT subcategory_id FROM works WHERE id = 101"));
+                assertEquals("[\"100:101\", \"100:100\"]", value(sql, "SELECT manual_order::text FROM master_table_groups WHERE id = 100"));
                 assertEquals("101", value(sql, "SELECT work_id FROM takes WHERE id = 100"));
-                assertEquals("101", value(sql, "SELECT work_id FROM feed_events WHERE take_id = 100"));
-                assertEquals("true", value(sql, "SELECT (w.category_id = s.category_id)::text FROM works w JOIN subcategories s ON s.id=w.subcategory_id WHERE w.id=101"));
-                String animeCategory = value(sql, "SELECT category_id FROM works WHERE id = 101");
-                assertEquals(animeCategory + ":101", value(sql, "SELECT manual_order->>0 FROM master_table_groups WHERE id=100"));
-                assertEquals("2", value(sql, "SELECT count(*) FROM master_table_categories WHERE master_table_id=100"));
+                assertEquals("{}", value(sql, "SELECT details::text FROM works WHERE id = 100"));
 
-                assertEquals("CUSTOM", value(sql, "SELECT template FROM categories WHERE id = 200"));
-                assertEquals("200", value(sql, "SELECT category_id FROM works WHERE id = 200"));
-                assertEquals("true", value(sql, "SELECT details->>'legacyClassificationRequired' FROM works WHERE id = 200"));
-                assertEquals("3", value(sql, "SELECT count(*) FROM master_table_categories WHERE master_table_id=200"));
-                assertEquals("3", value(sql, "SELECT jsonb_array_length(manual_order) FROM master_table_groups WHERE id=200"));
-                assertEquals("TV", value(sql, "SELECT template FROM works WHERE id=202"));
-                assertNotEquals("200", value(sql, "SELECT category_id FROM works WHERE id=202"));
-                assertEquals("true", value(sql, "SELECT (w.category_id = s.category_id)::text FROM works w JOIN subcategories s ON s.id=w.subcategory_id WHERE w.id=202"));
-                assertEquals("2", value(sql, "SELECT count(*) FROM categories WHERE user_id=300"));
-
-                assertThrows(SQLException.class, () -> sql.execute("UPDATE works SET details='[]' WHERE id=100"));
-                assertThrows(SQLException.class, () -> sql.execute("UPDATE categories SET template='INVALID' WHERE id=100"));
+                assertThrows(SQLException.class, () -> sql.execute("UPDATE works SET details = '[]' WHERE id = 100"));
             }
         } finally {
-            // Único schema removido é o schema de teste gerado nesta execução.
+            // Só o schema descartável criado aqui é removido.
             try (Connection connection = dataSource.getConnection(); Statement sql = connection.createStatement()) {
                 sql.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
             }
         }
+    }
+
+    private static String templatesOf(long categoryId) {
+        return "SELECT string_agg(template, ',' ORDER BY position) FROM category_templates WHERE category_id = " + categoryId;
     }
 
     private String value(Statement sql, String query) throws SQLException {

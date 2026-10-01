@@ -4,7 +4,6 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.entity.Work;
 import br.com.myrank.domain.enums.TableTemplate;
 import br.com.myrank.dto.*;
-import br.com.myrank.repository.CategoryRepository;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.repository.WorkRepository;
 import br.com.myrank.service.CategoryService;
@@ -15,85 +14,121 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static br.com.myrank.domain.enums.TableTemplate.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Precisa de um Postgres (o mesmo dos testes de contexto). */
 @SpringBootTest
 @Transactional
 class TableTemplateIntegrationTest {
     @Autowired CategoryService categories;
     @Autowired WorkService works;
     @Autowired UserRepository users;
-    @Autowired CategoryRepository categoryRepository;
     @Autowired WorkRepository workRepository;
     @Autowired EntityManager entityManager;
 
     @Test
-    void renamingAndChangingTableTemplateNeverReclassifiesExistingItems() {
+    void renomearATabelaNaoMudaOTipo_eDetailsSobrevivemAEdicoes() {
         User owner = user();
-        CategoryCreateDTO table = new CategoryCreateDTO();
-        table.setName("🎬 Favoritos");
-        table.setTemplate(TableTemplate.MOVIE);
-        Long categoryId = categories.createCategory(owner, table).getId();
-        Work work = works.createWork(owner, new WorkCreateDTO(categoryId, "Exemplo", null,
-                "Diretor", null, 120, 9, null, null,
+        Long tableId = table(owner, "🎬 Favoritos", MOVIE).getId();
+        Work work = works.createWork(owner, newWork(tableId, null,
                 Map.of("provider", "tmdb", "externalId", "123", "nested", Map.of("language", "pt"))));
-        Long workId = work.getId();
-        entityManager.flush();
-        entityManager.clear();
+        assertEquals(MOVIE, work.getTemplate()); // tabela de um tipo só: o item herda
 
         CategoryUpdateDTO rename = new CategoryUpdateDTO();
         rename.setName("🎵 Sem palavras de filme");
-        assertEquals(TableTemplate.MOVIE, categories.updateCategory(categoryId, owner.getId(), rename).getTemplate());
-        rename.setTemplate(TableTemplate.CUSTOM);
-        categories.updateCategory(categoryId, owner.getId(), rename);
-        entityManager.flush();
-        entityManager.clear();
+        assertEquals(List.of(MOVIE), categories.updateCategory(tableId, owner.getId(), rename).getTemplates());
+        flush();
 
-        WorkResponseDTO response = WorkResponseDTO.fromEntity(workRepository.findById(workId).orElseThrow());
-        assertEquals(TableTemplate.MOVIE, response.template());
+        WorkResponseDTO response = WorkResponseDTO.fromEntity(workRepository.findById(work.getId()).orElseThrow());
         assertEquals("filme", response.template().type());
-        assertEquals("123", response.details().get("externalId"));
         assertEquals(Map.of("language", "pt"), response.details().get("nested"));
-        assertEquals(TableTemplate.CUSTOM, categoryRepository.findById(categoryId).orElseThrow().getTemplate());
 
-        works.updateWork(workId, owner.getId(), new WorkUpdateDTO(null, null, null, null,
-                null, 8.5, null, null, null));
-        assertEquals("123", workRepository.findById(workId).orElseThrow().getDetails().get("externalId"));
-        works.updateWork(workId, owner.getId(), new WorkUpdateDTO(null, null, null, null,
-                null, null, null, null, Map.of()));
-        entityManager.flush();
-        entityManager.clear();
-        assertTrue(workRepository.findById(workId).orElseThrow().getDetails().isEmpty());
+        works.updateWork(work.getId(), owner.getId(), new WorkUpdateDTO(null, null, null, null, null, 8.5, null, null, null));
+        assertEquals("123", workRepository.findById(work.getId()).orElseThrow().getDetails().get("externalId"));
+        works.updateWork(work.getId(), owner.getId(), new WorkUpdateDTO(null, null, null, null, null, null, null, null, Map.of()));
+        flush();
+        assertTrue(workRepository.findById(work.getId()).orElseThrow().getDetails().isEmpty());
     }
 
     @Test
-    void customTableKeepsTheExplicitItemTemplateAcrossRoundTrips() {
+    void tabelaMista_exigeEscolherOTipo_eSoAceitaOsTiposDela() {
         User owner = user();
-        CategoryCreateDTO table = new CategoryCreateDTO();
-        table.setName("Minha coleção");
-        Long categoryId = categories.createCategory(owner, table).getId();
-        Work work = works.createWork(owner, new WorkCreateDTO(categoryId, "Anime", null,
-                null, null, 0, 8, null, TableTemplate.ANIME, null));
-        entityManager.flush();
-        entityManager.clear();
-        assertEquals(TableTemplate.ANIME, workRepository.findById(work.getId()).orElseThrow().getTemplate());
-        assertEquals(TableTemplate.CUSTOM, categoryRepository.findById(categoryId).orElseThrow().getTemplate());
+        Long tableId = table(owner, "🎮 Jogos e séries", GAME, TV, ANIME).getId();
+
+        assertThrows(IllegalArgumentException.class, () -> works.createWork(owner, newWork(tableId, null, null)));
+        assertThrows(IllegalArgumentException.class, () -> works.createWork(owner, newWork(tableId, BOOK, null)));
+        Work anime = works.createWork(owner, newWork(tableId, ANIME, null));
+        flush();
+        assertEquals(ANIME, workRepository.findById(anime.getId()).orElseThrow().getTemplate());
+        assertEquals(List.of(GAME, TV, ANIME), categories.getCategoriesByUser(owner.getId()).get(0).getTemplates());
     }
 
     @Test
-    void defaultTablesSeparateSeriesFromAnime() {
+    void adicionarTipoPodeSempre_tirarSoSeNenhumItemUsar() {
+        User owner = user();
+        Long tableId = table(owner, "📚 Leituras", BOOK).getId();
+        works.createWork(owner, newWork(tableId, BOOK, null));
+
+        CategoryUpdateDTO change = new CategoryUpdateDTO();
+        change.setName("📚 Leituras");
+        change.setTemplates(List.of(BOOK, CUSTOM));
+        assertEquals(List.of(BOOK, CUSTOM), categories.updateCategory(tableId, owner.getId(), change).getTemplates());
+
+        change.setTemplates(List.of(CUSTOM)); // ainda tem um livro na tabela
+        assertThrows(IllegalArgumentException.class, () -> categories.updateCategory(tableId, owner.getId(), change));
+        change.setTemplates(List.of(BOOK)); // ninguém usa CUSTOM: pode tirar
+        assertEquals(List.of(BOOK), categories.updateCategory(tableId, owner.getId(), change).getTemplates());
+        change.setTemplates(List.of());
+        assertThrows(IllegalArgumentException.class, () -> categories.updateCategory(tableId, owner.getId(), change));
+    }
+
+    @Test
+    void detailsGrandesDemais_saoRecusados() {
+        User owner = user();
+        Long tableId = table(owner, "🎬 Filmes", MOVIE).getId();
+        Map<String, Object> huge = Map.of("blob", "x".repeat(9 * 1024));
+        assertThrows(IllegalArgumentException.class, () -> works.createWork(owner, newWork(tableId, null, huge)));
+    }
+
+    @Test
+    void tabelasPadrao_umaPorTipo_comSeriesEAnimesSeparados() {
         User owner = user();
         categories.createDefaultCategories(owner);
         var defaults = categories.getCategoriesByUser(owner.getId());
         assertEquals(5, defaults.size());
-        assertEquals(Set.of(TableTemplate.MOVIE, TableTemplate.TV, TableTemplate.ANIME,
-                TableTemplate.BOOK, TableTemplate.GAME), defaults.stream()
-                .map(CategoryResponseDTO::getTemplate).collect(Collectors.toSet()));
+        assertEquals(Set.of(List.of(MOVIE), List.of(TV), List.of(ANIME), List.of(BOOK), List.of(GAME)),
+                defaults.stream().map(CategoryResponseDTO::getTemplates).collect(Collectors.toSet()));
         assertTrue(defaults.stream().allMatch(CategoryResponseDTO::isDefault));
+    }
+
+    @Test
+    void tabelaSemTipoInformado_viraPersonalizada() {
+        User owner = user();
+        CategoryCreateDTO dto = new CategoryCreateDTO();
+        dto.setName("Minha coleção");
+        assertEquals(List.of(CUSTOM), categories.createCategory(owner, dto).getTemplates());
+    }
+
+    private CategoryResponseDTO table(User owner, String name, TableTemplate... templates) {
+        CategoryCreateDTO dto = new CategoryCreateDTO();
+        dto.setName(name);
+        dto.setTemplates(List.of(templates));
+        return categories.createCategory(owner, dto);
+    }
+
+    private static WorkCreateDTO newWork(Long tableId, TableTemplate template, Map<String, Object> details) {
+        return new WorkCreateDTO(tableId, "Exemplo", null, "Criador", null, 120, 9, null, template, details);
+    }
+
+    private void flush() {
+        entityManager.flush();
+        entityManager.clear();
     }
 
     private User user() {
