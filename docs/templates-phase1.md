@@ -57,3 +57,99 @@ docker run -d --name mr-test-db -e POSTGRES_PASSWORD=x -e POSTGRES_DB=myrank_tes
 ./mvnw test -Dspring.datasource.url=jdbc:postgresql://localhost:55432/myrank_test -Dspring.datasource.username=postgres -Dspring.datasource.password=x
 docker rm -f mr-test-db
 ```
+
+## Fase 5: campos próprios
+
+Os campos próprios pertencem à tabela e só podem ser definidos quando ela tem
+o template `CUSTOM` (Personalizado). Uma tabela pode ter até **5 campos**, com
+os tipos `TEXT`, `NUMBER`, `DATE` e `BOOLEAN`. Cada definição tem `{ id, name,
+type }`. O servidor gera um ID curto e aleatório (`f_` + 8 caracteres), que
+continua o mesmo ao renomear. O nome tem de 1 a 40 caracteres, após remover
+espaços das bordas, e é único na tabela sem diferenciar maiúsculas.
+
+### Definições e API
+
+`PUT /api/categories/{id}/custom-fields` exige o dono da tabela, pela mesma
+checagem dos outros endpoints de categoria, e recebe a **lista completa**:
+
+```json
+[
+  { "name": "Local", "type": "TEXT" },
+  { "name": "Visita", "type": "DATE" }
+]
+```
+
+Sem `id`, cria um campo. Com `id`, atualiza um campo existente da mesma tabela.
+IDs desconhecidos ou repetidos são recusados. A resposta é o
+`CategoryResponseDTO` atualizado, com `customFields` em todas as respostas de
+categoria. Para renomear, envie o mesmo ID e tipo com o novo nome. Campos
+existentes omitidos da lista são removidos; `[]` remove todos.
+
+- **Renomear:** permitido, respeitando tamanho e unicidade; preserva valores.
+- **Adicionar:** permitido até o limite; itens antigos ficam sem valor.
+- **Trocar tipo:** retorna 400 com mensagem orientando remover e criar outro.
+- **Remover:** apaga o valor de cada campo removido em todos os itens da tabela,
+  preservando outros campos e metadados, na mesma transação. A confirmação é
+  responsabilidade do frontend.
+- **Retirar `CUSTOM` da tabela:** mantém a regra de que não pode haver itens
+  usando esse template; quando permitido, apaga também as definições. Adicionar
+  `CUSTOM` novamente começa sem campos próprios.
+
+A V10 adiciona `categories.custom_fields JSONB NOT NULL DEFAULT '[]'` com
+`CHECK (jsonb_typeof(custom_fields) = 'array')`. Os tipos e limites são validados
+no código; não há CHECK com a lista de tipos. V1–V9 permanecem intactas.
+
+### Valores dos itens
+
+Só itens `CUSTOM` podem enviar `details.fields`, um objeto com os IDs das
+definições da tabela como chaves. Por exemplo, usando IDs devolvidos pelo
+servidor:
+
+```json
+{
+  "template": "custom",
+  "details": {
+    "fields": {
+      "f_a1B2c3D4": "São Paulo",
+      "f_e5F6g7H8": "2026-10-01"
+    }
+  }
+}
+```
+
+| Tipo | Valor aceito |
+| --- | --- |
+| `TEXT` | String de até 200 caracteres, inclusive vazia |
+| `NUMBER` | Número finito; strings numéricas, NaN e infinito são recusados |
+| `DATE` | String com data válida e completa no formato `yyyy-MM-dd` |
+| `BOOLEAN` | `true` ou `false`, sem conversão de strings ou números |
+
+`null` como valor remove a chave do campo no item, sem remover sua definição.
+Campos podem ficar sem valor. Chaves desconhecidas e `details.fields` fora de
+um objeto são recusados com 400 e mensagem em português. Itens de outro
+template recusam `details.fields`, inclusive vazio ou nulo. Ao trocar o
+template de um item, os detalhes resultantes também são validados.
+
+O contrato de edição continua igual: `details: null` mantém os detalhes;
+`details: {}` limpa; um objeto substitui os detalhes completos. O limite total
+de **8 KB em UTF-8** continua valendo, inclusive para campos próprios. As
+gravações de itens e mudanças de definições/templates bloqueiam a mesma
+categoria durante a transação, evitando reintroduzir um campo removido em uma
+gravação concorrente.
+
+### Testes da fase 5
+
+`CustomFieldsServiceTest` e `CustomFieldsControllerTest` cobrem validações,
+contratos HTTP e mensagens 400. `CustomFieldsIntegrationTest` verifica JSONB,
+renomeação, limpeza em todos os itens, preservação de outras tabelas e rollback
+conjunto de definições e valores. `CustomFieldsMigrationTest` aplica a V10 sobre
+um schema na V9, confere default e CHECK de array e garante que o banco não
+restringe a lista de tipos. O teste antigo da V9 permanece limitado à V9.
+
+Execute a suíte inteira no Postgres descartável com o comando da seção
+**Testes** acima. No Windows, use `.\mvnw.cmd` no lugar de `./mvnw`. Depois,
+valide a compilação com `./mvnw -q -DskipTests compile` (ou
+`.\mvnw.cmd -q -DskipTests compile`).
+
+Validação em 01/10/2026: a suíte inteira passou no Postgres 15 descartável,
+com **210 testes, nenhuma falha, nenhum erro e nenhum teste ignorado**.
