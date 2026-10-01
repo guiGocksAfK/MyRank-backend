@@ -8,6 +8,9 @@ import java.util.List;
 
 public interface WorkRepository extends JpaRepository<Work, Long> {
 
+    /** Tirar um template da tabela só é permitido se nenhum item usar ele. */
+    boolean existsByCategoryIdAndTemplate(Long categoryId, br.com.myrank.domain.enums.TableTemplate template);
+
     /*
      * `left join fetch w.category` em todos os finders de lista: sem isso, mapear
      * cada Work pro DTO dispara 1 query por obra pra pegar o nome da categoria
