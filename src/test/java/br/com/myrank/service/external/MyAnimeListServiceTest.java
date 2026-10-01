@@ -36,9 +36,9 @@ class MyAnimeListServiceTest {
     private static final String CLIENT_ID = "client-id-de-teste";
     private static final String SEARCH_FIELDS = "id,title,main_picture,start_date";
     private static final String MANGA_URL =
-            "https://api.myanimelist.net/v2/manga/13?fields=id,title,main_picture,start_date,authors,num_volumes,status";
+            "https://api.myanimelist.net/v2/manga/13?fields=id,title,main_picture,start_date,authors,num_volumes,status,genres";
     private static final String ANIME_URL = "https://api.myanimelist.net/v2/anime/13?fields="
-            + "id,title,main_picture,start_date,num_episodes,average_episode_duration,studios";
+            + "id,title,main_picture,start_date,num_episodes,average_episode_duration,studios,media_type,status,genres";
 
     private final RestTemplate restTemplate = mock(RestTemplate.class);
     private final MyAnimeListService service = new MyAnimeListService(restTemplate, CLIENT_ID);

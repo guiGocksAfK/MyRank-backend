@@ -17,17 +17,11 @@ public class MalMangaNodeDTO extends MalAnimeNodeDTO {
     @JsonProperty("num_volumes")
     private Integer numVolumes;
 
-    /** finished | currently_publishing | not_yet_published | on_hiatus | discontinued */
-    private String status;
-
     public List<Author> getAuthors() { return authors; }
     public void setAuthors(List<Author> authors) { this.authors = authors; }
 
     public Integer getNumVolumes() { return numVolumes; }
     public void setNumVolumes(Integer numVolumes) { this.numVolumes = numVolumes; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
 
     /** Nomes dos autores separados por vírgula; null se nenhum nome estiver disponível. */
     public String resolveAuthorNames() {
