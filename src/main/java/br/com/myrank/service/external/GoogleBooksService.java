@@ -107,13 +107,18 @@ public class GoogleBooksService {
 
         GoogleBookVolumeInfoDTO info = item.getVolumeInfo();
 
-        return new ExternalWorkDetailsDTO(
+        ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
                 info.getTitle(),
                 info.resolveImageUrl(),
                 info.resolveAuthorNames(),
                 info.resolveDateOnly(),
                 info.resolveEstimatedMinutes()
         );
+        dto.setDetails(CardDetails.create()
+                .put("pages", info.getPageCountValue())
+                .names("genres", info.getCategories(), category -> category)
+                .build());
+        return dto;
     }
 
     /** 429 do Google Books: quota diária estourada (típico quando não há API key configurada). */

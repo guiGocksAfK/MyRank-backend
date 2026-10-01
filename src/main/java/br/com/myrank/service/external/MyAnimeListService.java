@@ -1,6 +1,7 @@
 package br.com.myrank.service.external;
 
 import br.com.myrank.dto.external.ExternalSearchResultDTO;
+import br.com.myrank.dto.external.ExternalNameDTO;
 import br.com.myrank.dto.external.ExternalWorkDetailsDTO;
 import br.com.myrank.dto.external.MalAnimeNodeDTO;
 import br.com.myrank.dto.external.MalListResponseDTO;
@@ -45,8 +46,8 @@ public class MyAnimeListService {
 
     private static final String SEARCH_FIELDS = "id,title,main_picture,start_date";
     private static final String DETAILS_FIELDS =
-            "id,title,main_picture,start_date,num_episodes,average_episode_duration,studios";
-    private static final String MANGA_DETAILS_FIELDS = "id,title,main_picture,start_date,authors,num_volumes,status";
+            "id,title,main_picture,start_date,num_episodes,average_episode_duration,studios,media_type,status,genres";
+    private static final String MANGA_DETAILS_FIELDS = "id,title,main_picture,start_date,authors,num_volumes,status,genres";
 
     private final RestTemplate restTemplate;
     private final String clientId;
@@ -135,13 +136,21 @@ public class MyAnimeListService {
     /** Detalhes completos de um anime: GET /anime/{id}?fields=... (objeto na raiz). */
     public ExternalWorkDetailsDTO getAnimeDetails(Long malId) {
         MalAnimeNodeDTO details = getDetails(malId, "anime", "anime", DETAILS_FIELDS, MalAnimeNodeDTO.class);
-        return new ExternalWorkDetailsDTO(
+        ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
                 details.getTitle(),
                 details.resolveImageUrl(),
                 details.resolveStudioNames(),
                 details.resolveReleaseDate(),
                 details.resolveTotalMinutes()
         );
+        // Card: episódios, tipo (o front só mostra quando não é série de TV) e situação.
+        dto.setDetails(CardDetails.create()
+                .put("episodes", details.getNumEpisodes())
+                .put("mediaType", details.getMediaType())
+                .put("status", details.getStatus())
+                .names("genres", details.getGenres(), ExternalNameDTO::getName)
+                .build());
+        return dto;
     }
 
     /** Detalhes de mangá: autores como criador e duração zero, sem ponderação por tempo. */
@@ -154,10 +163,11 @@ public class MyAnimeListService {
                 details.getTitle(), details.resolveImageUrl(), details.resolveAuthorNames(),
                 details.resolveReleaseDate(), 0);
         // Card: quantos volumes (0 = ainda em aberto, o MAL não informa) e a situação da publicação.
-        java.util.Map<String, Object> card = new java.util.LinkedHashMap<>();
-        if (details.getNumVolumes() != null && details.getNumVolumes() > 0) card.put("volumes", details.getNumVolumes());
-        if (details.getStatus() != null && !details.getStatus().isBlank()) card.put("status", details.getStatus());
-        dto.setDetails(card);
+        dto.setDetails(CardDetails.create()
+                .put("volumes", details.getNumVolumes())
+                .put("status", details.getStatus())
+                .names("genres", details.getGenres(), ExternalNameDTO::getName)
+                .build());
         return dto;
     }
 

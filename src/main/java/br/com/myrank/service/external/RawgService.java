@@ -91,13 +91,17 @@ public class RawgService {
                     "Não foi possível buscar os detalhes do jogo agora. Tente novamente em instantes.", null);
         }
 
-        return new ExternalWorkDetailsDTO(
+        ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
                 details.getName(),
                 details.getBackgroundImage(), // já vem como URL completa, sem precisar montar prefixo
                 details.resolveDeveloperNames(),
                 details.getReleased(),
                 details.resolveTimeMinutes()
         );
+        dto.setDetails(CardDetails.create()
+                .names("genres", details.getGenres(), ExternalNameDTO::getName)
+                .build());
+        return dto;
     }
 
     private List<ExternalSearchResultDTO> mapSearchResults(RawgSearchResponseDTO response) {

@@ -95,13 +95,18 @@ public class TmdbService {
                 ? details.getCredits().findDirectorName()
                 : null;
 
-        return new ExternalWorkDetailsDTO(
+        ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
                 details.getTitle(),
                 buildImageUrl(details.getPosterPath()),
                 director,
                 details.getReleaseDate(),
                 details.getRuntime() != null ? details.getRuntime() : 0
         );
+        // Ano e duração já vão nos campos normais; aqui só os gêneros (pra IA, não aparecem no card).
+        dto.setDetails(CardDetails.create()
+                .names("genres", details.getGenres(), TmdbGenreDTO::getName)
+                .build());
+        return dto;
     }
 
     /** Detalhes completos de uma série: GET /tv/{id} (created_by já vem no payload padrão) */
@@ -112,13 +117,19 @@ public class TmdbService {
 
         TmdbTvDetailsDTO details = executeGetOrThrow(url, TmdbTvDetailsDTO.class);
 
-        return new ExternalWorkDetailsDTO(
+        ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
                 details.getName(),
                 buildImageUrl(details.getPosterPath()),
                 details.resolveCreatorNames(),
                 details.getFirstAirDate(),
                 details.resolveTotalMinutes()
         );
+        dto.setDetails(CardDetails.create()
+                .put("seasons", details.getNumberOfSeasons())
+                .put("status", details.getStatus())
+                .names("genres", details.getGenres(), TmdbGenreDTO::getName)
+                .build());
+        return dto;
     }
 
     /** Usado na busca/autocomplete: se a TMDB falhar, devolve null (vira lista vazia) em vez de propagar. */
