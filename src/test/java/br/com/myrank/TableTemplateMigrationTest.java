@@ -26,8 +26,8 @@ class TableTemplateMigrationTest {
         try {
             Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
                     .target("8").load().migrate();
-            try (Connection connection = dataSource.getConnection(); Statement sql = connection.createStatement()) {
-                sql.execute("SET search_path TO " + schema);
+            try (Connection connection = dataSource.getConnection(); AutoCloseable scope = inSchema(connection, schema);
+                 Statement sql = connection.createStatement()) {
                 sql.execute("""
                     INSERT INTO users(id, username) VALUES (100, 'legado');
                     INSERT INTO categories(id, user_id, name, is_default) VALUES
@@ -48,10 +48,11 @@ class TableTemplateMigrationTest {
                     INSERT INTO takes(id, user_id, work_id, text) VALUES (100, 100, 101, 'Continua aqui');
                     """);
             }
-            var result = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load().migrate();
+            var result = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
+                    .target("9").load().migrate();
             assertEquals(1, result.migrationsExecuted);
-            try (Connection connection = dataSource.getConnection(); Statement sql = connection.createStatement()) {
-                sql.execute("SET search_path TO " + schema);
+            try (Connection connection = dataSource.getConnection(); AutoCloseable scope = inSchema(connection, schema);
+                 Statement sql = connection.createStatement()) {
                 // A tabela mista continua uma só, agora com dois tipos na ordem Séries, Animes.
                 assertEquals("TV,ANIME", value(sql, templatesOf(100)));
                 assertEquals("MOVIE", value(sql, templatesOf(101)));
@@ -85,6 +86,13 @@ class TableTemplateMigrationTest {
 
     private static String templatesOf(long categoryId) {
         return "SELECT string_agg(template, ',' ORDER BY position) FROM category_templates WHERE category_id = " + categoryId;
+    }
+
+    private AutoCloseable inSchema(Connection connection, String schema) throws SQLException {
+        String original = connection.getSchema();
+        connection.setSchema(schema);
+        // Evita contaminar os próximos testes com o schema descartável desta migration.
+        return () -> connection.setSchema(original);
     }
 
     private String value(Statement sql, String query) throws SQLException {
