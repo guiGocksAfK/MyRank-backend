@@ -14,6 +14,8 @@ public enum TableTemplate {
     // "mais consumida" que uma de 3.
     MUSIC("music", "musica", false),
     ALBUM("album", "album", false),
+    // Mangá também não: tempo de leitura não é informado e não faz sentido estimar.
+    MANGA("manga", "manga", false),
     CUSTOM("custom", "outro", true);
 
     private final String value;

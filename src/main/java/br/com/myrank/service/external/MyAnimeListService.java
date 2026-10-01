@@ -46,7 +46,7 @@ public class MyAnimeListService {
     private static final String SEARCH_FIELDS = "id,title,main_picture,start_date";
     private static final String DETAILS_FIELDS =
             "id,title,main_picture,start_date,num_episodes,average_episode_duration,studios";
-    private static final String MANGA_DETAILS_FIELDS = "id,title,main_picture,start_date,authors";
+    private static final String MANGA_DETAILS_FIELDS = "id,title,main_picture,start_date,authors,num_volumes,status";
 
     private final RestTemplate restTemplate;
     private final String clientId;
@@ -150,9 +150,15 @@ public class MyAnimeListService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de mangá inválido.");
         }
         MalMangaNodeDTO details = getDetails(malId, "manga", "mangá", MANGA_DETAILS_FIELDS, MalMangaNodeDTO.class);
-        return new ExternalWorkDetailsDTO(
+        ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
                 details.getTitle(), details.resolveImageUrl(), details.resolveAuthorNames(),
                 details.resolveReleaseDate(), 0);
+        // Card: quantos volumes (0 = ainda em aberto, o MAL não informa) e a situação da publicação.
+        java.util.Map<String, Object> card = new java.util.LinkedHashMap<>();
+        if (details.getNumVolumes() != null && details.getNumVolumes() > 0) card.put("volumes", details.getNumVolumes());
+        if (details.getStatus() != null && !details.getStatus().isBlank()) card.put("status", details.getStatus());
+        dto.setDetails(card);
+        return dto;
     }
 
     private <T extends MalAnimeNodeDTO> T getDetails(Long malId, String resource, String workName,

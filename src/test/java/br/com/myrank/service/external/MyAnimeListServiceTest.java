@@ -36,7 +36,7 @@ class MyAnimeListServiceTest {
     private static final String CLIENT_ID = "client-id-de-teste";
     private static final String SEARCH_FIELDS = "id,title,main_picture,start_date";
     private static final String MANGA_URL =
-            "https://api.myanimelist.net/v2/manga/13?fields=id,title,main_picture,start_date,authors";
+            "https://api.myanimelist.net/v2/manga/13?fields=id,title,main_picture,start_date,authors,num_volumes,status";
     private static final String ANIME_URL = "https://api.myanimelist.net/v2/anime/13?fields="
             + "id,title,main_picture,start_date,num_episodes,average_episode_duration,studios";
 
@@ -121,10 +121,12 @@ class MyAnimeListServiceTest {
                  "main_picture":{"large":"https://img.test/manga.jpg"},
                  "authors":[{"node":{"id":1,"first_name":"Tsugumi","last_name":"Ohba"},"role":"Story"},
                             {"node":{"id":2,"first_name":"Takeshi","last_name":"Obata"},"role":"Art"}],
-                 "num_episodes":37,"average_episode_duration":1440,"num_chapters":108,"num_volumes":12}
+                 "num_episodes":37,"average_episode_duration":1440,"num_chapters":108,"num_volumes":12,
+                 "status":"finished"}
                 """, MalMangaNodeDTO.class));
 
         ExternalWorkDetailsDTO details = service.getMangaDetails(13L);
+        assertThat(details.getDetails()).isEqualTo(java.util.Map.of("volumes", 12, "status", "finished"));
 
         assertThat(details.getTitle()).isEqualTo("Death Note");
         assertThat(details.getImageUrl()).isEqualTo("https://img.test/manga.jpg");

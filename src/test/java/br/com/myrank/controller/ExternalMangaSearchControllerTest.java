@@ -34,7 +34,7 @@ class ExternalMangaSearchControllerTest {
     private static final String SEARCH_URL =
             "https://api.myanimelist.net/v2/manga?q=Naruto&limit=20&fields=id,title,main_picture,start_date";
     private static final String DETAILS_URL =
-            "https://api.myanimelist.net/v2/manga/13?fields=id,title,main_picture,start_date,authors";
+            "https://api.myanimelist.net/v2/manga/13?fields=id,title,main_picture,start_date,authors,num_volumes,status";
 
     private final RestTemplate restTemplate = mock(RestTemplate.class);
     private final ObjectMapper mapper = new ObjectMapper();
