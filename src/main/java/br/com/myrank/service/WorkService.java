@@ -15,6 +15,7 @@ import br.com.myrank.service.social.FeedEventService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,8 +48,9 @@ public class WorkService {
         this.objectMapper = objectMapper;
     }
 
+    @Transactional
     public Work createWork(User user, WorkCreateDTO dto) {
-        Category category = categoryRepository.findById(dto.categoryId())
+        Category category = categoryRepository.findByIdForUpdate(dto.categoryId())
                 .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
 
         if (!category.getUser().getId().equals(user.getId())) {
@@ -59,7 +61,7 @@ public class WorkService {
         work.setCategory(category);
         work.setUser(user);
         work.setTemplate(resolveTemplate(category, dto.template()));
-        work.setDetails(checkedDetails(dto.details()));
+        work.setDetails(checkedDetails(category, work.getTemplate(), dto.details()));
         work.setTitle(dto.title());
         work.setImageUrl(dto.imageUrl());
         work.setCreator(dto.creator());
@@ -93,6 +95,7 @@ public class WorkService {
         return workRepository.findByUserIdOrderByFinalScoreDesc(userId);
     }
 
+    @Transactional
     public Work updateWork(Long workId, Long userId, WorkUpdateDTO dto) {
         Work work = workRepository.findById(workId)
                 .orElseThrow(() -> new IllegalArgumentException("Obra não encontrada."));
@@ -103,8 +106,13 @@ public class WorkService {
 
         BigDecimal previousScore = work.getScore();
 
-        if (dto.template() != null) work.setTemplate(resolveTemplate(work.getCategory(), dto.template()));
-        if (dto.details() != null) work.setDetails(checkedDetails(dto.details()));
+        Category category = categoryRepository.findByIdForUpdate(work.getCategory().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+        TableTemplate template = dto.template() != null ? resolveTemplate(category, dto.template()) : work.getTemplate();
+        Map<String, Object> details = checkedDetails(category, template,
+                dto.details() != null ? dto.details() : work.getDetails());
+        work.setTemplate(template);
+        work.setDetails(details);
 
         if (dto.title() != null && !dto.title().isBlank()) {
             work.setTitle(dto.title());
@@ -156,7 +164,7 @@ public class WorkService {
         return requested;
     }
 
-    private Map<String, Object> checkedDetails(Map<String, Object> details) {
+    private Map<String, Object> checkedDetails(Category category, TableTemplate template, Map<String, Object> details) {
         if (details == null) return null;
         try {
             if (objectMapper.writeValueAsString(details).getBytes(StandardCharsets.UTF_8).length > MAX_DETAILS_BYTES) {
@@ -165,7 +173,7 @@ public class WorkService {
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Detalhes do item inválidos.");
         }
-        return details;
+        return CustomFieldPolicy.values(category, template, details);
     }
 
     public void deleteWork(Long workId, Long userId) {
