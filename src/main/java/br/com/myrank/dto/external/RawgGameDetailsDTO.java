@@ -21,6 +21,11 @@ public class RawgGameDetailsDTO {
 
     private List<RawgDeveloperDTO> developers;
 
+    private List<ExternalNameDTO> genres;
+
+    public List<ExternalNameDTO> getGenres() { return genres; }
+    public void setGenres(List<ExternalNameDTO> genres) { this.genres = genres; }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

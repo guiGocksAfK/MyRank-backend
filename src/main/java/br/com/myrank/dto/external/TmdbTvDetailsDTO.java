@@ -23,6 +23,12 @@ public class TmdbTvDetailsDTO {
     @JsonProperty("number_of_episodes")
     private Integer numberOfEpisodes;
 
+    @JsonProperty("number_of_seasons")
+    private Integer numberOfSeasons;
+
+    /** Returning Series | Ended | Canceled | In Production | Planned | Pilot (vem em inglês) */
+    private String status;
+
     @JsonProperty("last_episode_to_air")
     private TmdbEpisodeDTO lastEpisodeToAir; // fallback: runtime do último episódio exibido
 
@@ -54,6 +60,12 @@ public class TmdbTvDetailsDTO {
 
     public List<TmdbCreatorDTO> getCreatedBy() { return createdBy; }
     public void setCreatedBy(List<TmdbCreatorDTO> createdBy) { this.createdBy = createdBy; }
+
+    public Integer getNumberOfSeasons() { return numberOfSeasons; }
+    public void setNumberOfSeasons(Integer numberOfSeasons) { this.numberOfSeasons = numberOfSeasons; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     public List<TmdbGenreDTO> getGenres() { return genres; }
     public void setGenres(List<TmdbGenreDTO> genres) { this.genres = genres; }
