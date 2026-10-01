@@ -1,8 +1,12 @@
 package br.com.myrank.domain.entity;
 
-import jakarta.persistence.*;
 import br.com.myrank.domain.enums.TableTemplate;
+import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "categories")
@@ -19,9 +23,18 @@ public class Category {
     @Column(nullable = false, length = 100)
     private String name;
 
+    /**
+     * Um ou mais templates, na ordem escolhida (V9, category_templates). Cada obra
+     * da tabela usa um deles. EAGER + BatchSize: toda tela que mostra a tabela
+     * precisa deles, e o lote evita uma query por tabela.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "category_templates", joinColumns = @JoinColumn(name = "category_id"))
+    @OrderColumn(name = "position")
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 32)
-    private TableTemplate template = TableTemplate.CUSTOM;
+    @Column(name = "template", nullable = false, length = 32)
+    @BatchSize(size = 100)
+    private List<TableTemplate> templates = new ArrayList<>();
 
     @Column(name = "is_default", nullable = false)
     private boolean isDefault = false;
@@ -46,8 +59,11 @@ public class Category {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public TableTemplate getTemplate() { return template; }
-    public void setTemplate(TableTemplate template) { this.template = template; }
+    public List<TableTemplate> getTemplates() { return templates; }
+    public void setTemplates(List<TableTemplate> templates) {
+        this.templates.clear();
+        this.templates.addAll(templates);
+    }
 
     public boolean isDefault() { return isDefault; }
     public void setDefault(boolean isDefault) { this.isDefault = isDefault; }
