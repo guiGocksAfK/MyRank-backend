@@ -11,18 +11,20 @@ A integração usa o `RestTemplate` existente, a API pública da Deezer e o iTun
 
 As sugestões mantêm `externalId`, `title`, `posterUrl` e `releaseDate`. Os detalhes mantêm `title`, `imageUrl`, `creator` (artista), `releaseDate` e `timeMinutes`. Durações em segundos (Deezer) ou milissegundos (iTunes) são convertidas para minutos inteiros por arredondamento. A duração de um álbum do iTunes é a soma das suas faixas, arredondada ao final. Campos não informados pela base externa ficam nulos; duração ausente fica em zero. A busca da Deezer pode não informar a data de lançamento; os detalhes da faixa consultam também o álbum quando necessário.
 
-## Dependência pendente
+## Cache
 
-Por decisão do usuário, o `pom.xml` permanece fora do escopo. O build padrão precisa receber esta dependência antes de compilar ou executar a integração. A versão já é gerenciada pelo Spring Boot do projeto.
+Usa Caffeine (dependência no `pom.xml`, versão gerenciada pelo Spring Boot):
+expira 10 minutos depois da gravação e guarda no máximo 500 entradas, incluindo
+respostas e os metadados usados pela reserva. Falhas e respostas inválidas não
+são guardadas. Com mais de uma instância, o certo é um cache compartilhado (Redis).
 
-```xml
-<dependency>
-    <groupId>com.github.ben-manes.caffeine</groupId>
-    <artifactId>caffeine</artifactId>
-</dependency>
-```
+## Card de Música e Álbum
 
-O cache usa Caffeine, expira após 10 minutos da gravação e tem teto global de 500 entradas, incluindo respostas e metadados usados pela reserva. Com mais de uma instância, o certo é usar um cache compartilhado, como Redis. Falhas e respostas inválidas não são armazenadas.
+- As sugestões trazem `subtitle` com o artista, porque muitas faixas têm o mesmo título.
+- Os detalhes trazem `details`: a faixa informa `album` (de qual álbum é); o álbum
+  informa `trackCount`. O front guarda isso em `works.details`.
+- As capas do iTunes vêm em 100px; a URL é trocada pra pedir 600px.
+- Música e álbum não usam ponderação por tempo (`TableTemplate.timeWeighted`).
 
 ## Reserva
 
@@ -34,26 +36,10 @@ Se a Deezer cair depois da busca, os detalhes podem usar título e artista ainda
 
 ## Validação
 
-Os testes unitários usam `RestTemplate` mockado, sem chamadas às APIs reais ou banco. Cobrem busca, detalhes, reserva, duração, codificação de consultas, cache, contratos HTTP e rate limit. Como a dependência ficou pendente, a validação usa um descritor Maven temporário e ignorado em `target/music-validation-pom.xml`, com a dependência adicionada somente para os testes.
+Testes unitários com `RestTemplate` mockado, sem chamadas às APIs reais nem banco:
+busca, detalhes, reserva, duração, codificação das consultas, cache, contratos HTTP,
+rate limit e os campos do card (`MusicCardDetailsTest`).
 
-Resultado em 01/10/2026: **43 testes, nenhuma falha, nenhum erro e nenhum teste ignorado**, com `BUILD SUCCESS`. A compilação validou também os demais arquivos de produção e testes da cópia local. Os testes de integração que exigem Postgres não foram executados.
-
-Para repetir a validação nesta cópia local com o descritor temporário já criado:
-
-```powershell
-.\mvnw.cmd -B -ntp -f target\music-validation-pom.xml '-Dtest=DeezerServiceTest,ItunesServiceTest,MusicSearchCacheTest,ExternalMusicSearchControllerTest,ExternalMusicRateLimitFilterTest' test
+```bash
+./mvnw test -Dtest='DeezerServiceTest,ItunesServiceTest,MusicSearchCacheTest,MusicCardDetailsTest,ExternalMusicSearchControllerTest,ExternalMusicRateLimitFilterTest'
 ```
-
-Após adicionar a dependência no build padrão:
-
-```powershell
-.\mvnw.cmd '-Dtest=DeezerServiceTest,ItunesServiceTest,MusicSearchCacheTest,ExternalMusicSearchControllerTest,ExternalMusicRateLimitFilterTest' test
-```
-
-## Divisão sugerida de commits
-
-Nenhum commit foi executado. Os grupos abaixo têm até cinco arquivos cada.
-
-1. `feat: integra busca musical` — `DeezerService.java`, `ItunesService.java`, `MusicSearchCache.java`, `MusicCatalogSupport.java` (4 arquivos).
-2. `feat: expõe rotas musicais` — `ExternalSearchController.java`, `RateLimitFilter.java`, este documento (3 arquivos).
-3. `test: cobre busca musical` — `DeezerServiceTest.java`, `ItunesServiceTest.java`, `MusicSearchCacheTest.java`, `ExternalMusicSearchControllerTest.java`, `ExternalMusicRateLimitFilterTest.java` (5 arquivos).
