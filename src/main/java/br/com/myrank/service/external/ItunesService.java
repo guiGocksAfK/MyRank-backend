@@ -11,7 +11,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static br.com.myrank.service.external.MusicCatalogSupport.*;
 
@@ -63,7 +65,7 @@ public class ItunesService {
             if (!matchesType(item, album)) continue;
             results.add(new ExternalSearchResultDTO(
                     ID_PREFIX + item.path(idField(album)).asText(), text(item, titleField(album)),
-                    artwork(item), date(text(item, "releaseDate"))));
+                    artwork(item), date(text(item, "releaseDate")), text(item, "artistName")));
         }
         return results;
     }
@@ -97,8 +99,16 @@ public class ItunesService {
                 }
             }
             if (!album) duration = selected.path("trackTimeMillis").asLong(0);
-            return new ExternalWorkDetailsDTO(text(selected, titleField(album)), artwork(selected),
+            ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(text(selected, titleField(album)), artwork(selected),
                     text(selected, "artistName"), date(text(selected, "releaseDate")), minutes(duration, 60_000));
+            Map<String, Object> details = new LinkedHashMap<>();
+            if (album && selected.path("trackCount").asInt(0) > 0) {
+                details.put("trackCount", selected.path("trackCount").asInt());
+            } else if (!album && text(selected, "collectionName") != null) {
+                details.put("album", text(selected, "collectionName"));
+            }
+            dto.setDetails(details);
+            return dto;
         } catch (RestClientException e) {
             throw new ExternalServiceUnavailableException(
                     "Não foi possível buscar os detalhes no iTunes. Tente novamente em instantes.", e);
@@ -119,8 +129,10 @@ public class ItunesService {
                 && item.path(idField(album)).asLong(0) > 0 && text(item, titleField(album)) != null;
     }
 
+    /** O iTunes devolve capas de 100px; a mesma URL aceita pedir 600px, que não fica borrada no card. */
     private String artwork(JsonNode item) {
-        return first(text(item, "artworkUrl100"), text(item, "artworkUrl60"), text(item, "artworkUrl30"));
+        String url = first(text(item, "artworkUrl100"), text(item, "artworkUrl60"), text(item, "artworkUrl30"));
+        return url == null ? null : url.replaceFirst("/\\d+x\\d+bb\\.", "/600x600bb.");
     }
 
     private String titleField(boolean album) {

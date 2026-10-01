@@ -1,5 +1,7 @@
 package br.com.myrank.dto.external;
 
+import java.util.Map;
+
 /**
  * Detalhes completos de uma obra externa, já no formato que o front
  * usa para pré-preencher o formulário de criação de Work.
@@ -12,6 +14,8 @@ public class ExternalWorkDetailsDTO {
     private String creator;       // diretor (filme) ou criador/showrunner (série)
     private String releaseDate;   // formato ISO (yyyy-MM-dd)
     private int timeMinutes;      // duração do filme, ou duração total estimada da série
+    /** Campos próprios do template (ex.: álbum da faixa); o front guarda em works.details. */
+    private Map<String, Object> details;
 
     public ExternalWorkDetailsDTO() {}
 
@@ -38,4 +42,7 @@ public class ExternalWorkDetailsDTO {
 
     public int getTimeMinutes() { return timeMinutes; }
     public void setTimeMinutes(int timeMinutes) { this.timeMinutes = timeMinutes; }
+
+    public Map<String, Object> getDetails() { return details; }
+    public void setDetails(Map<String, Object> details) { this.details = details; }
 }

@@ -11,7 +11,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static br.com.myrank.service.external.MusicCatalogSupport.*;
 
@@ -60,7 +62,7 @@ public class DeezerService {
                 String externalId = item.path("id").asText();
                 cache.remember(identityKey(externalId, album), item);
                 results.add(new ExternalSearchResultDTO(externalId, text(item, "title"),
-                        artwork(item, album), releaseDate(item)));
+                        artwork(item, album), releaseDate(item), text(item.path("artist"), "name")));
             }
             return results;
         } catch (RestClientException deezerFailure) {
@@ -94,8 +96,10 @@ public class DeezerService {
                     duration += Math.max(0, track.path("duration").asLong(0));
                 }
             }
-            return new ExternalWorkDetailsDTO(text(item, "title"), artwork(item, album),
+            ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(text(item, "title"), artwork(item, album),
                     text(item.path("artist"), "name"), releaseDate, minutes(duration, 60));
+            dto.setDetails(cardDetails(item, album));
+            return dto;
         } catch (RestClientException deezerFailure) {
             JsonNode knownItem = cache.find(identityKey(deezerId, album));
             if (knownItem != null && text(knownItem, "title") != null
@@ -112,6 +116,19 @@ public class DeezerService {
                     "Não foi possível buscar os detalhes da música ou álbum. Tente novamente em instantes.",
                     deezerFailure);
         }
+    }
+
+    /** Card: a faixa mostra de qual álbum é; o álbum, quantas faixas tem. */
+    private Map<String, Object> cardDetails(JsonNode item, boolean album) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        if (album) {
+            int tracks = item.path("nb_tracks").asInt(0);
+            if (tracks > 0) details.put("trackCount", tracks);
+        } else {
+            String albumTitle = text(item.path("album"), "title");
+            if (albumTitle != null) details.put("album", albumTitle);
+        }
+        return details;
     }
 
     private JsonNode getDetails(String externalId, boolean album) {
