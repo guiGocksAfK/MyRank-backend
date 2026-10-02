@@ -1,6 +1,7 @@
 package br.com.myrank.dto;
 
 import br.com.myrank.domain.entity.User;
+import br.com.myrank.domain.enums.OnboardingStep;
 
 import java.time.LocalDateTime;
 
@@ -15,7 +16,8 @@ public record UserResponseDTO(
         String language,
         LocalDateTime createdAt,
         /** Conta só com Google/Discord não tem senha — a exclusão não pede senha. */
-        boolean hasPassword
+        boolean hasPassword,
+        OnboardingStep onboardingStep
 ) {
     public static UserResponseDTO fromEntity(User user) {
         return new UserResponseDTO(
@@ -28,7 +30,8 @@ public record UserResponseDTO(
                 user.isPublic(),
                 user.getLanguage(),
                 user.getCreatedAt(),
-                user.getPasswordHash() != null && !user.getPasswordHash().isBlank()
+                user.getPasswordHash() != null && !user.getPasswordHash().isBlank(),
+                user.getOnboardingStep()
         );
     }
 }
