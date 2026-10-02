@@ -4,6 +4,7 @@ import br.com.myrank.domain.entity.Category;
 import br.com.myrank.domain.entity.Subcategory;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.entity.Work;
+import br.com.myrank.domain.enums.TableTemplate;
 import br.com.myrank.dto.WorkCreateDTO;
 import br.com.myrank.dto.WorkUpdateDTO;
 import br.com.myrank.repository.CategoryRepository;
@@ -11,33 +12,45 @@ import br.com.myrank.repository.SubcategoryRepository;
 import br.com.myrank.repository.WorkRepository;
 import br.com.myrank.service.badge.BadgeService;
 import br.com.myrank.service.social.FeedEventService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class WorkService {
+
+    /** details vem do navegador: sem limite, alguém poderia encher o banco. */
+    private static final int MAX_DETAILS_BYTES = 8 * 1024;
 
     private final WorkRepository workRepository;
     private final CategoryRepository categoryRepository;
     private final SubcategoryRepository subcategoryRepository;
     private final BadgeService badgeService;
     private final FeedEventService feedEventService;
+    private final ObjectMapper objectMapper;
 
     public WorkService(WorkRepository workRepository, CategoryRepository categoryRepository,
                        SubcategoryRepository subcategoryRepository,
-                       BadgeService badgeService, FeedEventService feedEventService) {
+                       BadgeService badgeService, FeedEventService feedEventService,
+                       ObjectMapper objectMapper) {
         this.workRepository = workRepository;
         this.categoryRepository = categoryRepository;
         this.subcategoryRepository = subcategoryRepository;
         this.badgeService = badgeService;
         this.feedEventService = feedEventService;
+        this.objectMapper = objectMapper;
     }
 
+    @Transactional
     public Work createWork(User user, WorkCreateDTO dto) {
-        Category category = categoryRepository.findById(dto.categoryId())
+        Category category = categoryRepository.findByIdForUpdate(dto.categoryId())
                 .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
 
         if (!category.getUser().getId().equals(user.getId())) {
@@ -47,6 +60,8 @@ public class WorkService {
         Work work = new Work();
         work.setCategory(category);
         work.setUser(user);
+        work.setTemplate(resolveTemplate(category, dto.template()));
+        work.setDetails(checkedDetails(category, work.getTemplate(), dto.details()));
         work.setTitle(dto.title());
         work.setImageUrl(dto.imageUrl());
         work.setCreator(dto.creator());
@@ -80,6 +95,7 @@ public class WorkService {
         return workRepository.findByUserIdOrderByFinalScoreDesc(userId);
     }
 
+    @Transactional
     public Work updateWork(Long workId, Long userId, WorkUpdateDTO dto) {
         Work work = workRepository.findById(workId)
                 .orElseThrow(() -> new IllegalArgumentException("Obra não encontrada."));
@@ -89,6 +105,14 @@ public class WorkService {
         }
 
         BigDecimal previousScore = work.getScore();
+
+        Category category = categoryRepository.findByIdForUpdate(work.getCategory().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+        TableTemplate template = dto.template() != null ? resolveTemplate(category, dto.template()) : work.getTemplate();
+        Map<String, Object> details = checkedDetails(category, template,
+                dto.details() != null ? dto.details() : work.getDetails());
+        work.setTemplate(template);
+        work.setDetails(details);
 
         if (dto.title() != null && !dto.title().isBlank()) {
             work.setTitle(dto.title());
@@ -124,6 +148,34 @@ public class WorkService {
         return saved;
     }
 
+    /**
+     * O tipo do item precisa ser um dos tipos da tabela. Sem tipo informado, só
+     * dá pra adivinhar quando a tabela tem um tipo só.
+     */
+    private static TableTemplate resolveTemplate(Category category, TableTemplate requested) {
+        List<TableTemplate> allowed = category.getTemplates();
+        if (requested == null) {
+            if (allowed.size() == 1) return allowed.get(0);
+            throw new IllegalArgumentException("Escolha o tipo do item.");
+        }
+        if (!allowed.contains(requested)) {
+            throw new IllegalArgumentException("Esse tipo não faz parte da tabela.");
+        }
+        return requested;
+    }
+
+    private Map<String, Object> checkedDetails(Category category, TableTemplate template, Map<String, Object> details) {
+        if (details == null) return null;
+        try {
+            if (objectMapper.writeValueAsString(details).getBytes(StandardCharsets.UTF_8).length > MAX_DETAILS_BYTES) {
+                throw new IllegalArgumentException("Detalhes do item grandes demais.");
+            }
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Detalhes do item inválidos.");
+        }
+        return CustomFieldPolicy.values(category, template, details);
+    }
+
     public void deleteWork(Long workId, Long userId) {
         Work work = workRepository.findById(workId)
                 .orElseThrow(() -> new IllegalArgumentException("Obra não encontrada."));
@@ -148,7 +200,7 @@ public class WorkService {
 
     // Nota_Final = Nota_Original + Log10(Minutos / 60)
     private void applyScoreCalculation(Work work) {
-        double timeBonus = work.getTimeMinutes() > 0
+        double timeBonus = work.getTimeMinutes() > 0 && work.getTemplate().timeWeighted()
             ? Math.log10(work.getTimeMinutes() / 60.0)
             : 0.0;
         BigDecimal bonus = BigDecimal.valueOf(timeBonus).setScale(2, RoundingMode.HALF_UP);

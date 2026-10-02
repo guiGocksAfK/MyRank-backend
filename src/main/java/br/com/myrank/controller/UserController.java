@@ -41,7 +41,7 @@ public class UserController {
     public ResponseEntity<LoginResponseDTO> create(@Valid @RequestBody UserCreateDTO dto) {
         String email = signupCodeService.emailFromPass(dto.signupPass());
         User user = userService.createUser(dto, email);
-        return ResponseEntity.ok(new LoginResponseDTO(jwtService.generateToken(user.getId()), user.getUsername()));
+        return ResponseEntity.ok(new LoginResponseDTO(jwtService.generateToken(user), user.getUsername()));
     }
 
     @GetMapping("/me")

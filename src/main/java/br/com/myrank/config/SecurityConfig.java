@@ -94,6 +94,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // sem login válido (token ausente, vencido ou de sessão encerrada): 401, não 403.
+                // O front usa isso pra saber que é a sessão que caiu e mandar pro login.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        new org.springframework.security.web.authentication.HttpStatusEntryPoint(
+                                org.springframework.http.HttpStatus.UNAUTHORIZED)))
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()

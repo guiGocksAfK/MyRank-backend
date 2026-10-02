@@ -24,6 +24,14 @@ public class GoogleBookVolumeInfoDTO {
     @JsonProperty("imageLinks")
     private GoogleBookImageLinksDTO imageLinks;
 
+    /** Gêneros do livro, ex.: "Fiction / Science Fiction". */
+    private List<String> categories;
+
+    public List<String> getCategories() { return categories; }
+    public void setCategories(List<String> categories) { this.categories = categories; }
+
+    public Integer getPageCountValue() { return pageCount; }
+
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
 

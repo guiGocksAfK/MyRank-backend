@@ -13,6 +13,8 @@ public class ExternalSearchResultDTO {
     private String title;
     private String posterUrl;
     private String releaseDate; // formato ISO (yyyy-MM-dd), pode ser null
+    /** Linha de apoio na lista de sugestões (ex.: artista da música). Pode ser null. */
+    private String subtitle;
 
     public ExternalSearchResultDTO() {}
 
@@ -21,6 +23,12 @@ public class ExternalSearchResultDTO {
         this.title = title;
         this.posterUrl = posterUrl;
         this.releaseDate = releaseDate;
+    }
+
+    public ExternalSearchResultDTO(String externalId, String title, String posterUrl, String releaseDate,
+                                   String subtitle) {
+        this(externalId, title, posterUrl, releaseDate);
+        this.subtitle = subtitle;
     }
 
     public String getExternalId() { return externalId; }
@@ -34,4 +42,7 @@ public class ExternalSearchResultDTO {
 
     public String getReleaseDate() { return releaseDate; }
     public void setReleaseDate(String releaseDate) { this.releaseDate = releaseDate; }
+
+    public String getSubtitle() { return subtitle; }
+    public void setSubtitle(String subtitle) { this.subtitle = subtitle; }
 }

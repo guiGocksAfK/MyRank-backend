@@ -92,7 +92,7 @@ public class AuthController {
             throw new EmailNotVerifiedException();
         }
 
-        String token = jwtService.generateToken(user.getId());
+        String token = jwtService.generateToken(user);
         return ResponseEntity.ok(new LoginResponseDTO(token, user.getUsername()));
     }
 
@@ -100,7 +100,7 @@ public class AuthController {
     @PostMapping("/verify-email")
     public ResponseEntity<LoginResponseDTO> verifyEmail(@Valid @RequestBody EmailVerifyRequestDTO dto) {
         User user = emailVerificationService.verify(dto.token());
-        String token = jwtService.generateToken(user.getId());
+        String token = jwtService.generateToken(user);
         return ResponseEntity.ok(new LoginResponseDTO(token, user.getUsername()));
     }
 
@@ -131,7 +131,7 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<LoginResponseDTO> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO dto) {
         User user = passwordResetService.reset(dto.resetPass(), dto.password());
-        return ResponseEntity.ok(new LoginResponseDTO(jwtService.generateToken(user.getId()), user.getUsername()));
+        return ResponseEntity.ok(new LoginResponseDTO(jwtService.generateToken(user), user.getUsername()));
     }
 
     @PostMapping("/oauth/google")

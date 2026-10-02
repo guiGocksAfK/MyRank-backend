@@ -1,7 +1,15 @@
 package br.com.myrank.domain.entity;
 
+import br.com.myrank.domain.enums.TableTemplate;
+import br.com.myrank.domain.model.CustomField;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "categories")
@@ -17,6 +25,24 @@ public class Category {
 
     @Column(nullable = false, length = 100)
     private String name;
+
+    /**
+     * Um ou mais templates, na ordem escolhida (V9, category_templates). Cada obra
+     * da tabela usa um deles. EAGER + BatchSize: toda tela que mostra a tabela
+     * precisa deles, e o lote evita uma query por tabela.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "category_templates", joinColumns = @JoinColumn(name = "category_id"))
+    @OrderColumn(name = "position")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "template", nullable = false, length = 32)
+    @BatchSize(size = 100)
+    private List<TableTemplate> templates = new ArrayList<>();
+
+    /** Campos próprios da tabela, usados apenas pelas obras com template CUSTOM. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "custom_fields", nullable = false, columnDefinition = "jsonb")
+    private List<CustomField> customFields = new ArrayList<>();
 
     @Column(name = "is_default", nullable = false)
     private boolean isDefault = false;
@@ -40,6 +66,17 @@ public class Category {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public List<TableTemplate> getTemplates() { return templates; }
+    public void setTemplates(List<TableTemplate> templates) {
+        this.templates.clear();
+        this.templates.addAll(templates);
+    }
+
+    public List<CustomField> getCustomFields() { return customFields; }
+    public void setCustomFields(List<CustomField> customFields) {
+        this.customFields = new ArrayList<>(customFields);
+    }
 
     public boolean isDefault() { return isDefault; }
     public void setDefault(boolean isDefault) { this.isDefault = isDefault; }

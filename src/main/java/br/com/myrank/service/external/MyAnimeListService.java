@@ -1,20 +1,24 @@
 package br.com.myrank.service.external;
 
 import br.com.myrank.dto.external.ExternalSearchResultDTO;
+import br.com.myrank.dto.external.ExternalNameDTO;
 import br.com.myrank.dto.external.ExternalWorkDetailsDTO;
 import br.com.myrank.dto.external.MalAnimeNodeDTO;
 import br.com.myrank.dto.external.MalListResponseDTO;
+import br.com.myrank.dto.external.MalMangaNodeDTO;
 import br.com.myrank.exception.ExternalServiceUnavailableException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Collections;
@@ -42,7 +46,8 @@ public class MyAnimeListService {
 
     private static final String SEARCH_FIELDS = "id,title,main_picture,start_date";
     private static final String DETAILS_FIELDS =
-            "id,title,main_picture,start_date,num_episodes,average_episode_duration,studios";
+            "id,title,main_picture,start_date,num_episodes,average_episode_duration,studios,media_type,status,genres";
+    private static final String MANGA_DETAILS_FIELDS = "id,title,main_picture,start_date,authors,num_volumes,status,genres";
 
     private final RestTemplate restTemplate;
     private final String clientId;
@@ -63,11 +68,20 @@ public class MyAnimeListService {
      * autocomplete. Instabilidade do MAL (5xx/timeout) → lista vazia.
      */
     public List<ExternalSearchResultDTO> searchAnime(String query) {
+        return search(query, "anime", "animes");
+    }
+
+    /** Autocomplete de mangá com o mesmo client id e tratamento de falhas da busca de anime. */
+    public List<ExternalSearchResultDTO> searchManga(String query) {
+        return search(query, "manga", "mangás");
+    }
+
+    private List<ExternalSearchResultDTO> search(String query, String resource, String worksName) {
         if (!configured() || query == null || query.trim().length() < MIN_QUERY_LENGTH) {
             return Collections.emptyList();
         }
 
-        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/anime")
+        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/" + resource)
                 .queryParam("q", query.trim())
                 .queryParam("limit", 20)
                 .queryParam("fields", SEARCH_FIELDS)
@@ -83,7 +97,7 @@ public class MyAnimeListService {
         } catch (RestClientException e) {
             // 4xx (ex.: 400 query curta, 403 client id inválido) e demais falhas.
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar animes agora. O MyAnimeList pode estar instável ou limitando requisições. Tente novamente em instantes.", e);
+                    "Não foi possível buscar " + worksName + " agora. O MyAnimeList pode estar instável ou limitando requisições. Tente novamente em instantes.", e);
         }
     }
 
@@ -121,35 +135,67 @@ public class MyAnimeListService {
 
     /** Detalhes completos de um anime: GET /anime/{id}?fields=... (objeto na raiz). */
     public ExternalWorkDetailsDTO getAnimeDetails(Long malId) {
-        if (!configured()) {
-            throw new ExternalServiceUnavailableException(
-                    "A integração com o MyAnimeList não está configurada.", null);
-        }
-
-        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/anime/" + malId)
-                .queryParam("fields", DETAILS_FIELDS)
-                .toUriString();
-
-        MalAnimeNodeDTO details;
-        try {
-            details = executeGet(url, MalAnimeNodeDTO.class);
-        } catch (RestClientException e) {
-            throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes do anime agora. O MyAnimeList pode estar instável — tente novamente em instantes.", e);
-        }
-
-        if (details == null || details.getTitle() == null) {
-            throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes do anime agora. Tente novamente em instantes.", null);
-        }
-
-        return new ExternalWorkDetailsDTO(
+        MalAnimeNodeDTO details = getDetails(malId, "anime", "anime", DETAILS_FIELDS, MalAnimeNodeDTO.class);
+        ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
                 details.getTitle(),
                 details.resolveImageUrl(),
                 details.resolveStudioNames(),
                 details.resolveReleaseDate(),
                 details.resolveTotalMinutes()
         );
+        // Card: episódios, tipo (o front só mostra quando não é série de TV) e situação.
+        dto.setDetails(CardDetails.create()
+                .put("episodes", details.getNumEpisodes())
+                .put("mediaType", details.getMediaType())
+                .put("status", details.getStatus())
+                .names("genres", details.getGenres(), ExternalNameDTO::getName)
+                .build());
+        return dto;
+    }
+
+    /** Detalhes de mangá: autores como criador e duração zero, sem ponderação por tempo. */
+    public ExternalWorkDetailsDTO getMangaDetails(Long malId) {
+        if (malId == null || malId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de mangá inválido.");
+        }
+        MalMangaNodeDTO details = getDetails(malId, "manga", "mangá", MANGA_DETAILS_FIELDS, MalMangaNodeDTO.class);
+        ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
+                details.getTitle(), details.resolveImageUrl(), details.resolveAuthorNames(),
+                details.resolveReleaseDate(), 0);
+        // Card: quantos volumes (0 = ainda em aberto, o MAL não informa) e a situação da publicação.
+        dto.setDetails(CardDetails.create()
+                .put("volumes", details.getNumVolumes())
+                .put("status", details.getStatus())
+                .names("genres", details.getGenres(), ExternalNameDTO::getName)
+                .build());
+        return dto;
+    }
+
+    private <T extends MalAnimeNodeDTO> T getDetails(Long malId, String resource, String workName,
+                                                    String fields, Class<T> responseType) {
+        if (!configured()) {
+            throw new ExternalServiceUnavailableException(
+                    "A integração com o MyAnimeList não está configurada.", null);
+        }
+
+        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/" + resource + "/" + malId)
+                .queryParam("fields", fields)
+                .toUriString();
+
+        T details;
+        try {
+            details = executeGet(url, responseType);
+        } catch (RestClientException e) {
+            throw new ExternalServiceUnavailableException(
+                    "Não foi possível buscar os detalhes do " + workName + " agora. O MyAnimeList pode estar instável — tente novamente em instantes.", e);
+        }
+
+        if (details == null || details.getTitle() == null) {
+            throw new ExternalServiceUnavailableException(
+                    "Não foi possível buscar os detalhes do " + workName + " agora. Tente novamente em instantes.", null);
+        }
+
+        return details;
     }
 
     private List<ExternalSearchResultDTO> mapSearchResults(MalListResponseDTO response) {

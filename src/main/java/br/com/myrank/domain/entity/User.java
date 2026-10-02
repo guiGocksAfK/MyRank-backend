@@ -1,6 +1,7 @@
 package br.com.myrank.domain.entity;
 
 import br.com.myrank.domain.enums.AuthProvider;
+import br.com.myrank.domain.enums.OnboardingStep;
 import br.com.myrank.domain.enums.PlanType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -69,6 +70,10 @@ public class User {
     @Column(name = "password_reset_expires_at")
     private LocalDateTime passwordResetExpiresAt;
 
+    /** Vai dentro de cada token de login; aumentar derruba todas as sessões abertas (V16). */
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion;
+
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;
 
@@ -81,7 +86,11 @@ public class User {
     private PlanType plan = PlanType.FREE;
 
     @Column(name = "is_public", nullable = false)
-    private boolean isPublic = true;
+    private boolean isPublic = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "onboarding_step", nullable = false, length = 20)
+    private OnboardingStep onboardingStep = OnboardingStep.DONE;
 
     /** Idioma da interface: PT | EN | ES. */
     @Column(nullable = false, length = 5)
@@ -153,6 +162,9 @@ public class User {
     public LocalDateTime getPasswordResetExpiresAt() { return passwordResetExpiresAt; }
     public void setPasswordResetExpiresAt(LocalDateTime passwordResetExpiresAt) { this.passwordResetExpiresAt = passwordResetExpiresAt; }
 
+    public int getTokenVersion() { return tokenVersion; }
+    public void setTokenVersion(int tokenVersion) { this.tokenVersion = tokenVersion; }
+
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
@@ -164,6 +176,9 @@ public class User {
 
     public boolean isPublic() { return isPublic; }
     public void setPublic(boolean isPublic) { this.isPublic = isPublic; }
+
+    public OnboardingStep getOnboardingStep() { return onboardingStep; }
+    public void setOnboardingStep(OnboardingStep onboardingStep) { this.onboardingStep = onboardingStep; }
 
     public String getLanguage() { return language; }
     public void setLanguage(String language) { this.language = language; }

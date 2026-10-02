@@ -8,7 +8,6 @@ import br.com.myrank.dto.ActorDTO;
 import br.com.myrank.dto.NotificationDTO;
 import br.com.myrank.dto.WorkMiniDTO;
 import br.com.myrank.repository.*;
-import br.com.myrank.service.WorkTypeResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -296,7 +295,7 @@ public class NotificationService {
         String about = work != null ? " sobre " + work.getTitle() : "";
         WorkMiniDTO workMini = work == null ? null : new WorkMiniDTO(
                 work.getId(), work.getTitle(),
-                WorkTypeResolver.fromCategoryName(work.getCategory() != null ? work.getCategory().getName() : null),
+                work.getTemplate().type(),
                 work.getImageUrl(), work.getScore());
 
         String title;

@@ -2,6 +2,7 @@ package br.com.myrank.controller;
 
 import br.com.myrank.dto.external.ExternalSearchResultDTO;
 import br.com.myrank.dto.external.ExternalWorkDetailsDTO;
+import br.com.myrank.service.external.DeezerService;
 import br.com.myrank.service.external.GoogleBooksService;
 import br.com.myrank.service.external.MyAnimeListService;
 import br.com.myrank.service.external.RawgService;
@@ -14,7 +15,7 @@ import java.util.List;
 
 /**
  * Endpoints de busca em bases externas: TMDB (filmes/séries), RAWG (jogos),
- * MyAnimeList (anime), Google Books (livros).
+ * MyAnimeList (animes e mangás), Google Books (livros), Deezer/iTunes (músicas e álbuns).
  * Protegido pela mesma SecurityConfig já existente (usuário precisa estar logado).
  */
 @RestController
@@ -26,15 +27,17 @@ public class ExternalSearchController {
     private final MyAnimeListService myAnimeListService;
     private final GoogleBooksService googleBooksService;
     private final ShowcaseService showcaseService;
+    private final DeezerService deezerService;
 
     public ExternalSearchController(TmdbService tmdbService, RawgService rawgService,
                                     MyAnimeListService myAnimeListService, GoogleBooksService googleBooksService,
-                                    ShowcaseService showcaseService) {
+                                    ShowcaseService showcaseService, DeezerService deezerService) {
         this.tmdbService = tmdbService;
         this.rawgService = rawgService;
         this.myAnimeListService = myAnimeListService;
         this.googleBooksService = googleBooksService;
         this.showcaseService = showcaseService;
+        this.deezerService = deezerService;
     }
 
     /**
@@ -67,9 +70,34 @@ public class ExternalSearchController {
         return ResponseEntity.ok(myAnimeListService.searchAnime(query));
     }
 
+    @GetMapping("/search/manga")
+    public ResponseEntity<List<ExternalSearchResultDTO>> searchManga(@RequestParam String query) {
+        return ResponseEntity.ok(myAnimeListService.searchManga(query));
+    }
+
     @GetMapping("/search/books")
     public ResponseEntity<List<ExternalSearchResultDTO>> searchBooks(@RequestParam String query) {
         return ResponseEntity.ok(googleBooksService.searchBooks(query));
+    }
+
+    @GetMapping("/search/music")
+    public ResponseEntity<List<ExternalSearchResultDTO>> searchMusic(@RequestParam String query) {
+        return ResponseEntity.ok(deezerService.searchMusic(query));
+    }
+
+    @GetMapping("/search/albums")
+    public ResponseEntity<List<ExternalSearchResultDTO>> searchAlbums(@RequestParam String query) {
+        return ResponseEntity.ok(deezerService.searchAlbums(query));
+    }
+
+    @GetMapping("/music/{id}")
+    public ResponseEntity<ExternalWorkDetailsDTO> getMusicDetails(@PathVariable String id) {
+        return ResponseEntity.ok(deezerService.getMusicDetails(id));
+    }
+
+    @GetMapping("/albums/{id}")
+    public ResponseEntity<ExternalWorkDetailsDTO> getAlbumDetails(@PathVariable String id) {
+        return ResponseEntity.ok(deezerService.getAlbumDetails(id));
     }
 
     @GetMapping("/movies/{id}")
@@ -90,6 +118,11 @@ public class ExternalSearchController {
     @GetMapping("/anime/{id}")
     public ResponseEntity<ExternalWorkDetailsDTO> getAnimeDetails(@PathVariable Long id) {
         return ResponseEntity.ok(myAnimeListService.getAnimeDetails(id));
+    }
+
+    @GetMapping("/manga/{id}")
+    public ResponseEntity<ExternalWorkDetailsDTO> getMangaDetails(@PathVariable Long id) {
+        return ResponseEntity.ok(myAnimeListService.getMangaDetails(id));
     }
 
     @GetMapping("/books/{id}")

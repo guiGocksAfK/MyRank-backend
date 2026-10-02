@@ -2,21 +2,26 @@ package br.com.myrank.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import br.com.myrank.domain.enums.TableTemplate;
+import br.com.myrank.domain.model.CustomField;
 
 public class CategoryResponseDTO {
 
     private Long id;
     private String name;
+    private List<TableTemplate> templates = List.of();
     private boolean isDefault;
     private LocalDateTime createdAt;
     private List<SubcategoryDTO> subcategories = List.of();
+    private List<CustomField> customFields = List.of();
 
     public CategoryResponseDTO() {}
 
-    public CategoryResponseDTO(Long id, String name, boolean isDefault, LocalDateTime createdAt,
+    public CategoryResponseDTO(Long id, String name, List<TableTemplate> templates, boolean isDefault, LocalDateTime createdAt,
                                List<SubcategoryDTO> subcategories) {
         this.id = id;
         this.name = name;
+        this.templates = List.copyOf(templates);
         this.isDefault = isDefault;
         this.createdAt = createdAt;
         this.subcategories = subcategories;
@@ -27,6 +32,8 @@ public class CategoryResponseDTO {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    public List<TableTemplate> getTemplates() { return templates; }
+    public void setTemplates(List<TableTemplate> templates) { this.templates = templates; }
 
     public boolean isDefault() { return isDefault; }
     public void setDefault(boolean isDefault) { this.isDefault = isDefault; }
@@ -36,4 +43,7 @@ public class CategoryResponseDTO {
 
     public List<SubcategoryDTO> getSubcategories() { return subcategories; }
     public void setSubcategories(List<SubcategoryDTO> subcategories) { this.subcategories = subcategories; }
+
+    public List<CustomField> getCustomFields() { return customFields; }
+    public void setCustomFields(List<CustomField> customFields) { this.customFields = List.copyOf(customFields); }
 }

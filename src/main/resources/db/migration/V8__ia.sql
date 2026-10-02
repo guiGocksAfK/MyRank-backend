@@ -1,9 +1,9 @@
 -- =========================================================
--- MyRank — AI Insights (análise de perfil gerada por IA / Gemini)
--- payload = JSON estruturado devolvido pelo modelo (summaryTitle, traits,
--- tasteProfile, recommendation...). Cacheado por (user_id, selection_hash):
--- mesma seleção de obras + mesmas notas + mesmo modelo => reaproveita a linha.
+-- MyRank — IA: análises de perfil e limite diário de uso
 -- =========================================================
+-- payload = JSON estruturado devolvido pelo modelo (summaryTitle, traits,
+-- tasteProfile, recommendation...). Cache por (user_id, selection_hash): mesma
+-- seleção de obras + mesmas notas + mesmo modelo reaproveita a linha.
 
 CREATE TABLE ai_insights (
     id              BIGSERIAL PRIMARY KEY,
@@ -15,6 +15,10 @@ CREATE TABLE ai_insights (
     -- chat de follow-up sobre esta análise: array de {role:'USER'|'AI', content, at}.
     chat_log        JSONB        NOT NULL DEFAULT '[]',
     created_at      TIMESTAMP    NOT NULL DEFAULT now(),
+    -- A linha é reaproveitada quando a seleção não muda, então "Gerar de novo"
+    -- mantém id e created_at: updated_at é a última geração de verdade (o
+    -- "gerado há X" do front). O chat de follow-up não mexe aqui.
+    updated_at      TIMESTAMP    NOT NULL DEFAULT now(),
 
     CONSTRAINT fk_ai_insights_user FOREIGN KEY (user_id)
         REFERENCES users (id) ON DELETE CASCADE,

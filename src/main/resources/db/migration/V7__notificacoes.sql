@@ -1,11 +1,13 @@
 -- =========================================================
 -- MyRank — Notificações (sininho)
--- Reações são AGREGADAS: 1 linha por (destinatário, feed_event, reaction_kind),
--- com actor_count e o último ator. Follow e take são 1 linha por evento.
--- GROUP_ADDED / GROUP_APPROVED: 1 linha por (destinatário, conversa); re-adição
--- reaproveita a linha (bump de updated_at + read=false).
--- Depende de feed_events (V5) e conversations (V6).
 -- =========================================================
+-- Reações são AGREGADAS: uma linha por (destinatário, feed_event, reaction_kind),
+-- com actor_count e o último ator. Seguir e take são uma linha por evento.
+-- GROUP_ADDED / GROUP_APPROVED: uma linha por (destinatário, conversa); ser
+-- adicionado de novo reaproveita a linha (updated_at novo + read=false).
+
+CREATE TYPE notification_type AS ENUM ('REACTION', 'FOLLOW', 'TAKE', 'GROUP_ADDED', 'GROUP_APPROVED',
+                                       'FOLLOW_REQUEST', 'FOLLOW_ACCEPTED', 'TAKE_COMMENT');
 
 CREATE TABLE notifications (
     id              BIGSERIAL         PRIMARY KEY,

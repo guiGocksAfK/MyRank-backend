@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.util.Map;
+import br.com.myrank.domain.enums.TableTemplate;
 
 /** Update parcial: campo null = não mexe. */
 public record WorkUpdateDTO(
@@ -20,5 +22,8 @@ public record WorkUpdateDTO(
         @Min(0) @Max(1_000_000) Integer timeMinutes,
         @DecimalMin("0.0") @DecimalMax("10.0") Double score,
         /** null = não mexe; 0 = tira da subcategoria; outro = move pra essa subcategoria. */
-        Long subcategoryId
+        Long subcategoryId,
+        TableTemplate template,
+        /** null mantém; objeto substitui os detalhes; {} limpa. */
+        Map<String, Object> details
 ) {}

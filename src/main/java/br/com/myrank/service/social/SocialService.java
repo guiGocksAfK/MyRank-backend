@@ -5,7 +5,6 @@ import br.com.myrank.domain.enums.FeedEventType;
 import br.com.myrank.domain.enums.ReactionKind;
 import br.com.myrank.dto.*;
 import br.com.myrank.repository.*;
-import br.com.myrank.service.WorkTypeResolver;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -416,8 +415,7 @@ public class SocialService {
     }
 
     private WorkMiniDTO toWorkMini(Work w) {
-        String type = WorkTypeResolver.fromCategoryName(
-                w.getCategory() != null ? w.getCategory().getName() : null);
+        String type = w.getTemplate().type();
         return new WorkMiniDTO(w.getId(), w.getTitle(), type, w.getImageUrl(), w.getScore());
     }
 

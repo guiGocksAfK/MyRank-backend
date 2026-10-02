@@ -172,7 +172,7 @@ public class OAuthService {
             throw new IllegalArgumentException("Conta OAuth sem email. Não foi possível autenticar.");
         }
 
-        String token = jwtService.generateToken(user.getId());
+        String token = jwtService.generateToken(user);
         return new LoginResponseDTO(token, user.getUsername());
     }
 

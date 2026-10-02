@@ -1,8 +1,13 @@
 -- =========================================================
--- MyRank — Social: follow, takes, feed materializado e reações do feed
+-- MyRank — Social: seguir, takes, comentários e feed
 -- =========================================================
+-- Pedido de seguir só existe enquanto o perfil alvo é privado e ainda não
+-- respondeu: aprovar vira linha em follow, recusar ou cancelar apaga.
+-- O feed é materializado: uma linha por ação relevante (RATED, ADDED, BADGE, TAKE).
 
--- FOLLOW (relação social entre usuários)
+CREATE TYPE feed_event_type AS ENUM ('RATED', 'ADDED', 'BADGE', 'TAKE');
+CREATE TYPE reaction_kind   AS ENUM ('UP', 'AGREE', 'DISAGREE');
+
 CREATE TABLE follow (
     id            BIGSERIAL PRIMARY KEY,
     follower_id   BIGINT    NOT NULL,

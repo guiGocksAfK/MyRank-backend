@@ -72,7 +72,10 @@ public class PasswordResetService {
         return pass.issue(email);
     }
 
-    /** Troca a senha da conta do passe e devolve a conta, pra quem chama já abrir a sessão. */
+    /**
+     * Troca a senha da conta do passe e encerra as sessões abertas em outros
+     * aparelhos. Devolve a conta, pra quem chama já abrir a sessão nova.
+     */
     public User reset(String resetPass, String newPassword) {
         String email = pass.emailFrom(resetPass, "O código expirou. Peça um novo.");
         User user = userRepository.findByEmail(email)
@@ -85,6 +88,8 @@ public class PasswordResetService {
         user.setPasswordResetExpiresAt(null);
         // quem acertou o código provou que é dono do email
         user.setEmailVerified(true);
+        // derruba as sessões de todos os aparelhos; quem chama emite o token novo depois disso
+        user.setTokenVersion(user.getTokenVersion() + 1);
         return userRepository.save(user);
     }
 

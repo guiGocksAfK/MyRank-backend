@@ -3,6 +3,7 @@ package br.com.myrank.service;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.entity.UserStats;
 import br.com.myrank.domain.enums.AuthProvider;
+import br.com.myrank.domain.enums.OnboardingStep;
 import br.com.myrank.dto.UserCreateDTO;
 import br.com.myrank.dto.UserUpdateDTO;
 import br.com.myrank.repository.UserRepository;
@@ -19,13 +20,10 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final CategoryService categoryService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       CategoryService categoryService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.categoryService = categoryService;
     }
 
     /**
@@ -62,15 +60,11 @@ public class UserService {
 
         if (pending.isEmpty()) {
             user.setUserStats(new UserStats(user));
+            user.setPublic(false);
+            user.setOnboardingStep(OnboardingStep.TABLES);
         }
 
-        User savedUser = userRepository.save(user);
-
-        if (pending.isEmpty()) {
-            categoryService.createDefaultCategories(savedUser);
-        }
-
-        return savedUser;
+        return userRepository.save(user);
     }
 
     public User getByEmail(String email) {
@@ -189,14 +183,14 @@ public class UserService {
         user.setProviderId(info.providerId());
         user.setAvatarUrl(info.avatarUrl());
         user.setEmailVerified(true); // o OAuthService só aceita email verificado pelo provedor
+        user.setPublic(false);
+        user.setOnboardingStep(OnboardingStep.TABLES);
         linkDiscordId(user, info, provider);
 
         UserStats stats = new UserStats(user);
         user.setUserStats(stats);
 
-        User savedUser = userRepository.save(user);
-        categoryService.createDefaultCategories(savedUser);
-        return savedUser;
+        return userRepository.save(user);
     }
 
     private User updateOAuthProfile(User user, OAuthUserInfo info, AuthProvider provider) {

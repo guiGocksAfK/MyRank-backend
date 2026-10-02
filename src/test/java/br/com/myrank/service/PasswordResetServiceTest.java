@@ -80,6 +80,7 @@ class PasswordResetServiceTest {
         assertThat(encoder.matches("senha-nova-123", user.getPasswordHash())).isTrue();
         assertThat(user.isEmailVerified()).isTrue();
         assertThat(user.getPasswordResetTokenHash()).isNull();
+        assertThat(user.getTokenVersion()).isEqualTo(1); // sessões dos outros aparelhos caem
     }
 
     @Test

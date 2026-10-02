@@ -35,6 +35,24 @@ public class MalAnimeNodeDTO {
 
     private List<MalStudioDTO> studios;
 
+    /** tv | movie | ova | ona | special | music (anime); manga | novel | one_shot... (mangá) */
+    @JsonProperty("media_type")
+    private String mediaType;
+
+    /** Anime: finished_airing | currently_airing | not_yet_aired. Mangá: finished | currently_publishing... */
+    private String status;
+
+    private List<ExternalNameDTO> genres;
+
+    public String getMediaType() { return mediaType; }
+    public void setMediaType(String mediaType) { this.mediaType = mediaType; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public List<ExternalNameDTO> getGenres() { return genres; }
+    public void setGenres(List<ExternalNameDTO> genres) { this.genres = genres; }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

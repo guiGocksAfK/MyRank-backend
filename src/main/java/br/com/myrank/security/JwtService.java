@@ -1,5 +1,6 @@
 package br.com.myrank.security;
 
+import br.com.myrank.domain.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -18,6 +19,8 @@ public class JwtService {
 
     /** HS256 exige chave de 256 bits — 32 bytes ASCII é o mínimo absoluto. */
     private static final int MIN_SECRET_LENGTH = 32;
+    /** Versão de sessão da conta no momento do login (ver User#tokenVersion). */
+    private static final String VERSION_CLAIM = "ver";
 
     @Value("${jwt.secret:}")
     private String secretKey;
@@ -44,9 +47,10 @@ public class JwtService {
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(Long userId) {
+    public String generateToken(User user) {
         return Jwts.builder()
-                .subject(userId.toString())
+                .subject(user.getId().toString())
+                .claim(VERSION_CLAIM, user.getTokenVersion())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -57,20 +61,27 @@ public class JwtService {
         return Long.valueOf(extractClaim(token, Claims::getSubject));
     }
 
-    public boolean isTokenValid(String token, Long userId) {
-        return extractUserId(token).equals(userId) && !isTokenExpired(token);
-    }
-
-    private boolean isTokenExpired(String token) {
-        return extractClaim(token, Claims::getExpiration).before(new Date());
+    /**
+     * Token é da conta, não venceu e tem a versão de sessão atual dela. Token sem
+     * versão (emitido antes da V16) conta como 0.
+     */
+    public boolean isTokenValid(String token, User user) {
+        Claims claims = parse(token);
+        Integer version = claims.get(VERSION_CLAIM, Integer.class);
+        return claims.getSubject().equals(user.getId().toString())
+                && claims.getExpiration().after(new Date())
+                && (version == null ? 0 : version) == user.getTokenVersion();
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        Claims claims = Jwts.parser()
+        return claimsResolver.apply(parse(token));
+    }
+
+    private Claims parse(String token) {
+        return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        return claimsResolver.apply(claims);
     }
 }
