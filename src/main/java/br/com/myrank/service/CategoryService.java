@@ -232,28 +232,7 @@ public class CategoryService {
                 .stream().map(SubcategoryDTO::fromEntity).toList();
     }
 
-    public void createDefaultCategories(User user) {
-        record DefaultTable(String name, TableTemplate template) {}
-        List<DefaultTable> defaults = List.of(
-                new DefaultTable("🎬 Filmes", TableTemplate.MOVIE),
-                new DefaultTable("🎮 Jogos", TableTemplate.GAME),
-                new DefaultTable("📚 Livros", TableTemplate.BOOK),
-                new DefaultTable("📺 Séries", TableTemplate.TV),
-                new DefaultTable("🎌 Animes", TableTemplate.ANIME)
-        );
-
-        for (DefaultTable table : defaults) {
-            Category category = new Category();
-            category.setUser(user);
-            category.setName(table.name());
-            category.setTemplates(List.of(table.template()));
-            category.setDefault(true);
-            categoryRepository.save(category);
-        }
-    }
-
-
-    private CategoryResponseDTO toResponseDTO(Category category, List<SubcategoryDTO> subcategories) {
+    CategoryResponseDTO toResponseDTO(Category category, List<SubcategoryDTO> subcategories) {
         CategoryResponseDTO response = new CategoryResponseDTO(
                 category.getId(),
                 category.getName(),
