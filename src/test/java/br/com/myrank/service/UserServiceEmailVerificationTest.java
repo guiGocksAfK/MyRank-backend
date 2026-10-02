@@ -2,6 +2,7 @@ package br.com.myrank.service;
 
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.enums.AuthProvider;
+import br.com.myrank.domain.enums.OnboardingStep;
 import br.com.myrank.dto.UserCreateDTO;
 import br.com.myrank.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,8 +15,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /** Regras de cadastro/junção que fecham o pre-account takeover por email. */
@@ -23,13 +22,12 @@ class UserServiceEmailVerificationTest {
 
     private final UserRepository userRepository = mock(UserRepository.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
-    private final CategoryService categoryService = mock(CategoryService.class);
 
     private UserService service;
 
     @BeforeEach
     void setUp() {
-        service = new UserService(userRepository, passwordEncoder, categoryService);
+        service = new UserService(userRepository, passwordEncoder);
         when(passwordEncoder.encode(any())).thenAnswer(inv -> "hash:" + inv.getArgument(0));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
     }
@@ -54,12 +52,14 @@ class UserServiceEmailVerificationTest {
         assertThat(user.isEmailVerified()).isTrue();
         assertThat(user.getEmail()).isEqualTo("novo@myrank.dev");
         assertThat(user.getLanguage()).isEqualTo("EN");
-        verify(categoryService).createDefaultCategories(user);
+        assertThat(user.getOnboardingStep()).isEqualTo(OnboardingStep.TABLES);
+        assertThat(user.isPublic()).isFalse();
     }
 
     @Test
     void cadastroPendenteDoFluxoAntigo_eReaproveitado_eConfirmado() {
         User pending = localUser(false);
+        pending.setPublic(true);
         pending.setEmailVerificationTokenHash("hash-do-link-antigo");
         when(userRepository.findByEmail("dono@myrank.dev")).thenReturn(Optional.of(pending));
 
@@ -70,7 +70,8 @@ class UserServiceEmailVerificationTest {
         assertThat(user.getPasswordHash()).isEqualTo("hash:senha-nova");
         assertThat(user.isEmailVerified()).isTrue();
         assertThat(user.getEmailVerificationTokenHash()).isNull();
-        verify(categoryService, never()).createDefaultCategories(any());
+        assertThat(user.getOnboardingStep()).isEqualTo(OnboardingStep.DONE);
+        assertThat(user.isPublic()).isTrue();
     }
 
     @Test
