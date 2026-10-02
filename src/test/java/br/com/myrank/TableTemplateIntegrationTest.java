@@ -3,10 +3,12 @@ package br.com.myrank;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.entity.Work;
 import br.com.myrank.domain.enums.TableTemplate;
+import br.com.myrank.domain.enums.OnboardingStep;
 import br.com.myrank.dto.*;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.repository.WorkRepository;
 import br.com.myrank.service.CategoryService;
+import br.com.myrank.service.OnboardingService;
 import br.com.myrank.service.WorkService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class TableTemplateIntegrationTest {
     @Autowired CategoryService categories;
+    @Autowired OnboardingService onboarding;
     @Autowired WorkService works;
     @Autowired UserRepository users;
     @Autowired WorkRepository workRepository;
@@ -97,12 +100,14 @@ class TableTemplateIntegrationTest {
     }
 
     @Test
-    void tabelasPadrao_umaPorTipo_comSeriesEAnimesSeparados() {
+    void tabelasDoTutorial_umaPorTipoEscolhido_comSeriesEAnimesSeparados() {
         User owner = user();
-        categories.createDefaultCategories(owner);
+        owner.setOnboardingStep(OnboardingStep.TABLES);
+        entityManager.flush();
+        onboarding.chooseTables(owner.getId(), List.of(TV, ANIME));
         var defaults = categories.getCategoriesByUser(owner.getId());
-        assertEquals(5, defaults.size());
-        assertEquals(Set.of(List.of(MOVIE), List.of(TV), List.of(ANIME), List.of(BOOK), List.of(GAME)),
+        assertEquals(2, defaults.size());
+        assertEquals(Set.of(List.of(TV), List.of(ANIME)),
                 defaults.stream().map(CategoryResponseDTO::getTemplates).collect(Collectors.toSet()));
         assertTrue(defaults.stream().allMatch(CategoryResponseDTO::isDefault));
     }

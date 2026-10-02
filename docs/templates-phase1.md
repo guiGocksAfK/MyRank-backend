@@ -42,8 +42,9 @@ A antiga "Séries & Animes" vira **uma tabela mista** com Séries + Animes, sem
 mover nenhum item: o que tem capa do MyAnimeList vira anime, o resto vira série.
 Notas, subdivisões, ordem manual e takes ficam intactos.
 
-Cadastros novos recebem cinco tabelas: Filmes, Jogos, Livros, Séries e Animes,
-uma para cada tipo. A escolha das tabelas no primeiro acesso fica para a fase 6.
+Cadastros novos começam sem tabelas e com perfil privado. A escolha das tabelas
+no primeiro acesso acontece pelo [tutorial pós-cadastro](onboarding.md), com
+uma tabela para cada template escolhido.
 
 ## Testes
 
