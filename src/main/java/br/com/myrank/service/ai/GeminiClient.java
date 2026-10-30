@@ -10,9 +10,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,28 +24,39 @@ import java.util.Map;
  * Cliente do Gemini via camada compatível com a API da OpenAI
  * ({@code POST {base-url}/chat/completions}). Trocar de provedor = trocar
  * {@code gemini.api.*} nas properties, sem mexer no código.
+ *
+ * Cada chamada tenta duas vezes: o plano gratuito recusa pedidos de vez em quando
+ * (429/5xx) e às vezes a resposta vem com o JSON quebrado. Erro do nosso lado (4xx)
+ * não é repetido.
  */
 @Component
 public class GeminiClient {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
+    private static final int ATTEMPTS = 2;
 
     private final RestClient http;
     private final ObjectMapper objectMapper;
     private final String apiKey;
     private final String model;
+    private final String reasoningEffort;
+    private final Duration retryPause;
 
     public GeminiClient(ObjectMapper objectMapper,
                         @Value("${gemini.api.key:}") String apiKey,
                         @Value("${gemini.api.base-url}") String baseUrl,
-                        @Value("${gemini.api.model}") String model) {
+                        @Value("${gemini.api.model}") String model,
+                        @Value("${gemini.api.reasoning-effort:none}") String reasoningEffort,
+                        @Value("${gemini.api.retry-pause-ms:1000}") long retryPauseMs) {
         this.objectMapper = objectMapper;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model;
+        this.reasoningEffort = reasoningEffort == null ? "" : reasoningEffort.trim();
+        this.retryPause = Duration.ofMillis(retryPauseMs);
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofSeconds(10).toMillis());
-        factory.setReadTimeout((int) Duration.ofSeconds(45).toMillis()); // geração leva 10-30s
+        factory.setReadTimeout((int) Duration.ofSeconds(30).toMillis());
 
         this.http = RestClient.builder()
                 .baseUrl(baseUrl)
@@ -58,9 +73,9 @@ public class GeminiClient {
     }
 
     /**
-     * Manda o prompt e devolve a análise já parseada. Qualquer falha
-     * (sem chave, provedor fora do ar, JSON inválido) vira IllegalStateException
-     * → 503 com mensagem amigável (ver GlobalExceptionHandler).
+     * Manda o prompt e devolve a análise já parseada. Qualquer falha que sobre
+     * depois das tentativas (sem chave, provedor fora do ar, JSON inválido) vira
+     * IllegalStateException → 503 com mensagem amigável (ver GlobalExceptionHandler).
      */
     public InsightPayloadDTO analyze(String systemPrompt, String userPrompt) {
         if (!isConfigured()) {
@@ -68,40 +83,33 @@ public class GeminiClient {
                     "A análise por IA não está configurada no servidor. Defina GEMINI_API_KEY e tente de novo.");
         }
 
-        Map<String, Object> body = Map.of(
-                "model", model,
-                "temperature", 0.7,
-                "response_format", Map.of("type", "json_object"),
-                "messages", List.of(
-                        Map.of("role", "system", "content", systemPrompt),
-                        Map.of("role", "user", "content", userPrompt)
-                )
-        );
+        Map<String, Object> body = body(0.7, List.of(
+                Map.of("role", "system", "content", systemPrompt),
+                Map.of("role", "user", "content", userPrompt)));
+        body.put("response_format", Map.of("type", "json_object"));
 
-        String raw;
-        try {
-            raw = http.post()
-                    .uri("/chat/completions")
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
-        } catch (Exception e) {
-            log.warn("Chamada ao Gemini falhou: {}", e.getMessage());
-            throw new IllegalStateException(
-                    "O serviço de IA está instável agora. Tente gerar a análise de novo em instantes.", e);
+        for (int attempt = 1; ; attempt++) {
+            boolean last = attempt == ATTEMPTS;
+            try {
+                String content = extractContent(post(body));
+                InsightPayloadDTO payload = parsePayload(content);
+                if (payload != null && payload.isUsable()) {
+                    return payload;
+                }
+                log.warn("Gemini devolveu payload inutilizável (tentativa {}): {}", attempt, content);
+            } catch (RetryableFailure e) {
+                log.warn("Chamada ao Gemini falhou (tentativa {}): {}", attempt, e.getMessage());
+            } catch (RestClientResponseException e) {
+                log.warn("Gemini recusou o pedido: {}", e.getMessage());
+                throw new IllegalStateException(
+                        "O serviço de IA recusou o pedido. Tente gerar a análise de novo mais tarde.", e);
+            }
+            if (last) {
+                throw new IllegalStateException(
+                        "O serviço de IA está instável agora. Tente gerar a análise de novo em instantes.");
+            }
+            pause();
         }
-
-        String content = extractContent(raw);
-        InsightPayloadDTO payload = parsePayload(content);
-
-        if (payload == null || !payload.isUsable()) {
-            log.warn("Gemini devolveu payload inutilizável: {}", content);
-            throw new IllegalStateException(
-                    "A IA respondeu num formato inesperado. Tente gerar a análise de novo.");
-        }
-        return payload;
     }
 
     /**
@@ -116,7 +124,7 @@ public class GeminiClient {
                     "O chat da IA não está configurado no servidor. Defina GEMINI_API_KEY e tente de novo.");
         }
 
-        List<Map<String, Object>> messages = new java.util.ArrayList<>();
+        List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt));
         messages.add(Map.of("role", "user", "content", context));
         messages.add(Map.of("role", "assistant", "content",
@@ -129,50 +137,78 @@ public class GeminiClient {
             }
         }
         messages.add(Map.of("role", "user", "content", question));
+        Map<String, Object> body = body(0.6, messages);
 
-        Map<String, Object> body = Map.of(
-                "model", model,
-                "temperature", 0.6,
-                "messages", messages
-        );
+        for (int attempt = 1; ; attempt++) {
+            try {
+                String answer = extractContent(post(body)).trim();
+                if (answer.startsWith("```")) {
+                    answer = answer.replaceAll("^```(?:\\w+)?\\s*", "").replaceAll("\\s*```$", "").trim();
+                }
+                return answer;
+            } catch (RetryableFailure e) {
+                log.warn("Chat com o Gemini falhou (tentativa {}): {}", attempt, e.getMessage());
+                if (attempt == ATTEMPTS) {
+                    throw new IllegalStateException(
+                            "O serviço de IA está instável agora. Tente perguntar de novo em instantes.");
+                }
+            } catch (RestClientResponseException e) {
+                log.warn("Gemini recusou a pergunta: {}", e.getMessage());
+                throw new IllegalStateException(
+                        "O serviço de IA recusou o pedido. Tente perguntar de novo mais tarde.", e);
+            }
+            pause();
+        }
+    }
 
-        String raw;
+    /**
+     * Corpo comum. O raciocínio interno do Gemini 2.5 Flash fica desligado por padrão:
+     * com ele, a análise levava ~25s; sem ele, ~3s, com o mesmo resultado em JSON.
+     */
+    private Map<String, Object> body(double temperature, List<Map<String, Object>> messages) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", model);
+        body.put("temperature", temperature);
+        if (!reasoningEffort.isEmpty()) {
+            body.put("reasoning_effort", reasoningEffort);
+        }
+        body.put("messages", messages);
+        return body;
+    }
+
+    /** POST no provedor. Fora do ar, limite de uso (429) ou 5xx viram {@link RetryableFailure}. */
+    private String post(Map<String, Object> body) {
         try {
-            raw = http.post()
+            return http.post()
                     .uri("/chat/completions")
                     .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
                     .body(String.class);
-        } catch (Exception e) {
-            log.warn("Chat com o Gemini falhou: {}", e.getMessage());
-            throw new IllegalStateException(
-                    "O serviço de IA está instável agora. Tente perguntar de novo em instantes.", e);
+        } catch (RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            if (status == 429 || status >= 500) {
+                throw new RetryableFailure(status + " " + e.getStatusText());
+            }
+            throw e;
+        } catch (ResourceAccessException e) {
+            throw new RetryableFailure("sem resposta: " + e.getMessage());
         }
-
-        String answer = extractContent(raw).trim();
-        if (answer.startsWith("```")) {
-            answer = answer.replaceAll("^```(?:\\w+)?\\s*", "").replaceAll("\\s*```$", "").trim();
-        }
-        return answer;
     }
 
     /** choices[0].message.content da resposta estilo OpenAI. */
     private String extractContent(String raw) {
         try {
-            JsonNode root = objectMapper.readTree(raw);
-            JsonNode content = root.path("choices").path(0).path("message").path("content");
-            if (content.isMissingNode() || !content.isTextual() || content.asText().isBlank()) {
-                throw new IllegalStateException("resposta sem conteúdo");
+            JsonNode content = objectMapper.readTree(raw)
+                    .path("choices").path(0).path("message").path("content");
+            if (content.isTextual() && !content.asText().isBlank()) {
+                return content.asText();
             }
-            return content.asText();
-        } catch (IllegalStateException e) {
-            throw e;
         } catch (Exception e) {
-            throw new IllegalStateException(
-                    "A IA respondeu num formato inesperado. Tente gerar a análise de novo.", e);
+            // cai no erro abaixo
         }
+        throw new RetryableFailure("resposta sem conteúdo");
     }
 
     /** O content é uma string JSON; alguns modelos ainda embrulham em ```json … ```. */
@@ -185,6 +221,23 @@ public class GeminiClient {
             return objectMapper.readValue(json, InsightPayloadDTO.class);
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private void pause() {
+        try {
+            Thread.sleep(retryPause.toMillis());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "O serviço de IA está instável agora. Tente de novo em instantes.", e);
+        }
+    }
+
+    /** Falha que vale uma nova tentativa. */
+    private static final class RetryableFailure extends RuntimeException {
+        RetryableFailure(String message) {
+            super(message);
         }
     }
 }
