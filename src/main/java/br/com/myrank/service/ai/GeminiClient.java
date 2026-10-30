@@ -83,10 +83,11 @@ public class GeminiClient {
                     "A análise por IA não está configurada no servidor. Defina GEMINI_API_KEY e tente de novo.");
         }
 
-        Map<String, Object> body = body(0.7, List.of(
+        Map<String, Object> body = body(0.5, List.of(
                 Map.of("role", "system", "content", systemPrompt),
                 Map.of("role", "user", "content", userPrompt)));
         body.put("response_format", Map.of("type", "json_object"));
+        body.put("max_tokens", 2048); // no modo JSON o modelo às vezes não para de gerar; a análise usa ~650
 
         for (int attempt = 1; ; attempt++) {
             boolean last = attempt == ATTEMPTS;
@@ -138,6 +139,7 @@ public class GeminiClient {
         }
         messages.add(Map.of("role", "user", "content", question));
         Map<String, Object> body = body(0.6, messages);
+        body.put("max_tokens", 1024);
 
         for (int attempt = 1; ; attempt++) {
             try {

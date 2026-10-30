@@ -1,12 +1,14 @@
 package br.com.myrank.service.ai;
 
 import br.com.myrank.domain.entity.AiInsight;
+import br.com.myrank.domain.entity.Take;
 import br.com.myrank.domain.entity.Work;
 import br.com.myrank.dto.insight.InsightChatMessageDTO;
 import br.com.myrank.dto.insight.InsightGenerateRequestDTO;
 import br.com.myrank.dto.insight.InsightPayloadDTO;
 import br.com.myrank.dto.insight.InsightResponseDTO;
 import br.com.myrank.repository.AiInsightRepository;
+import br.com.myrank.repository.TakeRepository;
 import br.com.myrank.repository.WorkRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,8 +20,10 @@ import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -33,17 +37,20 @@ public class InsightService {
     private static final int CHAT_MAX_CHARS = 500;
 
     private final WorkRepository workRepository;
+    private final TakeRepository takeRepository;
     private final AiInsightRepository insightRepository;
     private final GeminiClient gemini;
     private final AiUsageService usage;
     private final ObjectMapper objectMapper;
 
     public InsightService(WorkRepository workRepository,
+                          TakeRepository takeRepository,
                           AiInsightRepository insightRepository,
                           GeminiClient gemini,
                           AiUsageService usage,
                           ObjectMapper objectMapper) {
         this.workRepository = workRepository;
+        this.takeRepository = takeRepository;
         this.insightRepository = insightRepository;
         this.gemini = gemini;
         this.usage = usage;
@@ -78,12 +85,13 @@ public class InsightService {
         }
         List<InsightChatMessageDTO> thread = deserializeChat(insight);
         InsightPayloadDTO analysis = deserialize(insight);
+        TasteFacts facts = facts(userId, selectWorks(userId, null));
         AiUsageService.Reservation reservation = usage.reserve(userId);
         String answer;
         try {
             answer = gemini.chat(
                     InsightPromptBuilder.CHAT_SYSTEM,
-                    InsightPromptBuilder.chatContext(analysis),
+                    InsightPromptBuilder.chatContext(analysis, facts),
                     thread,
                     question);
         } catch (RuntimeException e) {
@@ -121,9 +129,9 @@ public class InsightService {
         AiUsageService.Reservation reservation = usage.reserve(userId);
         InsightPayloadDTO payload;
         try {
-            payload = gemini.analyze(
-                    InsightPromptBuilder.SYSTEM,
-                    InsightPromptBuilder.user(works));
+            TasteFacts facts = facts(userId, works);
+            payload = gemini.analyze(InsightPromptBuilder.SYSTEM, InsightPromptBuilder.user(facts))
+                    .withTasteProfile(facts.tasteProfile());
         } catch (RuntimeException e) {
             usage.release(userId, reservation);
             throw e;
@@ -156,12 +164,24 @@ public class InsightService {
         return all;
     }
 
-    /** SHA-256 de (modelo + obras ordenadas por id + notas). Mesma seleção → mesmo hash → cache. */
+    /** Fatos do gosto com o take mais recente de cada obra. */
+    private TasteFacts facts(Long userId, List<Work> works) {
+        Map<Long, String> takes = new HashMap<>();
+        for (Take take : takeRepository.findByUserIdOrderByCreatedAtDesc(userId)) {
+            takes.putIfAbsent(take.getWorkId(), take.getText());
+        }
+        return new TasteFacts(works, takes);
+    }
+
+    /**
+     * SHA-256 de (modelo + versão do prompt + obras ordenadas por id + notas).
+     * Mesma seleção → mesmo hash → cache.
+     */
     private String selectionHash(List<Work> works) {
         String basis = works.stream()
                 .sorted(Comparator.comparing(Work::getId))
                 .map(w -> w.getId() + ":" + w.getScore() + ":" + w.getFinalScore())
-                .collect(Collectors.joining("|", gemini.model() + "#", ""));
+                .collect(Collectors.joining("|", gemini.model() + "#" + InsightPromptBuilder.VERSION + "#", ""));
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest(basis.getBytes(StandardCharsets.UTF_8));
