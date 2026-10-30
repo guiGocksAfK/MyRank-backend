@@ -12,15 +12,15 @@ na versão anterior.
 
 ## 1. Teste geral no navegador
 
-Nada das fases 1 a 6 foi testado de ponta a ponta no navegador.
+Feito na conta existente (tabela mista, Músicas, Álbuns, Mangás, Personalizada,
+"Atualizar dados", ranking unificado). Falta, **depois do deploy**:
 
-1. Subir back (aplica a V11) e front.
-2. Na conta existente: a "Séries & Animes" mista, uma tabela de Músicas, uma de
-   Álbuns, uma de Mangás, uma Personalizada com campos próprios, o botão
-   "Atualizar dados" e as dicas das telas vazias.
-3. Conta nova em janela anônima: cadastro com código, tutorial inteiro, e
-   retomar o tutorial no meio (fechar e abrir de novo).
-4. Recuperação de senha e conferir que a sessão de outro navegador cai.
+- Conta nova: cadastro com código, tutorial inteiro e retomar no meio.
+- Recuperação de senha, conferindo que a sessão de outro navegador cai.
+
+Localmente o Brevo recusa o envio porque o IP de casa não está autorizado
+(Brevo → Security → Authorised IPs). Na produção, o IP da VM precisa estar
+autorizado, ou o bloqueio por IP desligado.
 
 ## 2. Consertar a IA Insights
 
@@ -45,13 +45,15 @@ específico da tabela"). Itens 1 a 4 primeiro, junto com os de velocidade.
 7. Robustez: temperatura menor, uma nova tentativa se o JSON vier quebrado, e a
    versão do prompt no hash do cache.
 
-**Velocidade e falhas**
+**Velocidade e falhas** (feito)
 
-- Desligar o raciocínio do Gemini 2.5 Flash.
-- Prompt compacto (hoje vão até 100 obras num formato verboso).
-- Nova tentativa automática em erro temporário (limite do plano grátis, timeout).
-- Mensagem de erro clara na tela, em vez de nada acontecer.
-- Medir o tempo antes e depois.
+- Raciocínio do Gemini 2.5 Flash desligado (`gemini.api.reasoning-effort`).
+  Com 45 obras: de ~24s para ~3,3s, com o JSON válido em todas as medições.
+- Nova tentativa automática em 429, 5xx, sem resposta e JSON quebrado; 4xx
+  não repete.
+- O front esperava no máximo 30s e cortava análises lentas; as chamadas da IA
+  agora esperam até 75s.
+- O prompt compacto entra junto com a reescrita da qualidade.
 
 Depois de pronto, escrever `docs/ia-insights.md`.
 
