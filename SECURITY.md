@@ -10,7 +10,7 @@ repositório do front.
 |---|---|
 | Senhas | BCrypt com salt por usuário (custo padrão do Spring, 10). Nunca voltam em resposta. Mínimo de 8 caracteres na criação e na troca. Conta criada pelo Google ou Discord não tem senha. |
 | Cadastro | O email é provado **antes** de existir conta: código de 6 dígitos por email, e só com ele o cadastro final é aceito. Quem digita o email de outra pessoa não consegue reservar nada. |
-| Códigos por email | Cadastro, recuperação de senha e exclusão de conta usam código. Ele fica só como SHA-256 (nunca o valor), vale 15 minutos (10 na exclusão), morre depois de 5 erros e tem intervalo de 30s entre reenvios. Comparação em tempo constante. |
+| Códigos por email | Cadastro, recuperação de senha e exclusão de conta usam código, guardado só como SHA-256 (nunca o valor) e comparado em tempo constante. Cadastro e recuperação: 6 dígitos, 15 minutos, morre depois de 5 erros, 30s entre reenvios. Exclusão: 8 caracteres, 10 minutos, 1 minuto entre reenvios, limitada pelo rate limit (ver [docs/autenticacao.md](docs/autenticacao.md)). |
 | Passes entre etapas | Acertar o código gera um passe curto (JWT) que libera a etapa seguinte. Cada fluxo assina com uma chave derivada do segredo do login + propósito: o passe do cadastro não troca senha, e nenhum passe serve como sessão. |
 | Login | Conta social, email inexistente e senha errada dão a **mesma** mensagem. "Email não confirmado" só aparece depois que a senha confere, pra não revelar quais emails têm cadastro pendente. |
 | Recuperação de senha | Email sem conta segue o mesmo caminho de uma conta real (o código é gerado, só não é mandado), então resposta e erros não revelam quem tem conta. Exceção decidida: conta só com Google/Discord é avisada na hora de qual provedor usar. |
