@@ -63,7 +63,12 @@ public class AccountDeletionService {
         String value = code.toString();
 
         CodeText text = CodeText.of(user.getLanguage());
-        emailClient.send(user.getEmail(), text.subject(), text.html(user.getUsername(), value));
+        try {
+            emailClient.send(user.getEmail(), text.subject(), text.html(user.getUsername(), value));
+        } catch (RestClientException ex) {
+            log.error("Falha ao enviar o código de exclusão do usuário {}: {}", user.getId(), ex.getMessage());
+            throw new IllegalStateException("Não foi possível enviar o email agora. Tente de novo em instantes.");
+        }
         user.setAccountDeletionCodeHash(sha256(value));
         user.setAccountDeletionCodeExpiresAt(now.plusMinutes(CODE_TTL_MINUTES));
         userRepository.save(user);
