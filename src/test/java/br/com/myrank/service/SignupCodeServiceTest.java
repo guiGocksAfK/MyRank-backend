@@ -8,6 +8,8 @@ import br.com.myrank.support.MutableClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -18,6 +20,7 @@ import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
@@ -60,6 +63,20 @@ class SignupCodeServiceTest {
         assertThat(service.emailFromPass(pass)).isEqualTo("NOVO@myrank.dev");
         assertThatThrownBy(() -> service.verifyCode("novo@myrank.dev", code))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void brevoRecusa_respondeMensagemClara_eLiberaOReenvio() {
+        doThrow(new HttpClientErrorException(HttpStatus.UNAUTHORIZED))
+                .when(emailClient).send(anyString(), anyString(), anyString());
+
+        assertThatThrownBy(() -> service.sendCode("novo@myrank.dev", "PT"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Não foi possível enviar o email agora. Tente de novo em instantes.");
+
+        // o código que não saiu foi descartado: pedir de novo não cai no intervalo de 30s
+        assertThatThrownBy(() -> service.sendCode("novo@myrank.dev", "PT"))
+                .hasMessage("Não foi possível enviar o email agora. Tente de novo em instantes.");
     }
 
     @Test

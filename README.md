@@ -10,7 +10,8 @@ This repository contains the API; the web app lives in
 [MyRank-frontend](https://github.com/guiGocksAfK/MyRank).
 
 Detailed operational and security docs ([SECURITY.md](SECURITY.md),
-[deploy/README.md](deploy/README.md) and [`docs/`](docs)) are written in Portuguese.
+[deploy/README.md](deploy/README.md) and [`docs/`](docs)) are written in Portuguese;
+see [Documentation](#documentation) for the full list.
 
 ## Features
 
@@ -156,10 +157,24 @@ Applied migrations are never edited, and no change requires dropping the
 database. Upgrading an existing production database to this version (the
 baseline of the squash, then V9–V11) is described in
 [deploy/README.md](deploy/README.md#atualizar-a-produção-para-esta-versão).
-Templates and custom fields are documented in
-[`docs/templates-phase1.md`](docs/templates-phase1.md), music search in
-[`docs/music-search-integration.md`](docs/music-search-integration.md) and
-onboarding in [`docs/onboarding.md`](docs/onboarding.md).
+
+## Documentation
+
+| Document | Covers |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | Rules for anyone (or any AI tool) working on the repository |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | What is pending, in order |
+| [`docs/decisoes.md`](docs/decisoes.md) | Product and technical decisions, and why |
+| [`docs/autenticacao.md`](docs/autenticacao.md) | Sign-up, login, e-mail codes, sessions, account deletion |
+| [`docs/templates.md`](docs/templates.md) | Templates, card details and custom fields |
+| [`docs/ranking.md`](docs/ranking.md) | Scores, unified ranking, creators and taste affinity |
+| [`docs/social.md`](docs/social.md) | Privacy, follows, feed, takes, comments, notifications |
+| [`docs/chat.md`](docs/chat.md) | Direct messages, groups, roles and real time |
+| [`docs/conquistas.md`](docs/conquistas.md) | Achievements catalog and calculation |
+| [`docs/onboarding.md`](docs/onboarding.md) | Post-sign-up tutorial |
+| [`docs/music-search-integration.md`](docs/music-search-integration.md) | Deezer and iTunes search |
+| [`SECURITY.md`](SECURITY.md) | Protections in place and open items |
+| [`deploy/README.md`](deploy/README.md) | VM setup, deploy and production upgrade |
 
 ## Environment variables
 

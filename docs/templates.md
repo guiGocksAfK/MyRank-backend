@@ -1,9 +1,26 @@
-# Templates — fase 1
+# Templates
 
-Template é o tipo do conteúdo: `movie`, `tv`, `anime`, `game`, `book` ou
-`custom` (Personalizado, preenchido à mão). Ele decide a busca, o card e as
-conquistas. Nome e emoji da tabela são só apresentação. As próximas fases
-acrescentam `music`, `album` e `manga`.
+Template é o tipo do conteúdo. Ele decide a busca, o card e as conquistas;
+nome e emoji da tabela são só apresentação.
+
+| Template | Busca em | `details` do card |
+|---|---|---|
+| `movie` Filmes | TMDB | gêneros |
+| `tv` Séries | TMDB | `seasons`, `status`, gêneros |
+| `anime` Animes | MyAnimeList | `episodes`, `mediaType`, `status`, gêneros |
+| `manga` Mangás | MyAnimeList | `volumes`, `status`, gêneros |
+| `game` Jogos | RAWG | gêneros |
+| `book` Livros | Google Books | `pages`, gêneros |
+| `music` Músicas | Deezer (iTunes de reserva) | `album` |
+| `album` Álbuns | Deezer (iTunes de reserva) | `trackCount` |
+| `custom` Personalizado | (preenchido à mão) | campos próprios |
+
+Os detalhes vêm prontos da busca e só entra o que a API trouxe preenchido.
+Os **gêneros são guardados para a IA e não aparecem no card**, sempre como a API
+manda. O card mostra o criador e os detalhes do template; no perfil e no social,
+só o criador. O botão "Atualizar dados" busca de novo pelo `provider` e
+`externalId` do item. Música e álbum em detalhe:
+[music-search-integration.md](music-search-integration.md).
 
 ## Regras
 
@@ -15,7 +32,8 @@ acrescentam `music`, `album` e `manga`.
 - **Mudar os templates depois:** adicionar pode sempre; tirar só se nenhum item
   da tabela usar aquele template. A tabela precisa de pelo menos um.
 - **Valores validados no código** (enum `TableTemplate`), não no banco: template
-  novo não exige migration.
+  novo não exige migration. O enum também diz se o template usa a nota
+  ponderada pelo tempo (ver [ranking.md](ranking.md)).
 - **`details`** (JSON) guarda dados específicos do template, como de onde o item
   veio (`provider`, `externalId`). Sempre um objeto, até 8 KB.
 
@@ -59,7 +77,7 @@ docker run -d --name mr-test-db -e POSTGRES_PASSWORD=x -e POSTGRES_DB=myrank_tes
 docker rm -f mr-test-db
 ```
 
-## Fase 5: campos próprios
+## Campos próprios (Personalizado)
 
 Os campos próprios pertencem à tabela e só podem ser definidos quando ela tem
 o template `CUSTOM` (Personalizado). Uma tabela pode ter até **5 campos**, com
@@ -138,7 +156,7 @@ gravações de itens e mudanças de definições/templates bloqueiam a mesma
 categoria durante a transação, evitando reintroduzir um campo removido em uma
 gravação concorrente.
 
-### Testes da fase 5
+### Testes dos campos próprios
 
 `CustomFieldsServiceTest` e `CustomFieldsControllerTest` cobrem validações,
 contratos HTTP e mensagens 400. `CustomFieldsIntegrationTest` verifica JSONB,
@@ -148,9 +166,4 @@ um schema na V9, confere default e CHECK de array e garante que o banco não
 restringe a lista de tipos. O teste antigo da V9 permanece limitado à V9.
 
 Execute a suíte inteira no Postgres descartável com o comando da seção
-**Testes** acima. No Windows, use `.\mvnw.cmd` no lugar de `./mvnw`. Depois,
-valide a compilação com `./mvnw -q -DskipTests compile` (ou
-`.\mvnw.cmd -q -DskipTests compile`).
-
-Validação em 01/10/2026: a suíte inteira passou no Postgres 15 descartável,
-com **210 testes, nenhuma falha, nenhum erro e nenhum teste ignorado**.
+**Testes** acima. No Windows, use `.\mvnw.cmd` no lugar de `./mvnw`.

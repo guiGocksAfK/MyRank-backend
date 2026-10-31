@@ -7,6 +7,8 @@ import br.com.myrank.dto.external.MalAnimeNodeDTO;
 import br.com.myrank.dto.external.MalListResponseDTO;
 import br.com.myrank.dto.external.MalMangaNodeDTO;
 import br.com.myrank.exception.ExternalServiceUnavailableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -49,6 +51,8 @@ public class MyAnimeListService {
             "id,title,main_picture,start_date,num_episodes,average_episode_duration,studios,media_type,status,genres";
     private static final String MANGA_DETAILS_FIELDS = "id,title,main_picture,start_date,authors,num_volumes,status,genres";
 
+    private static final Logger log = LoggerFactory.getLogger(MyAnimeListService.class);
+
     private final RestTemplate restTemplate;
     private final String clientId;
 
@@ -56,6 +60,10 @@ public class MyAnimeListService {
                               @Value("${mal.client-id:}") String clientId) {
         this.restTemplate = restTemplate;
         this.clientId = clientId;
+        if (!configured()) {
+            // sem a chave, as buscas de anime e mangá voltam vazias: avisa uma vez, na subida
+            log.warn("MAL_CLIENT_ID não configurado: buscas de anime e mangá vão voltar vazias.");
+        }
     }
 
     private boolean configured() {
@@ -92,7 +100,8 @@ public class MyAnimeListService {
             return mapSearchResults(response);
         } catch (HttpServerErrorException | ResourceAccessException e) {
             // 5xx do MAL ou timeout: instabilidade transitória, não-acionável no
-            // autocomplete — degrada para "nenhum resultado".
+            // autocomplete — degrada para "nenhum resultado", mas deixa o motivo no log.
+            log.warn("Busca de {} no MyAnimeList falhou: {}", worksName, e.getMessage());
             return Collections.emptyList();
         } catch (RestClientException e) {
             // 4xx (ex.: 400 query curta, 403 client id inválido) e demais falhas.

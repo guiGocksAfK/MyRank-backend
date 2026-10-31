@@ -3,6 +3,7 @@ package br.com.myrank.service.ai;
 import br.com.myrank.domain.entity.Work;
 import br.com.myrank.dto.insight.InsightGenerateRequestDTO;
 import br.com.myrank.repository.AiInsightRepository;
+import br.com.myrank.repository.TakeRepository;
 import br.com.myrank.repository.WorkRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ class InsightServiceSecurityTest {
     private final GeminiClient gemini = mock(GeminiClient.class);
     private final AiUsageService usage = mock(AiUsageService.class);
     private final InsightService service = new InsightService(
-            works, mock(AiInsightRepository.class), gemini, usage, new ObjectMapper());
+            works, mock(TakeRepository.class), mock(AiInsightRepository.class), gemini, usage, new ObjectMapper());
 
     private void oneWork() {
         Work work = new Work();

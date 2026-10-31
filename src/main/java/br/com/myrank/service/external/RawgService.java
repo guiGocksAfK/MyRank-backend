@@ -2,9 +2,12 @@ package br.com.myrank.service.external;
 
 import br.com.myrank.dto.external.*;
 import br.com.myrank.exception.ExternalServiceUnavailableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -15,6 +18,8 @@ import java.util.stream.Collectors;
 @Service
 public class RawgService {
 
+    private static final Logger log = LoggerFactory.getLogger(RawgService.class);
+
     private static final String BASE_URL = "https://api.rawg.io/api";
 
     private final RestTemplate restTemplate;
@@ -24,6 +29,9 @@ public class RawgService {
                        @Value("${rawg.api-key}") String apiKey) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("RAWG_API_KEY não configurada: a busca de jogos vai voltar vazia.");
+        }
     }
 
     /** Autocomplete de jogos: GET /games?search=...&ordering=-rating (prioriza jogos mais bem avaliados). */
@@ -39,7 +47,8 @@ public class RawgService {
         try {
             response = restTemplate.getForObject(url, RawgSearchResponseDTO.class);
         } catch (RestClientException e) {
-            // RAWG indisponível no momento — devolve lista vazia em vez de propagar o erro.
+            // RAWG indisponível ou chave recusada — devolve lista vazia, mas deixa o motivo no log.
+            log.warn("Busca de jogos na RAWG falhou: {}", describe(e));
             return Collections.emptyList();
         }
         return mapSearchResults(response);
@@ -116,5 +125,12 @@ public class RawgService {
                         item.getReleased()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    /** Status ou tipo da falha, sem a mensagem: a URL da RAWG leva a chave na query. */
+    private static String describe(RestClientException e) {
+        return e instanceof RestClientResponseException response
+                ? response.getStatusCode().toString()
+                : e.getClass().getSimpleName();
     }
 }

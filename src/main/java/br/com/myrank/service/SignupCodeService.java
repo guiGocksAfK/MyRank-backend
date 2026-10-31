@@ -6,6 +6,8 @@ import br.com.myrank.service.code.EmailCodeStore;
 import br.com.myrank.service.code.EmailPass;
 import br.com.myrank.service.email.BrevoEmailClient;
 import br.com.myrank.service.email.EmailLayout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -21,6 +23,8 @@ import java.util.Locale;
  */
 @Service
 public class SignupCodeService {
+
+    private static final Logger log = LoggerFactory.getLogger(SignupCodeService.class);
 
     private final UserRepository userRepository;
     private final BrevoEmailClient emailClient;
@@ -55,8 +59,10 @@ public class SignupCodeService {
         try {
             emailClient.send(email.trim(), text.subject(), text.html(code));
         } catch (RestClientException ex) {
+            // o motivo real (ex.: IP não autorizado no Brevo) fica no log; a tela recebe um 503 claro
             codes.discard(email);
-            throw ex;
+            log.error("Falha ao enviar o código de cadastro: {}", ex.getMessage());
+            throw new IllegalStateException("Não foi possível enviar o email agora. Tente de novo em instantes.");
         }
     }
 
