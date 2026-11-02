@@ -46,6 +46,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("/api/users/me", "DELETE", 5), // exclusão de conta confere senha
             // Buscas e detalhes de músicas e álbuns compartilham o teto das demais integrações.
             new Rule("/api/external/", null, 40),
+            new Rule("/api/works/refresh-details", "POST", 2), // dezenas de chamadas externas por pedido
     };
 
     private final ConcurrentHashMap<String, Window> windows = new ConcurrentHashMap<>();
