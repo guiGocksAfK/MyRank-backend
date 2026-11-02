@@ -38,6 +38,15 @@ Home, login e cadastro já foram refeitos. Falta o mesmo tratamento (base
 perfil e IA. O visual das funcionalidades novas (seletor de templates, campos
 próprios, tutorial, "Atualizar dados") foi deixado de propósito para esta etapa.
 
+Navbar: feita (moldura comum com a home, abas sem emoji com fio dourado, menu
+do avatar com idioma e Sair, barra de ícones no celular). Ficou com cara
+genérica; ideias testadas e guardadas pra voltar depois:
+
+- holofote dourado saindo de baixo da aba ativa e a borda de baixo como um fio
+  de luz que acende no centro (identidade de "palco", como a home);
+- ícones de traço ao lado das abas também no desktop;
+- anel dourado no avatar.
+
 ## 4. Fundos das tabelas (depois do remaster)
 
 - Cada tabela escolhe um fundo de uma lista pronta, sem upload.
