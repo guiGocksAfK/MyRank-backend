@@ -10,6 +10,7 @@ import br.com.myrank.repository.SubcategoryRepository;
 import br.com.myrank.repository.WorkRepository;
 import br.com.myrank.security.AuthUtils;
 import br.com.myrank.service.CategoryService;
+import br.com.myrank.service.WorkDetailsBackfillService;
 import br.com.myrank.service.WorkService;
 import br.com.myrank.service.badge.BadgeService;
 import br.com.myrank.service.social.FeedEventService;
@@ -47,7 +48,7 @@ class CustomFieldsControllerTest {
     private final User owner = new User();
     private final Category category = new Category();
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new CategoryController(categoryService, auth),
-                    new WorkController(workService, auth))
+                    new WorkController(workService, mock(WorkDetailsBackfillService.class), auth))
             .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler()).build();
 
