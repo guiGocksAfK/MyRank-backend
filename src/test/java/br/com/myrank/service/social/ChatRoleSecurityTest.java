@@ -18,7 +18,8 @@ class ChatRoleSecurityTest {
         ConversationRepository conversations = mock(ConversationRepository.class);
         ConversationMemberRepository members = mock(ConversationMemberRepository.class);
         ChatService service = new ChatService(conversations, members,
-                mock(ConversationJoinRequestRepository.class), mock(MessageRepository.class),
+                mock(ConversationJoinRequestRepository.class), mock(ConversationBanRepository.class),
+                mock(MessageRepository.class),
                 mock(MessageReactionRepository.class), mock(FollowRepository.class),
                 mock(UserRepository.class), mock(NotificationService.class));
         Conversation group = mock(Conversation.class);

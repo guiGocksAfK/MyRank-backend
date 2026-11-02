@@ -10,6 +10,7 @@ public record CreateGroupDTO(
         @Size(max = 80, message = "O nome do grupo é longo demais.")
         String name,
 
+        @Size(max = 50, message = "Máximo de 50 participantes.")
         List<Long> memberIds,
         String access,        // OPEN | REQUEST | CLOSED (default CLOSED)
 

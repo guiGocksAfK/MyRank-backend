@@ -85,6 +85,24 @@ public class ChatRealtimeService {
         }
     }
 
+    /**
+     * Ping pra uma lista fixa de pessoas, quando elas já não são membros (grupo
+     * excluído, pessoa removida) e precisam tirar a conversa da lista.
+     */
+    public void touchUsers(Long convId, java.util.Collection<Long> userIds) {
+        if (convId == null || userIds == null || userIds.isEmpty()) return;
+        try {
+            userRepository.findAllById(userIds).forEach(u -> {
+                if (u.getEmail() != null) {
+                    messaging.convertAndSendToUser(u.getEmail(), "/queue/chat",
+                            Map.of("conversationId", convId));
+                }
+            });
+        } catch (Exception e) {
+            log.warn("touchUsers({}) falhou: {}", convId, e.getMessage());
+        }
+    }
+
     /** Consulta a participação a cada envio; uma inscrição antiga não recebe eventos após expulsão. */
     private void sendToCurrentMembers(Long convId, Object event) {
         List<Long> memberIds = memberRepository.findMemberIds(convId);

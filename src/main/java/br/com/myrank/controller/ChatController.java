@@ -68,8 +68,8 @@ public class ChatController {
 
     @DeleteMapping("/conversations/{id}")
     public ResponseEntity<Void> delete(@AuthenticationPrincipal UserDetails ud, @PathVariable Long id) {
-        realtime.touch(id); // avisa os membros antes de a conversa sumir
-        chatService.deleteConversation(me(ud), id);
+        // avisa só depois de a exclusão passar pelas permissões (antes, um estranho disparava avisos)
+        realtime.touchUsers(id, chatService.deleteConversation(me(ud), id));
         return ResponseEntity.noContent().build();
     }
 
@@ -247,9 +247,9 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable Long id,
             @PathVariable Long userId) {
-        realtime.touch(id); // avisa todo mundo (inclusive quem sai) antes do commit
         chatService.removeMember(me(ud), id, userId);
-        realtime.touch(id);
+        realtime.touch(id);                         // quem ficou
+        realtime.touchUsers(id, List.of(userId));   // quem saiu já não é membro, avisa direto
         return ResponseEntity.noContent().build();
     }
 
