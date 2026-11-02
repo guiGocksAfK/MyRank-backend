@@ -5,75 +5,40 @@ histórico fica no git). Decisões já tomadas ficam em [decisoes.md](decisoes.m
 
 ## Estado atual
 
-Back e front na branch `seguranca-e-novasTabelas`, tudo commitado:
-squash das migrations, templates (fases 1 a 5), tutorial pós-cadastro (fase 6),
-cadastro por código e sessões que caem ao trocar a senha. A produção ainda está
-na versão anterior.
+Em produção: squash das migrations (baseline na V8), templates, campos próprios,
+tutorial pós-cadastro, cadastro e recuperação de senha por código, sessões que
+caem ao trocar a senha, e a IA Insights refeita (rápida e específica). Back e
+front na branch `remaster-e-ajustes`.
 
-## 1. Teste geral no navegador
+## 1. Pendências antes do remaster
 
-Feito na conta existente (tabela mista, Músicas, Álbuns, Mangás, Personalizada,
-"Atualizar dados", ranking unificado). Falta, **depois do deploy**:
+- **Testar a recuperação de senha na produção**, conferindo que a sessão de
+  outro navegador cai.
+- **Preencher os gêneros das obras antigas.** As obras criadas antes de o site
+  guardar gêneros estão sem eles, e a IA cai pra média por tipo. Rodar uma vez o
+  mesmo "Atualizar dados" em todas as obras que vieram de alguma API.
 
-- Conta nova: cadastro com código, tutorial inteiro e retomar no meio.
-- Recuperação de senha, conferindo que a sessão de outro navegador cai.
+## 2. IA Insights: o que ficou de fora
 
-Localmente o Brevo recusa o envio porque o IP de casa não está autorizado
-(Brevo → Security → Authorised IPs). Na produção, o IP da VM precisa estar
-autorizado, ou o bloqueio por IP desligado.
+Feito: o chat vê o ranking, dados completos por obra (com takes), fatos
+calculados no código, traços que citam obras, contradições, perfil de gosto com
+médias reais, raciocínio desligado (~24s → ~3s), nova tentativa automática,
+temperatura menor, teto de tamanho da resposta e versão do prompt no cache.
 
-## 2. Consertar a IA Insights
+Falta, sem data:
 
-Problemas relatados: lenta, falha muito e o conteúdo é genérico ("não fala nada
-específico da tabela"). Itens 1 a 4 primeiro, junto com os de velocidade.
+- Três recomendações (uma por tipo principal), descartando no código o que a
+  pessoa já avaliou. Hoje é uma, e só o prompt pede pra não repetir.
+- Responder no idioma da conta (hoje sempre em português) e analisar uma tabela só.
 
-**Qualidade**
-
-1. O chat recebe o ranking da pessoa (compacto) e responde perguntas sobre ele.
-   Hoje só recebe o resumo da análise e é instruído a recusar o resto.
-2. Mais dados por obra: template, criador, ano, gêneros (já guardados no
-   `details`), posição na tabela e os takes.
-3. Números calculados no código, não pela IA: média por tipo, gêneros mais
-   frequentes e mais bem avaliados, criadores favoritos, se a pessoa é exigente.
-   A IA só interpreta.
-4. Exigir especificidade: cada traço cita pelo menos duas obras com nota, uma
-   seção de contradições ("ama terror, mas deu 4 pra Hereditário"), frases
-   genéricas proibidas.
-5. Três recomendações, uma por tipo principal, explicadas com obras da pessoa.
-   O código descarta o que ela já avaliou.
-6. Responder no idioma da conta e permitir analisar uma tabela só.
-7. Robustez: temperatura menor, uma nova tentativa se o JSON vier quebrado, e a
-   versão do prompt no hash do cache.
-
-**Velocidade e falhas** (feito)
-
-- Raciocínio do Gemini 2.5 Flash desligado (`gemini.api.reasoning-effort`).
-  Com 45 obras: de ~24s para ~3,3s, com o JSON válido em todas as medições.
-- Nova tentativa automática em 429, 5xx, sem resposta e JSON quebrado; 4xx
-  não repete.
-- O front esperava no máximo 30s e cortava análises lentas; as chamadas da IA
-  agora esperam até 75s.
-- O prompt compacto entra junto com a reescrita da qualidade.
-
-Depois de pronto, escrever `docs/ia-insights.md`.
-
-## 3. Publicar
-
-Seguir [deploy/README.md](../deploy/README.md#atualizar-a-produção-para-esta-versão):
-backup no Neon, baseline na V8, V9–V11, desligar o baseline. Antes, mesclar
-`seguranca-e-novasTabelas` na `master` (back) e na `main` (front). Back e front
-sobem juntos.
-
-Sem pressa: hoje só o Guilherme usa o site.
-
-## 4. Remaster das telas internas
+## 3. Remaster das telas internas
 
 Home, login e cadastro já foram refeitos. Falta o mesmo tratamento (base
 `base.css`, padrão preto e dourado) no dashboard, rankings, social, chat,
 perfil e IA. O visual das funcionalidades novas (seletor de templates, campos
 próprios, tutorial, "Atualizar dados") foi deixado de propósito para esta etapa.
 
-## 5. Fundos das tabelas (depois do remaster)
+## 4. Fundos das tabelas (depois do remaster)
 
 - Cada tabela escolhe um fundo de uma lista pronta, sem upload.
 - 3 a 5 fundos por tipo (Filmes, Séries, Animes, Mangás, Jogos, Livros, Músicas,
