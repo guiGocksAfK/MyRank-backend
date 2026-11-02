@@ -56,6 +56,11 @@ deixar o motivo.
   já existiam mantiveram o que tinham.
 - **Perfil privado funciona como no Instagram:** pedido para seguir, e quem não
   segue vê só o cabeçalho e as contagens.
+- **"Visto por último" só entre quem se segue mutuamente**, e **só entra
+  direto num grupo quem se segue mutuamente** com quem adiciona (o resto vem
+  pelo link). Os dois fecham brechas de vigiar e de assediar desconhecidos.
+- **Expulsão de grupo é banimento** até a moderação adicionar de novo; sair por
+  conta própria não bane. **Quem entra vê o histórico de antes**, como no Discord.
 
 ## Tutorial pós-cadastro
 

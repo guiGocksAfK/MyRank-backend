@@ -79,8 +79,10 @@ repositório do front.
 
 9. **Avatar por URL externa.** A foto de perfil é um link que a própria pessoa
    informa e que o navegador de quem vê o perfil carrega direto. Quem controla
-   o servidor da imagem enxerga o IP de quem abriu o perfil. Alternativa:
-   upload com armazenamento próprio, ou proxy de imagens.
+   o servidor da imagem enxerga o IP de quem abriu o perfil. O mesmo vale pra
+   capa das obras, que aparece no feed e no perfil de outras pessoas e aceita
+   `http` (o Google Books devolve capas assim; o front sobe tudo pra `https`
+   pela CSP). Alternativa: upload com armazenamento próprio, ou proxy de imagens.
 
 10. **LGPD: sem exportação dos dados.** A exclusão de conta existe; a
     portabilidade (baixar os próprios dados) ainda não.
@@ -88,3 +90,10 @@ repositório do front.
 11. **Sem auditoria e sem análise de dependências automática.** Não há trilha
     de quem alterou o quê, e não há CI rodando os testes nem checando CVEs das
     dependências (por exemplo com o OWASP Dependency-Check).
+
+12. **WebSocket não reconfere a sessão depois de conectar.** O JWT e a versão de
+    sessão são checados no `CONNECT`. Depois de uma troca de senha, ou de o
+    token vencer, uma conexão já aberta continua recebendo eventos das conversas
+    até cair (a participação em cada conversa continua sendo conferida a cada
+    envio). Correção: derrubar pelo servidor as conexões da conta quando a
+    versão de sessão muda.

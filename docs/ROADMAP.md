@@ -68,5 +68,8 @@ próprios, tutorial, "Atualizar dados") foi deixado de propósito para esta etap
 - **DM com perfil privado:** hoje qualquer pessoa pode abrir conversa com
   qualquer outra. Decidir se perfil privado só recebe DM de quem segue.
 - Pendências de segurança: lista completa no [SECURITY.md](../SECURITY.md).
+- **Notificações antigas de perfil que virou privado** (ou de quem deixou de
+  seguir) continuam mostrando título, capa e nota da obra. Esconder a obra quando
+  quem vê já não teria acesso a ela.
 - Apagar as colunas do fluxo antigo de link (`email_verification_*`,
   `password_reset_*`) quando não houver mais conta pendente desse fluxo.
