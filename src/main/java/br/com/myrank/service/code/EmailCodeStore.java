@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class EmailCodeStore {
 
-    /** Teto de memória: acima disso, descarta os vencidos antes de aceitar outro. */
+    /** Teto de memória: acima disso, descarta os vencidos; se não abrir espaço, recusa o pedido. */
     private static final int MAX_PENDING = 10_000;
 
     private record Pending(String codeHash, Instant sentAt, Instant expiresAt, int attempts) {}
@@ -47,8 +47,12 @@ public final class EmailCodeStore {
         if (previous != null && previous.sentAt().plus(resendCooldown).isAfter(now)) {
             throw new IllegalArgumentException("Aguarde alguns segundos antes de pedir outro código.");
         }
-        if (pending.size() >= MAX_PENDING) {
+        if (pending.size() >= MAX_PENDING && previous == null) {
             pending.values().removeIf(p -> !p.expiresAt().isAfter(now));
+            // ainda cheio: é enxurrada de pedidos; recusar é melhor que deixar a memória crescer sem fim
+            if (pending.size() >= MAX_PENDING) {
+                throw new IllegalStateException("Muitos pedidos de código agora. Tente de novo em alguns minutos.");
+            }
         }
 
         String code = String.format("%06d", random.nextInt(1_000_000));
