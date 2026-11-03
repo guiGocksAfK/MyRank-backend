@@ -130,8 +130,10 @@ public class InsightService {
         InsightPayloadDTO payload;
         try {
             TasteFacts facts = facts(userId, works);
+            Set<String> rankedTitles = works.stream().map(Work::getTitle).collect(Collectors.toSet());
             payload = gemini.analyze(InsightPromptBuilder.SYSTEM, InsightPromptBuilder.user(facts))
-                    .withTasteProfile(facts.tasteProfile());
+                    .withTasteProfile(facts.tasteProfile())
+                    .withCleanRecommendations(rankedTitles);
         } catch (RuntimeException e) {
             usage.release(userId, reservation);
             throw e;

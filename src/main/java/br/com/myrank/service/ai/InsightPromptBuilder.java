@@ -13,7 +13,7 @@ final class InsightPromptBuilder {
      * Versão do prompt. Entra no hash do cache: mudou o prompt, sobe a versão, e uma
      * análise antiga não é reaproveitada como se fosse do formato novo.
      */
-    static final String VERSION = "v2";
+    static final String VERSION = "v3";
 
     static final String SYSTEM = """
             Você analisa o gosto de uma pessoa a partir do ranking dela no MyRank.
@@ -71,18 +71,23 @@ final class InsightPromptBuilder {
                   "contradictions": [
                     { "icon": "um emoji", "text": "1 frase sobre uma nota que contraria o padrão, ex.: 'Ama terror psicológico, mas deu 4 pra Hereditário'" }
                   ],
-                  "recommendation": {
-                    "title": "obra que NÃO está no ranking",
-                    "year": 2000,
-                    "category": "Filme, Série, Anime, Mangá, Jogo, Livro, Música ou Álbum",
-                    "reason": "2 frases ligando a recomendação a pelo menos 2 obras do ranking, com nota"
-                  }
+                  "recommendations": [
+                    {
+                      "title": "obra que NÃO está no ranking",
+                      "year": 2000,
+                      "category": "Filme, Série, Anime, Mangá, Jogo, Livro, Música ou Álbum",
+                      "reason": "2 frases ligando a recomendação a pelo menos 2 obras do ranking, com nota"
+                    }
+                  ]
                 }
 
                 Regras:
                 - traits: exatamente 3, diferentes entre si e com obras diferentes; cada um
                   nasce de um padrão dos FATOS ou dos takes, não do tipo de obra.
                 - contradictions: de 0 a 2, só a partir das TENSÕES dos fatos; lista vazia se não houver.
+                - recommendations: exatamente 3, obras diferentes entre si e de tipos
+                  diferentes quando o ranking tiver mais de um tipo; cada uma ligada a
+                  obras diferentes do ranking.
                 - Responda SOMENTE o JSON.
                 """.formatted(facts.ranking(), facts.summary());
     }
@@ -96,11 +101,12 @@ final class InsightPromptBuilder {
                 : a.contradictions().stream()
                     .map(InsightPayloadDTO.Contradiction::text)
                     .collect(Collectors.joining("; "));
-        var r = a.recommendation();
-        String reco = r == null ? "—"
-                : r.title() + (r.year() != null ? " (" + r.year() + ")" : "")
-                  + (r.category() != null ? ", " + r.category() : "")
-                  + ": " + r.reason();
+        String reco = a.recommendations() == null || a.recommendations().isEmpty() ? "—"
+                : a.recommendations().stream()
+                    .map(r -> r.title() + (r.year() != null ? " (" + r.year() + ")" : "")
+                            + (r.category() != null ? ", " + r.category() : "")
+                            + ": " + r.reason())
+                    .collect(Collectors.joining("; "));
 
         return """
                 ANÁLISE QUE A PESSOA VIU:
@@ -108,7 +114,7 @@ final class InsightPromptBuilder {
                 Resumo: %s
                 Traços: %s
                 Contradições: %s
-                Recomendação: %s
+                Recomendações: %s
 
                 RANKING (título | tipo | criador | ano | nota | tempo | posição na tabela | gêneros | take):
                 %s

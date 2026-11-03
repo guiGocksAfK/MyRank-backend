@@ -78,7 +78,7 @@ class GeminiClientTest {
         replies.add(new Reply(429, "{\"error\":\"quota\"}"));
         replies.add(new Reply(200, completion(VALID_PAYLOAD)));
 
-        assertThat(client.analyze("sys", "user").recommendation().title()).isEqualTo("R");
+        assertThat(client.analyze("sys", "user").recommendations().get(0).title()).isEqualTo("R");
         assertThat(requests).hasSize(2);
     }
 
