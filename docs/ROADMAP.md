@@ -27,8 +27,6 @@ temperatura menor, teto de tamanho da resposta e versão do prompt no cache.
 
 Falta, sem data:
 
-- Três recomendações (uma por tipo principal), descartando no código o que a
-  pessoa já avaliou. Hoje é uma, e só o prompt pede pra não repetir.
 - Responder no idioma da conta (hoje sempre em português) e analisar uma tabela só.
 
 ## 3. Remaster das telas internas

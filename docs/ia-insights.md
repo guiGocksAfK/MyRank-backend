@@ -13,7 +13,7 @@ coisas específicas.
 
 | Parte da análise | Quem faz |
 |---|---|
-| Título, resumo, 3 traços, contradições, recomendação | IA |
+| Título, resumo, 3 traços, contradições, 3 recomendações | IA |
 | Perfil de gosto (média e quantidade por gênero ou tipo) | Código |
 | Rigor, médias, criadores, tensões (base pras contradições) | Código, mandado pra IA |
 
@@ -54,8 +54,12 @@ guardar gêneros caem nesse segundo caso.
   qualquer pessoa, está errado.
 - Lista de frases genéricas proibidas ("narrativas profundas", "personagens
   complexos", "gosto eclético"…).
-- Não recomendar o que já está no ranking (hoje só o prompt pede; o código não
-  confere).
+- Três recomendações, de tipos diferentes quando o ranking tem mais de um tipo.
+  O prompt proíbe recomendar o que já está no ranking, e o código confere de
+  novo: tira as que já estão no ranking (título sem diferenciar maiúsculas), as
+  repetidas e as sem título, e corta em 3 (`withCleanRecommendations`).
+- Análises de antes do prompt v3 têm uma recomendação só (`recommendation`); ao
+  ler, ela vira a lista `recommendations` com um item, e o front só olha a lista.
 - Contradições: de 0 a 2, só a partir das tensões.
 
 `VERSION` entra no hash do cache. **Mudou o prompt, sobe a versão**: senão uma
