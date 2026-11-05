@@ -23,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -229,7 +230,10 @@ public class MyAnimeListService {
         headers.set("accept", "application/json");
 
         HttpEntity<Void> entity = new HttpEntity<>(headers);
-        ResponseEntity<T> response = restTemplate.exchange(url, HttpMethod.GET, entity, responseType);
+        // URI, não String: o endereço já vem codificado do UriComponentsBuilder, e com
+        // String o RestTemplate codifica de novo ("Cowboy Bebop" virava Cowboy%2520Bebop
+        // e o MAL não achava nada com mais de uma palavra)
+        ResponseEntity<T> response = restTemplate.exchange(URI.create(url), HttpMethod.GET, entity, responseType);
         return response.getBody();
     }
 }

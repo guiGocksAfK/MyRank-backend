@@ -25,6 +25,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.net.URI;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -94,7 +95,7 @@ class MyAnimeListServiceTest {
     @ParameterizedTest
     @ValueSource(strings = {"anime", "manga"})
     void buscaComTimeoutOuErroDeServidorMantemListaVazia(String resource) {
-        when(restTemplate.exchange(eq(searchUrl(resource, "Naruto")), eq(HttpMethod.GET),
+        when(restTemplate.exchange(eq(URI.create(searchUrl(resource, "Naruto"))), eq(HttpMethod.GET),
                 any(HttpEntity.class), eq(MalListResponseDTO.class)))
                 .thenThrow(new ResourceAccessException("MAL fora do ar"))
                 .thenThrow(new HttpServerErrorException(HttpStatus.SERVICE_UNAVAILABLE));
@@ -106,7 +107,7 @@ class MyAnimeListServiceTest {
     @CsvSource({"anime,animes", "manga,mangás"})
     void buscaComErroDeClienteMantemExcecaoMensagem_eCausa(String resource, String worksName) {
         RestClientException cause = new HttpClientErrorException(HttpStatus.FORBIDDEN);
-        when(restTemplate.exchange(eq(searchUrl(resource, "Naruto")), eq(HttpMethod.GET),
+        when(restTemplate.exchange(eq(URI.create(searchUrl(resource, "Naruto"))), eq(HttpMethod.GET),
                 any(HttpEntity.class), eq(MalListResponseDTO.class))).thenThrow(cause);
         assertThatThrownBy(() -> search(resource, "Naruto"))
                 .isInstanceOf(ExternalServiceUnavailableException.class)
@@ -188,7 +189,7 @@ class MyAnimeListServiceTest {
         String url = resource.equals("anime") ? ANIME_URL : MANGA_URL;
         Class<? extends MalAnimeNodeDTO> type = resource.equals("anime") ? MalAnimeNodeDTO.class : MalMangaNodeDTO.class;
         ResourceAccessException timeout = new ResourceAccessException("MAL fora do ar");
-        when(restTemplate.exchange(eq(url), eq(HttpMethod.GET), any(HttpEntity.class), eq(type)))
+        when(restTemplate.exchange(eq(URI.create(url)), eq(HttpMethod.GET), any(HttpEntity.class), eq(type)))
                 .thenThrow(timeout).thenThrow(new HttpServerErrorException(HttpStatus.SERVICE_UNAVAILABLE));
         assertThatThrownBy(() -> details(resource, 13L))
                 .isInstanceOf(ExternalServiceUnavailableException.class)
@@ -264,7 +265,7 @@ class MyAnimeListServiceTest {
                 """, MalListResponseDTO.class));
         assertThat(service.getShowcasePosters()).containsExactly("https://img.test/large.jpg", "https://img.test/medium.jpg");
         verifyRequest(url, MalListResponseDTO.class);
-        when(restTemplate.exchange(eq(url), eq(HttpMethod.GET), any(HttpEntity.class), eq(MalListResponseDTO.class)))
+        when(restTemplate.exchange(eq(URI.create(url)), eq(HttpMethod.GET), any(HttpEntity.class), eq(MalListResponseDTO.class)))
                 .thenThrow(new HttpClientErrorException(HttpStatus.FORBIDDEN));
         assertThat(service.getShowcasePosters()).isEmpty();
     }
@@ -282,14 +283,14 @@ class MyAnimeListServiceTest {
     }
 
     private <T> void respond(String url, Class<T> type, T body) {
-        when(restTemplate.exchange(eq(url), eq(HttpMethod.GET), any(HttpEntity.class), eq(type)))
+        when(restTemplate.exchange(eq(URI.create(url)), eq(HttpMethod.GET), any(HttpEntity.class), eq(type)))
                 .thenReturn(ResponseEntity.ok(body));
     }
 
     @SuppressWarnings("rawtypes")
     private <T> void verifyRequest(String url, Class<T> type) {
         ArgumentCaptor<HttpEntity> request = ArgumentCaptor.forClass(HttpEntity.class);
-        verify(restTemplate).exchange(eq(url), eq(HttpMethod.GET), request.capture(), eq(type));
+        verify(restTemplate).exchange(eq(URI.create(url)), eq(HttpMethod.GET), request.capture(), eq(type));
         assertThat(request.getValue().getHeaders().getFirst("X-MAL-CLIENT-ID")).isEqualTo(CLIENT_ID);
         assertThat(request.getValue().getHeaders().getFirst("accept")).isEqualTo("application/json");
         assertThat(request.getValue().getBody()).isNull();
