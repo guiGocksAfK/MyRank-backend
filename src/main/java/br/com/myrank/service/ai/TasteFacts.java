@@ -3,6 +3,7 @@ package br.com.myrank.service.ai;
 import br.com.myrank.domain.entity.Work;
 import br.com.myrank.domain.enums.TableTemplate;
 import br.com.myrank.dto.insight.InsightPayloadDTO.TasteSlice;
+import br.com.myrank.service.CreatorNames;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -125,11 +126,18 @@ final class TasteFacts {
         return stats(groups, MIN_GROUP).stream().limit(6).toList();
     }
 
+    /**
+     * Cada pessoa do campo criador conta à parte (Better Call Saul soma pro Vince
+     * Gilligan e pro Peter Gould); grafias que só diferem em acento/maiúscula se juntam
+     * com o nome da primeira vez que apareceu.
+     */
     private List<Stat> byCreator() {
+        Map<String, String> nameByKey = new HashMap<>();
         Map<String, List<Work>> groups = new LinkedHashMap<>();
         for (Work w : works) {
-            if (notBlank(w.getCreator())) {
-                groups.computeIfAbsent(w.getCreator().trim(), k -> new ArrayList<>()).add(w);
+            for (String name : CreatorNames.split(w.getCreator())) {
+                String shown = nameByKey.computeIfAbsent(CreatorNames.key(name), k -> name);
+                groups.computeIfAbsent(shown, k -> new ArrayList<>()).add(w);
             }
         }
         return stats(groups, MIN_GROUP).stream()

@@ -93,6 +93,20 @@ class TasteFactsTest {
     }
 
     @Test
+    void criadores_cadaPessoaDoCampoContaAParte() {
+        List<Work> works = sorted(List.of(
+                work("Breaking Bad", series, TableTemplate.TV, "10", 3480, "Vince Gilligan", List.of()),
+                work("Better Call Saul", series, TableTemplate.TV, "9", 3000, "Vince Gilligan, Peter Gould", List.of()),
+                work("El Camino", movies, TableTemplate.MOVIE, "8", 122, "vince gilligan", List.of())));
+
+        String summary = new TasteFacts(works, Map.of()).summary();
+
+        // grafia diferente junta, com o nome da primeira vez; Peter Gould (1 obra) não entra
+        assertThat(summary).contains("Criadores (2+ obras): Vince Gilligan 9,0 (3)");
+        assertThat(summary).doesNotContain("Peter Gould");
+    }
+
+    @Test
     void perfilDeGosto_usaGeneros_quandoHaPeloMenosTres() {
         List<Work> works = sorted(List.of(
                 work("A", movies, TableTemplate.MOVIE, "10", 100, "x", List.of("Drama", "Crime")),
