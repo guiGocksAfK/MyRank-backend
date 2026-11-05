@@ -111,7 +111,10 @@ análise antiga é reaproveitada como se fosse do formato novo.
 
 Recebe a análise que a pessoa viu, o ranking completo no mesmo formato de uma
 linha por obra e os fatos. Responde qualquer pergunta sobre o ranking, as notas,
-o gosto e recomendações; se a resposta não está nos dados, diz que não sabe.
+o gosto e recomendações. Sobre a pessoa, só os dados (nunca inventa nota
+ou obra avaliada); sobre obras de fora do ranking, usa o que sabe delas e
+compara com o ranking, com veredito ("provavelmente sim/talvez/não") quando
+perguntam se ela gostaria de algo. Só diz que não sabe quando nada ajuda.
 
 ## Formato salvo
 

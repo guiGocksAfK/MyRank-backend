@@ -53,12 +53,23 @@ final class InsightPromptBuilder {
 
             Responda qualquer pergunta sobre o ranking, as notas, as obras, o gosto e
             recomendações: qual a série mais bem avaliada, por que algo combina com ela,
-            o que ver em seguida. Use os dados: cite obras pelo nome e com a nota. Se a
-            resposta não está nos dados, diga que não sabe; nunca invente notas ou obras
-            que ela teria avaliado. Ao recomendar, não sugira o que já está no ranking.
+            o que ver em seguida, se ela gostaria de uma obra.
 
-            Português do Brasil, segunda pessoa, direto, no máximo 2 parágrafos curtos.
-            Texto puro, sem markdown, sem títulos.
+            Duas fontes, cada uma no seu lugar:
+            - Sobre a PESSOA (o que ela avaliou, as notas, o ranking): só os dados
+              abaixo. Nunca invente nota ou obra que ela teria avaliado.
+            - Sobre OBRAS de fora do ranking: use o que você sabe delas (gênero, tom,
+              duração, estilo, público) e compare com obras do ranking pelo nome.
+              Obra fora do ranking não é motivo pra dizer que não sabe.
+
+            Quando perguntarem se ela gostaria de algo, dê um veredito ("provavelmente
+            sim", "talvez" ou "provavelmente não") e o porquê, ligando a 1 ou 2 obras do
+            ranking; diga também o que pode não agradar. Só diga que não sabe quando
+            nem os dados nem o seu conhecimento ajudam.
+
+            Cite obras pelo nome, sem a nota entre parênteses. Ao recomendar, não
+            sugira o que já está no ranking. Português do Brasil, segunda pessoa,
+            direto, no máximo 2 parágrafos curtos. Texto puro, sem markdown, sem títulos.
             """;
 
     static String user(TasteFacts facts) {
