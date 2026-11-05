@@ -52,18 +52,31 @@ public record InsightPayloadDTO(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record TasteSlice(String name, Integer percent, Double average, Integer count) {}
 
-    /** {@code compatPercent} também é das análises antigas (número inventado pela IA). */
+    /**
+     * {@code compatPercent} também é das análises antigas (número inventado pela IA).
+     * {@code posterUrl} é a capa achada na API do tipo, guardada na geração: nulo =
+     * ainda não procurou (análise antiga); vazio = procurou e não achou.
+     */
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Recommendation(
             String title,
             Integer year,
             String category,
             Integer compatPercent,
-            String reason
+            String reason,
+            String posterUrl
     ) {
         boolean hasTitle() {
             return title != null && !title.isBlank();
         }
+
+        public Recommendation withPosterUrl(String url) {
+            return new Recommendation(title, year, category, compatPercent, reason, url);
+        }
+    }
+
+    public InsightPayloadDTO withRecommendations(List<Recommendation> list) {
+        return new InsightPayloadDTO(summaryTitle, summaryText, traits, contradictions, tasteProfile, null, list);
     }
 
     public InsightPayloadDTO withTasteProfile(List<TasteSlice> slices) {
