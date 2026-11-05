@@ -10,13 +10,14 @@ public class BadgeContext {
 
     /** Uma obra achatada pro que as regras precisam. */
     public record WorkView(
-            String type,          // jogo | filme | serie | livro | anime | outro
+            String type,          // jogo | filme | serie | livro | anime | manga | musica | album | outro
             double score,         // nota original 0..10
             int timeMinutes,
             List<String> creatorKeys, // cada pessoa do campo criador, normalizada (CreatorNames)
             Integer releaseYear,  // ano de lançamento ou null
             java.time.LocalDate addedDate,
-            boolean edited        // teve a nota/dados editados depois de cadastrada
+            boolean edited,       // teve a nota/dados editados depois de cadastrada
+            Long tableId          // tabela (categoria) onde a obra está
     ) {
         double hours() { return timeMinutes / 60.0; }
     }
@@ -71,6 +72,31 @@ public class BadgeContext {
                 .distinct().count();
     }
 
+    /** Décadas de lançamento distintas dentro de um tipo. */
+    public int distinctDecadesOfType(String type) {
+        return (int) works.stream()
+                .filter(w -> w.type().equals(type) && w.releaseYear() != null)
+                .map(w -> w.releaseYear() / 10)
+                .distinct().count();
+    }
+
+    /** Quantas obras do tipo tem a pessoa (criador) que mais aparece nele. */
+    public int maxWorksBySameCreator(String type) {
+        return works.stream()
+                .filter(w -> w.type().equals(type))
+                .flatMap(w -> w.creatorKeys().stream().distinct())
+                .collect(java.util.stream.Collectors.groupingBy(k -> k, java.util.stream.Collectors.counting()))
+                .values().stream().mapToInt(Long::intValue).max().orElse(0);
+    }
+
+    /** Tabelas diferentes que têm ao menos uma obra do tipo. */
+    public int distinctTablesOfType(String type) {
+        return (int) works.stream()
+                .filter(w -> w.type().equals(type) && w.tableId() != null)
+                .map(BadgeContext.WorkView::tableId)
+                .distinct().count();
+    }
+
     public boolean hasEditedWork() {
         return works.stream().anyMatch(BadgeContext.WorkView::edited);
     }
@@ -92,6 +118,12 @@ public class BadgeContext {
                 .mapToDouble(BadgeContext.WorkView::hours).max().orElse(0));
     }
 
+    /** Alguma obra do tipo com tempo registrado (> 0) de até `hours` horas. */
+    public boolean hasShortWorkOfType(String type, int hours) {
+        return works.stream().anyMatch(w ->
+                w.type().equals(type) && w.timeMinutes() > 0 && w.timeMinutes() <= hours * 60);
+    }
+
     // ── notas ─────────────────────────────────────────────────
     public boolean hasTenOfType(String type) {
         return works.stream().anyMatch(w -> w.type().equals(type) && w.score() >= TEN);
@@ -103,6 +135,14 @@ public class BadgeContext {
 
     public int countScoreGte(double v) {
         return (int) works.stream().filter(w -> w.score() >= v).count();
+    }
+
+    public int countScoreLte(double v) {
+        return (int) works.stream().filter(w -> w.score() <= v).count();
+    }
+
+    public int countScoreGteOfType(String type, double v) {
+        return (int) works.stream().filter(w -> w.type().equals(type) && w.score() >= v).count();
     }
 
     public boolean hasScoreLte(double v) {
@@ -122,6 +162,13 @@ public class BadgeContext {
     public boolean hasWorkBefore(String type, int year) {
         return works.stream().anyMatch(w ->
                 w.type().equals(type) && w.releaseYear() != null && w.releaseYear() < year);
+    }
+
+    /** Avaliou no mesmo ano em que a obra saiu (pelo dia em que foi adicionada). */
+    public boolean hasWorkInReleaseYear(String type) {
+        return works.stream().anyMatch(w -> w.type().equals(type)
+                && w.releaseYear() != null && w.addedDate() != null
+                && w.releaseYear() == w.addedDate().getYear());
     }
 
     public boolean hasAnyWorkBefore(int year) {
