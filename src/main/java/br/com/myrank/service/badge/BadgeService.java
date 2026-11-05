@@ -6,6 +6,7 @@ import br.com.myrank.domain.entity.UserBadge;
 import br.com.myrank.domain.entity.Work;
 import br.com.myrank.dto.BadgeResponseDTO;
 import br.com.myrank.repository.*;
+import br.com.myrank.service.CreatorNames;
 import br.com.myrank.service.social.FeedEventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,12 +146,12 @@ public class BadgeService {
         List<BadgeContext.WorkView> views = works.stream().map(w -> {
             String type = w.getTemplate().type();
             double score = w.getScore() != null ? w.getScore().doubleValue() : 0.0;
-            String creatorKey = normalizeCreator(w.getCreator());
+            List<String> creatorKeys = CreatorNames.keys(w.getCreator());
             Integer year = w.getReleaseDate() != null ? w.getReleaseDate().getYear() : null;
             LocalDate added = w.getCreatedAt() != null ? w.getCreatedAt().toLocalDate() : null;
             boolean edited = w.getCreatedAt() != null && w.getUpdatedAt() != null
                     && ChronoUnit.SECONDS.between(w.getCreatedAt(), w.getUpdatedAt()) > 60;
-            return new BadgeContext.WorkView(type, score, w.getTimeMinutes(), creatorKey, year, added, edited);
+            return new BadgeContext.WorkView(type, score, w.getTimeMinutes(), creatorKeys, year, added, edited);
         }).toList();
 
         boolean hasAvatar = user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank();
@@ -163,12 +164,6 @@ public class BadgeService {
                 : 0L;
 
         return new BadgeContext(views, hasAvatar, hasBio, hasCustomCategory, hasMasterGroup, accountAgeDays);
-    }
-
-    private static String normalizeCreator(String creator) {
-        if (creator == null) return null;
-        String t = creator.trim().toLowerCase();
-        return t.isEmpty() ? null : t;
     }
 
 }

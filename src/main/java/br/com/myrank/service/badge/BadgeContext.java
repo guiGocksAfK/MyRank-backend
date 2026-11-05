@@ -13,7 +13,7 @@ public class BadgeContext {
             String type,          // jogo | filme | serie | livro | anime | outro
             double score,         // nota original 0..10
             int timeMinutes,
-            String creatorKey,    // creator normalizado (lower/trim) ou null
+            List<String> creatorKeys, // cada pessoa do campo criador, normalizada (CreatorNames)
             Integer releaseYear,  // ano de lançamento ou null
             java.time.LocalDate addedDate,
             boolean edited        // teve a nota/dados editados depois de cadastrada
@@ -50,8 +50,8 @@ public class BadgeContext {
 
     public int distinctCreators(String type) {
         return (int) works.stream()
-                .filter(w -> w.type().equals(type) && w.creatorKey() != null)
-                .map(BadgeContext.WorkView::creatorKey)
+                .filter(w -> w.type().equals(type))
+                .flatMap(w -> w.creatorKeys().stream())
                 .distinct().count();
     }
 
