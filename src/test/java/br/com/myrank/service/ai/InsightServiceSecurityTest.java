@@ -21,7 +21,8 @@ class InsightServiceSecurityTest {
     private final GeminiClient gemini = mock(GeminiClient.class);
     private final AiUsageService usage = mock(AiUsageService.class);
     private final InsightService service = new InsightService(
-            works, mock(TakeRepository.class), mock(AiInsightRepository.class), gemini, usage, new ObjectMapper());
+            works, mock(TakeRepository.class), mock(AiInsightRepository.class), gemini, usage, new ObjectMapper(),
+            new RecommendationCovers(java.util.Map.of()));
 
     private void oneWork() {
         Work work = new Work();

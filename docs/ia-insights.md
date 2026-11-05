@@ -34,6 +34,11 @@ coisas específicas.
 
 - **Rigor:** média geral, quantas notas 10 e um rótulo (generoso a partir de
   8,5 de média, exigente até 6,5, equilibrado no meio).
+- **Faixa de notas:** a menor e a maior. Com a faixa estreita (tudo entre 9 e
+  10), "dá notas altas" não diferencia ninguém, e o prompt proíbe dizer isso.
+- **Tempo:** o total de horas e as 3 obras que mais tomaram tempo, com a fatia
+  de cada uma (música, álbum e mangá ficam de fora). É o dado que mais
+  diferencia uma pessoa de outra ("uma obra é 90% das suas horas").
 - **Médias por tipo**, por **gênero** e por **criador** (gênero e criador só
   com 2 ou mais obras).
 - **Tensões:** obras com nota pelo menos 2,5 abaixo da média do próprio gênero
@@ -48,10 +53,17 @@ guardar gêneros caem nesse segundo caso.
 
 `InsightPromptBuilder`. Regras principais:
 
-- Toda afirmação cita obras do ranking com a nota, como "Breaking Bad (10)".
-- Os traços nascem de padrões que só esse ranking tem (criador favorito, tipo
-  ou gênero muito acima dos outros, um take, o rigor). Se caberia no perfil de
-  qualquer pessoa, está errado.
+- Toda afirmação cita obras do ranking pelo nome, **sem a nota entre
+  parênteses** (a pessoa já vê as notas no site; no prompt v3 a nota em toda
+  citação deixava o texto robótico). No máximo um número por texto.
+- O resumo diz o que é característico da pessoa, sem média nem contagem de
+  obras: a tela já mostra isso.
+- Os traços nascem de padrões que só esse ranking tem (onde está o tempo,
+  mistura de tipos, criador com 3+ obras, um take) e se apoiam em pelo menos 3
+  obras ou num fato forte. Traço que é só um gênero ("gosta de ação") é
+  proibido: a seção de gêneros já mostra. Se caberia no perfil de qualquer
+  pessoa, está errado.
+- O motivo de cada recomendação tem 1 ou 2 frases e liga a uma obra só.
 - Lista de frases genéricas proibidas ("narrativas profundas", "personagens
   complexos", "gosto eclético"…).
 - Três recomendações, de tipos diferentes quando o ranking tem mais de um tipo.
@@ -60,6 +72,11 @@ guardar gêneros caem nesse segundo caso.
   repetidas e as sem título, e corta em 3 (`withCleanRecommendations`).
 - Análises de antes do prompt v3 têm uma recomendação só (`recommendation`); ao
   ler, ela vira a lista `recommendations` com um item, e o front só olha a lista.
+- Cada recomendação ganha a capa na hora de gerar (`RecommendationCovers`): a
+  obra é procurada na API do tipo (TMDB, MyAnimeList, RAWG, Google Books,
+  Deezer), preferindo título e ano iguais, e a capa fica guardada no `payload`.
+  Vazio = procurou e não achou. Análise de antes das capas procura uma vez ao
+  abrir e guarda; nada disso gasta mensagem de IA.
 - Contradições: de 0 a 2, só a partir das tensões.
 
 `VERSION` entra no hash do cache. **Mudou o prompt, sobe a versão**: senão uma
@@ -94,7 +111,10 @@ análise antiga é reaproveitada como se fosse do formato novo.
 
 Recebe a análise que a pessoa viu, o ranking completo no mesmo formato de uma
 linha por obra e os fatos. Responde qualquer pergunta sobre o ranking, as notas,
-o gosto e recomendações; se a resposta não está nos dados, diz que não sabe.
+o gosto e recomendações. Sobre a pessoa, só os dados (nunca inventa nota
+ou obra avaliada); sobre obras de fora do ranking, usa o que sabe delas e
+compara com o ranking, com veredito ("provavelmente sim/talvez/não") quando
+perguntam se ela gostaria de algo. Só diz que não sabe quando nada ajuda.
 
 ## Formato salvo
 

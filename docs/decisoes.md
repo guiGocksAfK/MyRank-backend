@@ -34,6 +34,17 @@ deixar o motivo.
   pessoa gostou.
 - **Ordem manual só desempata notas iguais.** Arrastar não pode contradizer a
   nota; a nota continua sendo a verdade.
+- **Criador com várias pessoas conta pra cada uma** ("Vince Gilligan, Peter
+  Gould" soma pros dois), nas conquistas, na IA e na tela de Criadores. A regra
+  de separar nomes fica num lugar só (`CreatorNames`, e `creatorNames.js` no front).
+- **Na tela de Criadores, cada obra aparece uma vez sempre que dá:** quem fez as
+  mesmas obras junto vira uma linha só ("David Benioff & D. B. Weiss") e quem só
+  tem obras junto com alguém de mais obras aparece dentro dele ("com Peter
+  Gould"). Duas carreiras próprias que se cruzam continuam aparecendo nas duas.
+- **Foto do criador vem da TMDB** (foto de pessoa ou logo de estúdio), guardada
+  uma vez por nome e compartilhada entre todos. Só aceita nome igual, para não
+  pegar homônimo; quando erra, a pessoa troca a foto (e o tipo) no "Editar", e
+  isso vale só para ela.
 
 ## Contas e segurança
 

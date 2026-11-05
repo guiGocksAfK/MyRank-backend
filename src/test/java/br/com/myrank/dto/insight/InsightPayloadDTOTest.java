@@ -13,7 +13,7 @@ class InsightPayloadDTOTest {
     private final ObjectMapper mapper = new ObjectMapper();
 
     private static InsightPayloadDTO.Recommendation reco(String title) {
-        return new InsightPayloadDTO.Recommendation(title, 2000, "Filme", null, "r");
+        return new InsightPayloadDTO.Recommendation(title, 2000, "Filme", null, "r", null);
     }
 
     private static InsightPayloadDTO withRecos(InsightPayloadDTO.Recommendation... recos) {
