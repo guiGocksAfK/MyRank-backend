@@ -13,7 +13,7 @@ final class InsightPromptBuilder {
      * Versão do prompt. Entra no hash do cache: mudou o prompt, sobe a versão, e uma
      * análise antiga não é reaproveitada como se fosse do formato novo.
      */
-    static final String VERSION = "v3";
+    static final String VERSION = "v4";
 
     static final String SYSTEM = """
             Você analisa o gosto de uma pessoa a partir do ranking dela no MyRank.
@@ -23,12 +23,14 @@ final class InsightPromptBuilder {
 
             O que vale:
             - Ser específico: toda afirmação se apoia em obras do ranking, citadas pelo
-              nome e com a nota entre parênteses, como "Breaking Bad (10)".
-            - Mostrar padrões que só ESTE ranking tem: um criador favorito, um tipo ou
-              gênero com média bem acima ou abaixo dos outros, algo dito nos takes, o
-              rigor das notas. Se o texto caberia no perfil de qualquer pessoa, está errado.
-            - Usar os FATOS como verdade: médias, rigor e tensões já foram calculados.
-              Não invente números nem notas.
+              nome (sem a nota entre parênteses: a pessoa já vê as notas no site). No
+              máximo um número por texto, e só quando ele surpreende.
+            - Mostrar padrões que só ESTE ranking tem: onde está o tempo (obras longas
+              ou curtas, uma obra que domina as horas), a mistura de tipos, um criador
+              com 3+ obras, algo dito nos takes. Se o texto caberia no perfil de qualquer
+              pessoa, está errado.
+            - Usar os FATOS como verdade: médias, faixa de notas, tempo e tensões já
+              foram calculados. Não invente números nem notas.
             - Os takes são opiniões escritas pela própria pessoa: são o melhor sinal do
               gosto dela.
 
@@ -38,6 +40,10 @@ final class InsightPromptBuilder {
               histórias", "gosto eclético", "gosto refinado", "obras-primas".
             - Citar obra que não está no ranking como se a pessoa tivesse avaliado.
             - Recomendar uma obra que já está no ranking.
+            - Repetir o que a tela já mostra: a média geral, o número de obras, a lista
+              de gêneros. Um traço que é só "gosta de ação/drama" está errado.
+            - Falar em "notas altas" quando a FAIXA DE NOTAS for estreita: aí todas são
+              altas e isso não diferencia nada.
             """;
 
     static final String CHAT_SYSTEM = """
@@ -64,9 +70,9 @@ final class InsightPromptBuilder {
                 Responda com este JSON (troque os valores):
                 {
                   "summaryTitle": "título curto e personalizado do perfil, ex.: 'O Colecionador de Anti-heróis'",
-                  "summaryText": "2 a 3 frases sobre o gosto da pessoa, citando pelo menos 2 obras com nota e pelo menos 1 número dos FATOS",
+                  "summaryText": "2 frases sobre o que é característico desta pessoa, citando 1 ou 2 obras pelo nome; sem média e sem contagem de obras",
                   "traits": [
-                    { "icon": "um emoji", "label": "nome curto do traço", "description": "1 a 2 frases citando pelo menos 2 obras com nota" }
+                    { "icon": "um emoji", "label": "nome curto do traço", "description": "1 a 2 frases citando obras pelo nome, sem nota" }
                   ],
                   "contradictions": [
                     { "icon": "um emoji", "text": "1 frase sobre uma nota que contraria o padrão, ex.: 'Ama terror psicológico, mas deu 4 pra Hereditário'" }
@@ -76,14 +82,16 @@ final class InsightPromptBuilder {
                       "title": "obra que NÃO está no ranking",
                       "year": 2000,
                       "category": "Filme, Série, Anime, Mangá, Jogo, Livro, Música ou Álbum",
-                      "reason": "2 frases ligando a recomendação a pelo menos 2 obras do ranking, com nota"
+                      "reason": "1 a 2 frases curtas ligando a recomendação a UMA obra do ranking, pelo nome, sem nota"
                     }
                   ]
                 }
 
                 Regras:
                 - traits: exatamente 3, diferentes entre si e com obras diferentes; cada um
-                  nasce de um padrão dos FATOS ou dos takes, não do tipo de obra.
+                  nasce de um padrão dos FATOS ou dos takes (tempo, mistura de tipos,
+                  criador com 3+ obras), não do tipo nem do gênero de obra, e se apoia em
+                  pelo menos 3 obras ou num fato forte.
                 - contradictions: de 0 a 2, só a partir das TENSÕES dos fatos; lista vazia se não houver.
                 - recommendations: exatamente 3, obras diferentes entre si e de tipos
                   diferentes quando o ranking tiver mais de um tipo; cada uma ligada a

@@ -93,6 +93,20 @@ class TasteFactsTest {
     }
 
     @Test
+    void fatos_trazemFaixaDeNotasETempo_semMusica() {
+        List<Work> works = sorted(List.of(
+                work("One Piece", series, TableTemplate.TV, "10", 36000, "Toei", List.of()),
+                work("Breaking Bad", series, TableTemplate.TV, "9", 3000, "Vince Gilligan", List.of()),
+                work("Interestelar", movies, TableTemplate.MOVIE, "9", 1000, "Nolan", List.of()),
+                work("Thriller", songs, TableTemplate.MUSIC, "10", 999999, "Michael Jackson", List.of())));
+
+        String summary = new TasteFacts(works, Map.of()).summary();
+
+        assertThat(summary).contains("Faixa de notas: de 9,0 a 10,0.");
+        assertThat(summary).contains("Tempo: 667h no total; mais tempo em \"One Piece\" 600h (90%), \"Breaking Bad\" 50h (8%), \"Interestelar\" 17h (3%).");
+    }
+
+    @Test
     void criadores_cadaPessoaDoCampoContaAParte() {
         List<Work> works = sorted(List.of(
                 work("Breaking Bad", series, TableTemplate.TV, "10", 3480, "Vince Gilligan", List.of()),

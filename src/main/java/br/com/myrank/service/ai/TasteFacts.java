@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * O que dá pra saber do gosto da pessoa sem IA: médias por tipo, gênero e criador,
@@ -83,6 +84,13 @@ final class TasteFacts {
         out.append("Rigor: média geral ").append(decimal(average)).append(" em ").append(works.size())
                 .append(" obras, ").append(tens).append(" com nota 10 — ").append(rigor(average)).append(".\n");
 
+        // faixa: com todas as notas entre 9 e 10, "você dá notas altas" não diz nada
+        double min = works.stream().mapToDouble(w -> value(w.getScore())).min().orElse(0);
+        double max = works.stream().mapToDouble(w -> value(w.getScore())).max().orElse(0);
+        out.append("Faixa de notas: de ").append(decimal(min)).append(" a ").append(decimal(max)).append(".\n");
+
+        out.append("Tempo: ").append(time()).append(".\n");
+
         out.append("Por tipo: ").append(join(byType())).append(".\n");
 
         List<Stat> genres = byGenre();
@@ -144,6 +152,24 @@ final class TasteFacts {
                 .sorted(Comparator.comparingDouble(Stat::average).reversed())
                 .limit(5)
                 .toList();
+    }
+
+    /**
+     * Onde estão as horas: total e as 3 obras que mais tomaram tempo, com a fatia de
+     * cada uma (música, álbum e mangá não contam: o tempo deles não diz nada).
+     */
+    private String time() {
+        List<Work> timed = works.stream()
+                .filter(w -> w.getTimeMinutes() > 0 && w.getTemplate().timeWeighted())
+                .sorted(Comparator.comparingInt(Work::getTimeMinutes).reversed())
+                .toList();
+        long total = timed.stream().mapToLong(Work::getTimeMinutes).sum();
+        if (total == 0) return "sem dados de tempo";
+        String top = timed.stream().limit(3)
+                .map(w -> "\"" + w.getTitle() + "\" " + hours(w.getTimeMinutes())
+                        + " (" + Math.round(w.getTimeMinutes() * 100.0 / total) + "%)")
+                .collect(Collectors.joining(", "));
+        return hours((int) Math.min(total, Integer.MAX_VALUE)) + " no total; mais tempo em " + top;
     }
 
     /**
