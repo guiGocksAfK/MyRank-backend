@@ -42,27 +42,43 @@ public class InsightService {
     private final GeminiClient gemini;
     private final AiUsageService usage;
     private final ObjectMapper objectMapper;
+    private final RecommendationCovers covers;
 
     public InsightService(WorkRepository workRepository,
                           TakeRepository takeRepository,
                           AiInsightRepository insightRepository,
                           GeminiClient gemini,
                           AiUsageService usage,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper,
+                          RecommendationCovers covers) {
         this.workRepository = workRepository;
         this.takeRepository = takeRepository;
         this.insightRepository = insightRepository;
         this.gemini = gemini;
         this.usage = usage;
         this.objectMapper = objectMapper;
+        this.covers = covers;
     }
 
     /** Última análise gerada pelo usuário, ou vazio se ele nunca gerou. */
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<InsightResponseDTO> getLatest(Long userId) {
         return insightRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
-                .map(entity -> InsightResponseDTO.of(entity, deserialize(entity), true,
+                .map(entity -> InsightResponseDTO.of(entity, withCovers(entity), true,
                         deserializeChat(entity), usage.remaining(userId), AiUsageService.DAILY_LIMIT));
+    }
+
+    /**
+     * Análise salva, com a capa das recomendações. Análise de antes das capas procura
+     * uma vez e guarda (as buscas não gastam mensagem de IA).
+     */
+    private InsightPayloadDTO withCovers(AiInsight entity) {
+        InsightPayloadDTO payload = deserialize(entity);
+        if (!covers.needsFill(payload)) return payload;
+        payload = covers.fill(payload);
+        entity.setPayload(serialize(payload));
+        insightRepository.save(entity);
+        return payload;
     }
 
     /**
@@ -121,7 +137,7 @@ public class InsightService {
             Optional<AiInsight> cached = insightRepository.findByUserIdAndSelectionHash(userId, hash);
             if (cached.isPresent()) {
                 // Reaproveitar do cache não custa mensagem.
-                return InsightResponseDTO.of(cached.get(), deserialize(cached.get()), true,
+                return InsightResponseDTO.of(cached.get(), withCovers(cached.get()), true,
                         deserializeChat(cached.get()), usage.remaining(userId), AiUsageService.DAILY_LIMIT);
             }
         }
@@ -134,6 +150,7 @@ public class InsightService {
             payload = gemini.analyze(InsightPromptBuilder.SYSTEM, InsightPromptBuilder.user(facts))
                     .withTasteProfile(facts.tasteProfile())
                     .withCleanRecommendations(rankedTitles);
+            payload = covers.fill(payload); // capa de cada recomendação, guardada junto
         } catch (RuntimeException e) {
             usage.release(userId, reservation);
             throw e;

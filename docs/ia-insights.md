@@ -60,6 +60,11 @@ guardar gêneros caem nesse segundo caso.
   repetidas e as sem título, e corta em 3 (`withCleanRecommendations`).
 - Análises de antes do prompt v3 têm uma recomendação só (`recommendation`); ao
   ler, ela vira a lista `recommendations` com um item, e o front só olha a lista.
+- Cada recomendação ganha a capa na hora de gerar (`RecommendationCovers`): a
+  obra é procurada na API do tipo (TMDB, MyAnimeList, RAWG, Google Books,
+  Deezer), preferindo título e ano iguais, e a capa fica guardada no `payload`.
+  Vazio = procurou e não achou. Análise de antes das capas procura uma vez ao
+  abrir e guarda; nada disso gasta mensagem de IA.
 - Contradições: de 0 a 2, só a partir das tensões.
 
 `VERSION` entra no hash do cache. **Mudou o prompt, sobe a versão**: senão uma
