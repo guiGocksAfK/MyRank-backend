@@ -69,8 +69,6 @@ genérica; ideias testadas e guardadas pra voltar depois:
 
 ## Ideias sem data
 
-- **Conquistas de Músicas, Álbuns e Mangás.** O catálogo só tem badges de jogos,
-  filmes, séries, livros e animes; os templates novos não contam para nada.
 - **Podcasts** como template (descartado por ora; voltar se houver público).
 - **DM com perfil privado:** hoje qualquer pessoa pode abrir conversa com
   qualquer outra. Decidir se perfil privado só recebe DM de quem segue.

@@ -41,6 +41,13 @@ deixar o motivo.
   mesmas obras junto vira uma linha só ("David Benioff & D. B. Weiss") e quem só
   tem obras junto com alguém de mais obras aparece dentro dele ("com Peter
   Gould"). Duas carreiras próprias que se cruzam continuam aparecendo nas duas.
+- **Conquistas: 6 por tipo, sem "nota 10 em X" e sem média alta.** Revisão de
+  2026-11: as de nota 10 por tipo saíram (um clique só) e as de média alta
+  também (premiam dar nota alta). No lugar, coisas que pedem hábito: avaliar no
+  ano de lançamento, várias obras do mesmo criador, décadas, obras curtas.
+  Mangás, Músicas, Álbuns e Personalizado ganharam 6 cada (72 no total). As
+  substituídas foram removidas, não reaproveitadas: quem tinha perde, para
+  ninguém ficar com conquista que não cumpriu.
 - **Foto do criador vem da TMDB** (foto de pessoa ou logo de estúdio), guardada
   uma vez por nome e compartilhada entre todos. Só aceita nome igual, para não
   pegar homônimo; quando erra, a pessoa troca a foto (e o tipo) no "Editar", e

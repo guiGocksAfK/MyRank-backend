@@ -1,6 +1,6 @@
 # Conquistas
 
-48 badges, calculadas no back a partir das obras e da conta.
+72 badges, calculadas no back a partir das obras e da conta.
 
 ## Catálogo
 
@@ -13,17 +13,26 @@ tinha.
 
 | Grupo | Quantas | Exemplos |
 |---|---|---|
-| Jogos | 6 | 5 e 25 jogos, 500h em jogos, um jogo com 100h+, 10 estúdios |
-| Filmes | 6 | 10 e 50 filmes, filme antes de 1970, filme com 3h+ |
-| Séries | 6 | 5 e 20 séries, 300h em séries, média ≥ 8 com 10 séries |
-| Livros | 6 | 5, 20 e 50 livros, 10 autores, livro antes de 1950 |
-| Animes | 6 | 5 e 25 animes, 200h em animes, anime antes de 2000 |
-| Gerais | 12 | uma obra de cada tipo, 5 décadas diferentes, crítico rigoroso, nota ≤ 2 |
+| Jogos | 6 | 5 e 25 jogos, 500h em jogos, jogo avaliado no ano em que saiu, 10 estúdios |
+| Filmes | 6 | 10 e 50 filmes, filme antes de 1970, 3 filmes do mesmo diretor |
+| Séries | 6 | 5 e 20 séries, 300h em séries, série antes de 1990, série de até 10h |
+| Livros | 6 | 5, 20 e 50 livros, 10 autores, 5 livros do mesmo autor |
+| Animes | 6 | 5 e 25 animes, 200h em animes, anime avaliado no ano em que saiu |
+| Mangás | 6 | 5 e 25 mangás, 5 autores, 3 do mesmo autor, 3 décadas |
+| Músicas | 6 | 10 e 50 músicas, 10 artistas, 5 do mesmo artista, 4 décadas |
+| Álbuns | 6 | 5 e 25 álbuns, 10 artistas, 3 do mesmo artista, álbum antes de 1980 |
+| Outros (Personalizado) | 6 | 5 e 25 obras, 50h, obras em 3 tabelas, 10 com nota ≥ 9 |
+| Gerais | 12 | uma obra de cada tipo, 5 décadas diferentes, crítico rigoroso, 5 notas ≤ 5 |
 | Uso do site | 6 | primeira obra, foto e bio, tabela própria, editar uma nota, 7 dias diferentes, 1 ano de conta |
 
 Os grupos por tipo usam o tipo do template da obra (`TableTemplate.type()`).
-**Músicas, Álbuns e Mangás ainda não têm badges próprias**; só contam nas
-gerais que olham todas as obras (anotado no ROADMAP).
+Músicas, Álbuns e Mangás não têm badge de horas: nesses templates o tempo não
+diz nada (ver decisões). "Polivalente" continua pedindo só os 5 tipos
+originais.
+
+**Sem "dê nota 10 a um X" por tipo:** é um clique, não uma conquista. A nota 10
+aparece só em "Dez de dez" (10 obras com nota 10). Também não há badge de média
+alta por tipo: média alta não é bom gosto.
 
 ## Cálculo
 
