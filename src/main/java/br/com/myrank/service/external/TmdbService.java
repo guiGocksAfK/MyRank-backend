@@ -2,6 +2,7 @@ package br.com.myrank.service.external;
 
 import br.com.myrank.dto.external.*;
 import br.com.myrank.exception.ExternalServiceUnavailableException;
+import br.com.myrank.service.CreatorNames;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -133,6 +134,54 @@ public class TmdbService {
     }
 
     /** Usado na busca/autocomplete: se a TMDB falhar, devolve null (vira lista vazia) em vez de propagar. */
+    // ── Foto dos criadores (tela de Criadores) ───────────────────────────
+
+    private static final String PHOTO_BASE_URL = "https://image.tmdb.org/t/p/w185";
+
+    /**
+     * Foto de perfil de uma pessoa (diretor, criador de série, autor). Só aceita nome
+     * igual (sem acento/maiúscula) pra não pegar outra pessoa; entre homônimos, prefere
+     * quem trabalha atrás das câmeras. Null = não achou; erro da TMDB sobe (quem chama
+     * não guarda o "não achou" nesse caso).
+     */
+    public String findPersonPhoto(String name) {
+        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/search/person")
+                .queryParam("query", name)
+                .queryParam("include_adult", false)
+                .toUriString();
+        TmdbPeopleSearchDTO response = executeGet(url, TmdbPeopleSearchDTO.class);
+        List<TmdbPeopleSearchDTO.Result> same = sameName(response, name).stream()
+                .filter(r -> r.getProfilePath() != null && !r.getProfilePath().isBlank())
+                .toList();
+        return same.stream()
+                .filter(r -> !"Acting".equals(r.getKnownForDepartment()))
+                .findFirst()
+                .or(() -> same.stream().findFirst())
+                .map(r -> PHOTO_BASE_URL + r.getProfilePath())
+                .orElse(null);
+    }
+
+    /** Logo de um estúdio/empresa, só com nome igual. Null = não achou. */
+    public String findCompanyLogo(String name) {
+        String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/search/company")
+                .queryParam("query", name)
+                .toUriString();
+        TmdbPeopleSearchDTO response = executeGet(url, TmdbPeopleSearchDTO.class);
+        return sameName(response, name).stream()
+                .filter(r -> r.getLogoPath() != null && !r.getLogoPath().isBlank())
+                .findFirst()
+                .map(r -> PHOTO_BASE_URL + r.getLogoPath())
+                .orElse(null);
+    }
+
+    private static List<TmdbPeopleSearchDTO.Result> sameName(TmdbPeopleSearchDTO response, String name) {
+        if (response == null || response.getResults() == null) return List.of();
+        String key = CreatorNames.key(name);
+        return response.getResults().stream()
+                .filter(r -> r.getName() != null && CreatorNames.key(r.getName()).equals(key))
+                .toList();
+    }
+
     private <T> T executeGetSilently(String url, Class<T> responseType) {
         try {
             return executeGet(url, responseType);
