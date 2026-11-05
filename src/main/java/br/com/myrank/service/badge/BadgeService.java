@@ -151,7 +151,8 @@ public class BadgeService {
             LocalDate added = w.getCreatedAt() != null ? w.getCreatedAt().toLocalDate() : null;
             boolean edited = w.getCreatedAt() != null && w.getUpdatedAt() != null
                     && ChronoUnit.SECONDS.between(w.getCreatedAt(), w.getUpdatedAt()) > 60;
-            return new BadgeContext.WorkView(type, score, w.getTimeMinutes(), creatorKeys, year, added, edited);
+            Long tableId = w.getCategory() != null ? w.getCategory().getId() : null;
+            return new BadgeContext.WorkView(type, score, w.getTimeMinutes(), creatorKeys, year, added, edited, tableId);
         }).toList();
 
         boolean hasAvatar = user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank();
