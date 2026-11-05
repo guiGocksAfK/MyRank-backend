@@ -1,6 +1,7 @@
 package br.com.myrank.service.social;
 
 import br.com.myrank.domain.entity.Conversation;
+import br.com.myrank.domain.entity.ConversationBan;
 import br.com.myrank.domain.entity.ConversationJoinRequest;
 import br.com.myrank.domain.entity.ConversationMember;
 import br.com.myrank.domain.entity.Message;
@@ -49,6 +50,7 @@ public class ChatService {
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository memberRepository;
     private final ConversationJoinRequestRepository joinRequestRepository;
+    private final ConversationBanRepository banRepository;
     private final MessageRepository messageRepository;
     private final MessageReactionRepository reactionRepository;
     private final FollowRepository followRepository;
@@ -58,6 +60,7 @@ public class ChatService {
     public ChatService(ConversationRepository conversationRepository,
                        ConversationMemberRepository memberRepository,
                        ConversationJoinRequestRepository joinRequestRepository,
+                       ConversationBanRepository banRepository,
                        MessageRepository messageRepository,
                        MessageReactionRepository reactionRepository,
                        FollowRepository followRepository,
@@ -66,6 +69,7 @@ public class ChatService {
         this.conversationRepository = conversationRepository;
         this.memberRepository = memberRepository;
         this.joinRequestRepository = joinRequestRepository;
+        this.banRepository = banRepository;
         this.messageRepository = messageRepository;
         this.reactionRepository = reactionRepository;
         this.followRepository = followRepository;
@@ -112,6 +116,7 @@ public class ChatService {
         if (memberIdsRaw != null) memberIdsRaw.forEach(id -> { if (id != null) ids.add(id); });
         ids.remove(me);
         if (ids.size() >= GROUP_MAX) throw new IllegalArgumentException("Máximo de " + GROUP_MAX + " participantes.");
+        requireAddable(me, ids, null);
 
         List<User> found = userRepository.findAllById(ids);
         if (found.size() != ids.size()) throw new IllegalArgumentException("Algum usuário não existe.");
@@ -220,6 +225,7 @@ public class ChatService {
         if (memberRepository.existsByConversationIdAndUserId(convId, me)) {
             throw new IllegalArgumentException("Você já está no grupo.");
         }
+        requireNotBanned(convId, me);
         switch (conv.getAccess()) {
             case OPEN -> {
                 if (memberRepository.countByConversationId(convId) >= GROUP_MAX) {
@@ -497,8 +503,10 @@ public class ChatService {
 
         List<User> found = userRepository.findAllById(ids);
         if (found.size() != ids.size()) throw new IllegalArgumentException("Algum usuário não existe.");
+        requireAddable(me, ids, convId);
 
         for (Long id : ids) {
+            banRepository.deleteByConversationIdAndUserId(convId, id); // adicionar de novo desfaz a expulsão
             joinRequestRepository.findByConversationIdAndUserId(convId, id)
                     .ifPresent(joinRequestRepository::delete);
             memberRepository.save(new ConversationMember(convId, id, ConversationMemberRole.MEMBER));
@@ -528,6 +536,10 @@ public class ChatService {
         }
 
         memberRepository.delete(target);
+        if (!leaving) {
+            // expulsão vale até alguém da moderação adicionar de novo; sair por conta própria não bane
+            banRepository.save(new ConversationBan(convId, targetId, me));
+        }
 
         if (leaving) {
             system(convId, me, nameOf(me) + " saiu do grupo");
@@ -705,6 +717,7 @@ public class ChatService {
         requireGroup(conv);
 
         if (!memberRepository.existsByConversationIdAndUserId(conv.getId(), me)) {
+            requireNotBanned(conv.getId(), me);
             if (memberRepository.countByConversationId(conv.getId()) >= GROUP_MAX) {
                 throw new IllegalArgumentException("O grupo está cheio.");
             }
@@ -733,14 +746,17 @@ public class ChatService {
     }
 
     @Transactional
-    public void deleteConversation(Long me, Long convId) {
+    /** Exclui o grupo e devolve quem era membro, pra avisar depois que der certo. */
+    public List<Long> deleteConversation(Long me, Long convId) {
         ConversationMember myMembership = assertMember(convId, me);
         Conversation conv = getConversation(convId);
         requireGroup(conv);
         if (myMembership.getRole() != ConversationMemberRole.OWNER) {
             throw new IllegalArgumentException("Só o dono pode excluir o grupo.");
         }
+        List<Long> members = memberRepository.findMemberIds(convId);
         conversationRepository.deleteById(convId);
+        return members;
     }
 
     // ── DTO builders ───────────────────────────────────────────────────
@@ -787,7 +803,9 @@ public class ChatService {
                         u != null ? u.getUsername() : "Usuário",
                         u != null ? u.getAvatarUrl() : null);
                 peerLastReadId = peerMember.getLastReadMessageId();
-                peerLastSeenAt = u != null ? u.getLastSeenAt() : null;
+                // presença só entre quem se segue mutuamente: abrir DM com qualquer id não pode
+                // virar um jeito de vigiar quando alguém (até perfil privado) esteve online
+                peerLastSeenAt = u != null && mutualFollow(me, peerMember.getUserId()) ? u.getLastSeenAt() : null;
             }
         }
 
@@ -912,6 +930,35 @@ public class ChatService {
         if (conv.getType() != ConversationType.GROUP) {
             throw new IllegalArgumentException("Essa ação só vale pra grupos.");
         }
+    }
+
+    /**
+     * Entra direto num grupo só quem se segue mutuamente com quem adiciona; o resto
+     * vem pelo link de convite. Exceção: quem já pediu pra entrar nesse grupo
+     * (adicionar é aprovar o pedido).
+     */
+    private void requireAddable(Long me, java.util.Collection<Long> ids, Long convId) {
+        Set<Long> iFollow = new HashSet<>(followRepository.findFollowedIds(me));
+        Set<Long> followMe = new HashSet<>(followRepository.findFollowerIds(me));
+        for (Long id : ids) {
+            boolean mutual = iFollow.contains(id) && followMe.contains(id);
+            boolean asked = convId != null && joinRequestRepository.existsByConversationIdAndUserId(convId, id);
+            if (!mutual && !asked) {
+                throw new IllegalArgumentException(
+                        "Só dá pra adicionar quem vocês se seguem mutuamente. Os outros entram pelo link de convite.");
+            }
+        }
+    }
+
+    private void requireNotBanned(Long convId, Long userId) {
+        if (banRepository.existsByConversationIdAndUserId(convId, userId)) {
+            throw new IllegalArgumentException("Você foi removido desse grupo. Só a moderação pode te adicionar de novo.");
+        }
+    }
+
+    private boolean mutualFollow(Long a, Long b) {
+        return followRepository.existsByFollowerIdAndFollowedId(a, b)
+                && followRepository.existsByFollowerIdAndFollowedId(b, a);
     }
 
     /** Usuários que você segue de volta e ainda não tem DM — pra sugerir "diga oi". */

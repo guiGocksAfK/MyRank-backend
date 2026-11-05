@@ -171,6 +171,7 @@ baseline of the squash, then V9–V11) is described in
 | [`docs/social.md`](docs/social.md) | Privacy, follows, feed, takes, comments, notifications |
 | [`docs/chat.md`](docs/chat.md) | Direct messages, groups, roles and real time |
 | [`docs/conquistas.md`](docs/conquistas.md) | Achievements catalog and calculation |
+| [`docs/ia-insights.md`](docs/ia-insights.md) | AI Insights: computed facts, prompt, retries, cache and budget |
 | [`docs/onboarding.md`](docs/onboarding.md) | Post-sign-up tutorial |
 | [`docs/music-search-integration.md`](docs/music-search-integration.md) | Deezer and iTunes search |
 | [`SECURITY.md`](SECURITY.md) | Protections in place and open items |

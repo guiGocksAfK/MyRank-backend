@@ -19,7 +19,7 @@ repositório do front.
 | Autorização | Dono conferido em toda operação de tabela, obra, subdivisão e campo próprio. Perfil privado: obras, takes e comparação só pra quem segue. O item só aceita um template que a tabela tenha. |
 | Chat em tempo real | O `CONNECT` do STOMP exige JWT válido (com a mesma checagem de versão de sessão). Cada inscrição é autorizada por conversa, e publicar direto no broker é proibido: mensagem só entra pela API. |
 | Bot do Discord | Header `X-Bot-Key` comparado em tempo constante, válido só num conjunto fechado de rotas. A pessoa precisa ter vinculado o Discord à conta. Rate limit por usuário do Discord (e não pelo IP do bot). |
-| Rate limiting | Janela fixa de 1 minuto, em memória, por IP: login 10, OAuth 15, envio de código 3, conferência de código 10, cadastro 5, exclusão de conta 5, busca externa 40. Não confia em `X-Forwarded-For` direto: atrás do Caddy, o Tomcat só aceita o IP real vindo da rede interna (`SERVER_FORWARD_HEADERS_STRATEGY=native`). |
+| Rate limiting | Janela fixa de 1 minuto, em memória, por IP: login 10, OAuth 15, envio de código 3, conferência de código 10, cadastro 5, exclusão de conta 5, busca externa 40, preencher detalhes de todas as obras 2. Não confia em `X-Forwarded-For` direto: atrás do Caddy, o Tomcat só aceita o IP real vindo da rede interna (`SERVER_FORWARD_HEADERS_STRATEGY=native`). |
 | Validação de entrada | Bean Validation nos DTOs, com tamanho máximo nos textos. O `details` de cada obra é sempre um objeto JSON de até 8 KB. Campos próprios validados pelo tipo: texto até 200, número finito, data real, sim/não sem conversão. |
 | Concorrência | Gravar uma obra e mudar os campos ou templates da tabela não acontecem ao mesmo tempo (trava na linha da tabela), pra um campo removido não voltar por uma gravação simultânea. |
 | Vazamento de erro | Exceção não mapeada vira um 500 genérico, sem stack trace. Erros de regra viram 400 com mensagem em português. |
@@ -79,8 +79,10 @@ repositório do front.
 
 9. **Avatar por URL externa.** A foto de perfil é um link que a própria pessoa
    informa e que o navegador de quem vê o perfil carrega direto. Quem controla
-   o servidor da imagem enxerga o IP de quem abriu o perfil. Alternativa:
-   upload com armazenamento próprio, ou proxy de imagens.
+   o servidor da imagem enxerga o IP de quem abriu o perfil. O mesmo vale pra
+   capa das obras, que aparece no feed e no perfil de outras pessoas e aceita
+   `http` (o Google Books devolve capas assim; o front sobe tudo pra `https`
+   pela CSP). Alternativa: upload com armazenamento próprio, ou proxy de imagens.
 
 10. **LGPD: sem exportação dos dados.** A exclusão de conta existe; a
     portabilidade (baixar os próprios dados) ainda não.
@@ -88,3 +90,10 @@ repositório do front.
 11. **Sem auditoria e sem análise de dependências automática.** Não há trilha
     de quem alterou o quê, e não há CI rodando os testes nem checando CVEs das
     dependências (por exemplo com o OWASP Dependency-Check).
+
+12. **WebSocket não reconfere a sessão depois de conectar.** O JWT e a versão de
+    sessão são checados no `CONNECT`. Depois de uma troca de senha, ou de o
+    token vencer, uma conexão já aberta continua recebendo eventos das conversas
+    até cair (a participação em cada conversa continua sendo conferida a cada
+    envio). Correção: derrubar pelo servidor as conexões da conta quando a
+    versão de sessão muda.

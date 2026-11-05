@@ -6,10 +6,17 @@ Conversas diretas (DM) e grupos, sob `/api/chat`, sempre com login.
 
 - **DM:** duas pessoas. Abrir a mesma DM duas vezes devolve a que já existe
   (inclusive com dois pedidos ao mesmo tempo). Hoje **qualquer pessoa pode abrir
-  DM com qualquer outra**, mesmo com perfil privado (em aberto no ROADMAP).
+  DM com qualquer outra**, mesmo com perfil privado (em aberto no ROADMAP). O
+  "visto por último" da outra pessoa só aparece **entre quem se segue
+  mutuamente**: senão abrir DM com qualquer id virava um jeito de vigiar quando
+  alguém esteve online.
 - **Sugestões de DM:** quem a pessoa segue de volta e com quem ainda não conversa.
 - **Grupo:** nome (até 80), descrição (até 300), foto por URL `https` e até
   **50 participantes**.
+- **Quem pode ser colocado num grupo** (na criação ou depois): só quem se segue
+  mutuamente com quem adiciona, ou quem já pediu pra entrar nesse grupo. Os
+  outros entram pelo link de convite. Isso evita encher desconhecidos de grupos
+  e notificações.
 
 ## Acesso ao grupo
 
@@ -22,6 +29,9 @@ Conversas diretas (DM) e grupos, sob `/api/chat`, sempre com login.
 - O **diretório** lista grupos de que a pessoa não participa, 30 por página.
 - O **link de convite** é reutilizável e pode ser trocado ou revogado (o
   antigo para de valer). Quem tem o link entra, qualquer que seja o acesso.
+- **Expulsão bane** (`conversation_bans`, V12): quem foi removido por um
+  moderador não volta pelo diretório, por pedido nem pelo link. Só alguém da
+  moderação adicionando de novo desfaz. Sair por conta própria não bane.
 
 ## Cargos
 
@@ -46,6 +56,8 @@ apagado.
 - Entradas, saídas, convites e mudanças no grupo geram mensagens de sistema,
   em português.
 - "Digitando…", "Visto" nas DMs e contador de não lidas.
+- Quem entra num grupo **vê o histórico de antes**, como no Discord. É de
+  propósito: o grupo é uma conversa contínua, não um chat por pessoa.
 
 ## Tempo real
 

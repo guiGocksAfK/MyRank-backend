@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,6 +47,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("/api/users/me", "DELETE", 5), // exclusão de conta confere senha
             // Buscas e detalhes de músicas e álbuns compartilham o teto das demais integrações.
             new Rule("/api/external/", null, 40),
+            new Rule("/api/works/refresh-details", "POST", 2), // dezenas de chamadas externas por pedido
     };
 
     private final ConcurrentHashMap<String, Window> windows = new ConcurrentHashMap<>();
@@ -106,8 +108,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return req.getRemoteAddr();
     }
 
+    /**
+     * Caminho decodificado, como o Spring usa pra escolher a rota. Comparar o
+     * getRequestURI() cru deixava "/api/auth/log%69n" cair no login sem limite.
+     */
+    private static final UrlPathHelper PATHS = new UrlPathHelper();
+
     private Rule match(HttpServletRequest req) {
-        String uri = req.getRequestURI();
+        String uri = PATHS.getPathWithinApplication(req);
         String method = req.getMethod();
         for (Rule r : RULES) {
             boolean pathOk = r.prefix().endsWith("/") ? uri.startsWith(r.prefix()) : uri.equals(r.prefix());

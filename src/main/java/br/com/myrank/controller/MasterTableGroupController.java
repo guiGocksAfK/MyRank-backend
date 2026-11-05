@@ -60,7 +60,7 @@ public class MasterTableGroupController {
     public ResponseEntity<MasterTableGroupResponseDTO> updateOrder(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id,
-            @RequestBody MasterTableGroupOrderDTO dto) {
+            @Valid @RequestBody MasterTableGroupOrderDTO dto) {
         User user = authUtils.getUser(userDetails);
         MasterTableGroup group = groupService.updateOrder(id, user.getId(), dto.order());
         return ResponseEntity.ok(MasterTableGroupResponseDTO.fromEntity(group));

@@ -19,7 +19,15 @@ Os detalhes vêm prontos da busca e só entra o que a API trouxe preenchido.
 Os **gêneros são guardados para a IA e não aparecem no card**, sempre como a API
 manda. O card mostra o criador e os detalhes do template; no perfil e no social,
 só o criador. O botão "Atualizar dados" busca de novo pelo `provider` e
-`externalId` do item. Música e álbum em detalhe:
+`externalId` do item.
+
+`POST /api/works/refresh-details` faz o mesmo em todas as obras da conta de
+uma vez (2 pedidos por minuto). Obra antiga, sem `externalId`, é procurada pelo
+título e só é ligada ao **único** resultado com o mesmo título (sem acento nem
+pontuação), o mesmo ano ±1 quando a obra tem data e, em música e álbum, o mesmo
+artista; na dúvida, é pulada. Nunca mexe em nota, título, capa nem criador. A
+resposta lista as atualizadas e as puladas, com o motivo: as puladas se resolvem
+pelo botão, escolhendo o resultado certo. Música e álbum em detalhe:
 [music-search-integration.md](music-search-integration.md).
 
 ## Regras
