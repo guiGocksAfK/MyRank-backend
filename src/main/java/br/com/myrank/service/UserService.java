@@ -5,6 +5,7 @@ import br.com.myrank.domain.entity.UserStats;
 import br.com.myrank.domain.enums.AuthProvider;
 import br.com.myrank.domain.enums.DmPolicy;
 import br.com.myrank.domain.enums.NotificationGroup;
+import br.com.myrank.domain.enums.RankingsView;
 import br.com.myrank.domain.enums.OnboardingStep;
 import br.com.myrank.dto.UserCreateDTO;
 import br.com.myrank.dto.UserUpdateDTO;
@@ -123,6 +124,14 @@ public class UserService {
 
         if (dto.weightedByDefault() != null) {
             user.setWeightedByDefault(dto.weightedByDefault());
+        }
+
+        if (dto.rankingsView() != null) {
+            try {
+                user.setRankingsView(RankingsView.valueOf(dto.rankingsView().trim().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Visualização inválida.");
+            }
         }
 
         if (dto.avatarUrl() != null) {

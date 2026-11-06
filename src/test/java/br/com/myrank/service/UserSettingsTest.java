@@ -4,6 +4,7 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.enums.DmPolicy;
 import br.com.myrank.domain.enums.NotificationGroup;
 import br.com.myrank.domain.enums.NotificationType;
+import br.com.myrank.domain.enums.RankingsView;
 import br.com.myrank.dto.UserResponseDTO;
 import br.com.myrank.dto.UserUpdateDTO;
 import br.com.myrank.repository.UserRepository;
@@ -35,7 +36,11 @@ class UserSettingsTest {
     }
 
     private static UserUpdateDTO settings(String dmPolicy, List<String> muted, Boolean weighted) {
-        return new UserUpdateDTO(null, null, null, null, null, dmPolicy, muted, weighted);
+        return new UserUpdateDTO(null, null, null, null, null, dmPolicy, muted, weighted, null);
+    }
+
+    private static UserUpdateDTO view(String rankingsView) {
+        return new UserUpdateDTO(null, null, null, null, null, null, null, null, rankingsView);
     }
 
     @Test
@@ -94,6 +99,19 @@ class UserSettingsTest {
         assertThat(u.isMuted(NotificationType.FOLLOW)).isTrue();
         assertThat(u.isMuted(NotificationType.FOLLOW_REQUEST)).isTrue();
         assertThat(u.isMuted(NotificationType.REACTION)).isFalse();
+    }
+
+    @Test
+    void visualizacaoDosRankings_salvaEDevolve_eRecusaValorDesconhecido() {
+        User u = user();
+        assertThat(UserResponseDTO.fromEntity(u).rankingsView()).isEqualTo("LIST");
+
+        service.updateUser(7L, view("grid"));
+
+        assertThat(u.getRankingsView()).isEqualTo(RankingsView.GRID);
+        assertThat(UserResponseDTO.fromEntity(u).rankingsView()).isEqualTo("GRID");
+        assertThatThrownBy(() -> service.updateUser(7L, view("mosaico")))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
