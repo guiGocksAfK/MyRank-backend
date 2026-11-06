@@ -17,7 +17,12 @@ public record UserResponseDTO(
         LocalDateTime createdAt,
         /** Conta só com Google/Discord não tem senha — a exclusão não pede senha. */
         boolean hasPassword,
-        OnboardingStep onboardingStep
+        OnboardingStep onboardingStep,
+        /** LOCAL (email e senha) | GOOGLE | DISCORD. */
+        String authProvider,
+        String dmPolicy,
+        java.util.List<String> mutedNotifications,
+        boolean weightedByDefault
 ) {
     public static UserResponseDTO fromEntity(User user) {
         return new UserResponseDTO(
@@ -31,7 +36,11 @@ public record UserResponseDTO(
                 user.getLanguage(),
                 user.getCreatedAt(),
                 user.getPasswordHash() != null && !user.getPasswordHash().isBlank(),
-                user.getOnboardingStep()
+                user.getOnboardingStep(),
+                user.getAuthProvider() != null ? user.getAuthProvider().name() : "LOCAL",
+                user.getDmPolicy().name(),
+                user.getMutedGroups().stream().map(Enum::name).sorted().toList(),
+                user.isWeightedByDefault()
         );
     }
 }
