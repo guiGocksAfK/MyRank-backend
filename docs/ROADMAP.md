@@ -70,8 +70,6 @@ genérica; ideias testadas e guardadas pra voltar depois:
 ## Ideias sem data
 
 - **Podcasts** como template (descartado por ora; voltar se houver público).
-- **DM com perfil privado:** hoje qualquer pessoa pode abrir conversa com
-  qualquer outra. Decidir se perfil privado só recebe DM de quem segue.
 - Pendências de segurança: lista completa no [SECURITY.md](../SECURITY.md).
 - **Notificações antigas de perfil que virou privado** (ou de quem deixou de
   seguir) continuam mostrando título, capa e nota da obra. Esconder a obra quando
