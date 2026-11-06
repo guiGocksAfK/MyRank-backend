@@ -3,6 +3,7 @@ package br.com.myrank.domain.entity;
 import br.com.myrank.domain.enums.DmPolicy;
 import br.com.myrank.domain.enums.NotificationGroup;
 import br.com.myrank.domain.enums.NotificationType;
+import br.com.myrank.domain.enums.RankingsView;
 import br.com.myrank.domain.enums.AuthProvider;
 import br.com.myrank.domain.enums.OnboardingStep;
 import br.com.myrank.domain.enums.PlanType;
@@ -114,6 +115,11 @@ public class User {
     @Column(name = "weighted_by_default", nullable = false)
     private boolean weightedByDefault = false;
 
+    /** Como os Rankings abrem: lista ou grade. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rankings_view", nullable = false, length = 10)
+    private RankingsView rankingsView = RankingsView.LIST;
+
     /** Última atividade conhecida (heartbeat do chat) — usado pra presença. */
     @Column(name = "last_seen_at")
     private LocalDateTime lastSeenAt;
@@ -206,6 +212,9 @@ public class User {
 
     public boolean isWeightedByDefault() { return weightedByDefault; }
     public void setWeightedByDefault(boolean weightedByDefault) { this.weightedByDefault = weightedByDefault; }
+
+    public RankingsView getRankingsView() { return rankingsView; }
+    public void setRankingsView(RankingsView rankingsView) { this.rankingsView = rankingsView; }
 
     /** Grupos silenciados; nome desconhecido (de uma versão antiga) é ignorado. */
     public Set<NotificationGroup> getMutedGroups() {

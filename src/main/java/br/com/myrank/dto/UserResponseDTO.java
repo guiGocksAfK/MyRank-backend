@@ -22,7 +22,8 @@ public record UserResponseDTO(
         String authProvider,
         String dmPolicy,
         java.util.List<String> mutedNotifications,
-        boolean weightedByDefault
+        boolean weightedByDefault,
+        String rankingsView
 ) {
     public static UserResponseDTO fromEntity(User user) {
         return new UserResponseDTO(
@@ -40,7 +41,8 @@ public record UserResponseDTO(
                 user.getAuthProvider() != null ? user.getAuthProvider().name() : "LOCAL",
                 user.getDmPolicy().name(),
                 user.getMutedGroups().stream().map(Enum::name).sorted().toList(),
-                user.isWeightedByDefault()
+                user.isWeightedByDefault(),
+                user.getRankingsView().name()
         );
     }
 }

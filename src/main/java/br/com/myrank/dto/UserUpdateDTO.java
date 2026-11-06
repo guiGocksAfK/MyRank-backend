@@ -26,5 +26,9 @@ public record UserUpdateDTO(
         @Size(max = 10)
         java.util.List<String> mutedNotifications,
 
-        Boolean weightedByDefault
+        Boolean weightedByDefault,
+
+        /** LIST | GRID. */
+        @Size(max = 10)
+        String rankingsView
 ) {}
