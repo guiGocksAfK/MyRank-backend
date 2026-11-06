@@ -16,5 +16,19 @@ public record UserUpdateDTO(
         @Size(max = 1000, message = "A URL da foto é longa demais.")
         String avatarUrl,
 
-        Boolean isPublic
+        Boolean isPublic,
+
+        /** EVERYONE | FOLLOWING. */
+        @Size(max = 20)
+        String dmPolicy,
+
+        /** Grupos de aviso silenciados (NotificationGroup); lista vazia = recebe tudo. */
+        @Size(max = 10)
+        java.util.List<String> mutedNotifications,
+
+        Boolean weightedByDefault,
+
+        /** LIST | GRID. */
+        @Size(max = 10)
+        String rankingsView
 ) {}

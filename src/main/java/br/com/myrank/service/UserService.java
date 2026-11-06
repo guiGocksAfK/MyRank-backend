@@ -3,6 +3,9 @@ package br.com.myrank.service;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.entity.UserStats;
 import br.com.myrank.domain.enums.AuthProvider;
+import br.com.myrank.domain.enums.DmPolicy;
+import br.com.myrank.domain.enums.NotificationGroup;
+import br.com.myrank.domain.enums.RankingsView;
 import br.com.myrank.domain.enums.OnboardingStep;
 import br.com.myrank.dto.UserCreateDTO;
 import br.com.myrank.dto.UserUpdateDTO;
@@ -99,6 +102,38 @@ public class UserService {
             user.setLanguage(lang);
         }
 
+        if (dto.dmPolicy() != null) {
+            try {
+                user.setDmPolicy(DmPolicy.valueOf(dto.dmPolicy().trim().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Opção de mensagens inválida.");
+            }
+        }
+
+        if (dto.mutedNotifications() != null) {
+            java.util.Set<NotificationGroup> groups = java.util.EnumSet.noneOf(NotificationGroup.class);
+            for (String raw : dto.mutedNotifications()) {
+                try {
+                    groups.add(NotificationGroup.valueOf(String.valueOf(raw).trim().toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Tipo de aviso inválido: " + raw);
+                }
+            }
+            user.setMutedGroups(groups);
+        }
+
+        if (dto.weightedByDefault() != null) {
+            user.setWeightedByDefault(dto.weightedByDefault());
+        }
+
+        if (dto.rankingsView() != null) {
+            try {
+                user.setRankingsView(RankingsView.valueOf(dto.rankingsView().trim().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Visualização inválida.");
+            }
+        }
+
         if (dto.avatarUrl() != null) {
             String url = dto.avatarUrl().trim();
             if (url.isEmpty()) {
@@ -114,6 +149,17 @@ public class UserService {
             }
         }
 
+        return userRepository.save(user);
+    }
+
+    /**
+     * "Sair dos outros aparelhos": sobe a versão de sessão da conta, o que invalida
+     * todos os tokens emitidos até agora. Quem pediu recebe um token novo na resposta.
+     */
+    public User revokeSessions(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
+        user.setTokenVersion(user.getTokenVersion() + 1);
         return userRepository.save(user);
     }
 

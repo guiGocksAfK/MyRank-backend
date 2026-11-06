@@ -79,6 +79,17 @@ deixar o motivo.
   pelo link). Os dois fecham brechas de vigiar e de assediar desconhecidos.
 - **Expulsão de grupo é banimento** até a moderação adicionar de novo; sair por
   conta própria não bane. **Quem entra vê o histórico de antes**, como no Discord.
+- **Quem pode mandar mensagem é escolha de quem recebe:** todo mundo (padrão) ou
+  só quem a pessoa segue. Vale para conversa nova; as que já existem continuam
+  abertas, para ninguém perder um histórico por mudar o ajuste.
+- **Avisos silenciados nem são criados**, em vez de escondidos na leitura: o
+  contador de não lidas fica certo e o banco não guarda o que ninguém vai ver.
+  O que se silencia são grupos (seguidores, reações, comentários, takes novos,
+  grupos), não cada tipo, para a tela não virar uma lista de 8 chaves.
+- **"Sair dos outros aparelhos" sobe a versão da sessão** (a mesma da troca de
+  senha) e devolve um token novo para quem pediu, que continua logado.
+- **Exportar as obras é feito no navegador** (CSV ou JSON a partir do
+  /works/unified), sem rota nova: os dados já chegam inteiros ao front.
 
 ## Tutorial pós-cadastro
 

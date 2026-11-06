@@ -50,6 +50,13 @@ public class UserController {
         return ResponseEntity.ok(UserResponseDTO.fromEntity(user));
     }
 
+    /** Desconecta todos os aparelhos; quem pediu continua logado com o token novo. */
+    @PostMapping("/me/sessions/revoke")
+    public ResponseEntity<LoginResponseDTO> revokeSessions(@AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.revokeSessions(authUtils.getUser(userDetails).getId());
+        return ResponseEntity.ok(new LoginResponseDTO(jwtService.generateToken(user), user.getUsername()));
+    }
+
     @PutMapping("/me")
     public ResponseEntity<UserResponseDTO> updateMe(
             @AuthenticationPrincipal UserDetails userDetails,

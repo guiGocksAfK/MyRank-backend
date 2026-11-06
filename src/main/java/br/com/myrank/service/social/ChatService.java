@@ -10,6 +10,7 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.enums.ConversationAccess;
 import br.com.myrank.domain.enums.ConversationMemberRole;
 import br.com.myrank.domain.enums.ConversationType;
+import br.com.myrank.domain.enums.DmPolicy;
 import br.com.myrank.domain.enums.MessageKind;
 import br.com.myrank.dto.chat.*;
 import br.com.myrank.repository.*;
@@ -84,7 +85,7 @@ public class ChatService {
         if (otherId == null || otherId.equals(me)) {
             throw new IllegalArgumentException("Destinatário inválido.");
         }
-        userRepository.findById(otherId)
+        User other = userRepository.findById(otherId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
 
         // serializa criações concorrentes do mesmo par (evita DM duplicada numa corrida)
@@ -94,6 +95,11 @@ public class ChatService {
         Conversation conv = conversationRepository
                 .findDirectsBetween(ConversationType.DIRECT, me, otherId).stream().findFirst()
                 .orElseGet(() -> {
+                    // conversa nova respeita "quem pode te mandar mensagem"; as que já existem seguem abertas
+                    if (other.getDmPolicy() == DmPolicy.FOLLOWING
+                            && !followRepository.existsByFollowerIdAndFollowedId(otherId, me)) {
+                        throw new IllegalArgumentException("Essa pessoa só recebe mensagens de quem ela segue.");
+                    }
                     Conversation fresh = conversationRepository.save(
                             new Conversation(ConversationType.DIRECT, null, me));
                     memberRepository.save(new ConversationMember(fresh.getId(), me, ConversationMemberRole.MEMBER));

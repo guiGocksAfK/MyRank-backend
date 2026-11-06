@@ -84,8 +84,9 @@ repositório do front.
    `http` (o Google Books devolve capas assim; o front sobe tudo pra `https`
    pela CSP). Alternativa: upload com armazenamento próprio, ou proxy de imagens.
 
-10. **LGPD: sem exportação dos dados.** A exclusão de conta existe; a
-    portabilidade (baixar os próprios dados) ainda não.
+10. **LGPD: exportação só das obras.** A exclusão de conta existe, e nas
+    Configurações dá para baixar as obras (CSV ou JSON). Ainda não saem num
+    arquivo os takes, comentários, conversas e seguidores.
 
 11. **Sem auditoria e sem análise de dependências automática.** Não há trilha
     de quem alterou o quê, e não há CI rodando os testes nem checando CVEs das

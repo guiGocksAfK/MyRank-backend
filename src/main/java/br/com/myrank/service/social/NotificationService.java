@@ -53,7 +53,7 @@ public class NotificationService {
     public void syncReaction(FeedEvent event, ReactionKind kind, Long actingUserId) {
         try {
             Long recipient = event.getUserId();
-            if (recipient.equals(actingUserId)) return;
+            if (recipient.equals(actingUserId) || muted(recipient, NotificationType.REACTION)) return;
 
             long count = feedReactionRepository
                     .countByFeedEventIdAndKindAndUserIdNot(event.getId(), kind, recipient);
@@ -92,7 +92,7 @@ public class NotificationService {
     @Transactional
     public void onFollow(Long recipientId, Long actorId) {
         try {
-            if (recipientId.equals(actorId)) return;
+            if (recipientId.equals(actorId) || muted(recipientId, NotificationType.FOLLOW)) return;
             Notification n = notificationRepository
                     .findByUserIdAndTypeAndActorId(recipientId, NotificationType.FOLLOW, actorId)
                     .orElseGet(() -> {
@@ -114,7 +114,7 @@ public class NotificationService {
     @Transactional
     public void onFollowRequest(Long recipientId, Long actorId) {
         try {
-            if (recipientId.equals(actorId)) return;
+            if (recipientId.equals(actorId) || muted(recipientId, NotificationType.FOLLOW_REQUEST)) return;
             Notification n = notificationRepository
                     .findByUserIdAndTypeAndActorId(recipientId, NotificationType.FOLLOW_REQUEST, actorId)
                     .orElseGet(() -> {
@@ -136,7 +136,7 @@ public class NotificationService {
     @Transactional
     public void onFollowAccepted(Long recipientId, Long actorId) {
         try {
-            if (recipientId.equals(actorId)) return;
+            if (recipientId.equals(actorId) || muted(recipientId, NotificationType.FOLLOW_ACCEPTED)) return;
             Notification n = notificationRepository
                     .findByUserIdAndTypeAndActorId(recipientId, NotificationType.FOLLOW_ACCEPTED, actorId)
                     .orElseGet(() -> {
@@ -158,7 +158,8 @@ public class NotificationService {
     @Transactional
     public void onTakeComment(Long recipientId, Long actorId, Long feedEventId) {
         try {
-            if (recipientId.equals(actorId) || feedEventId == null) return;
+            if (recipientId.equals(actorId) || feedEventId == null
+                    || muted(recipientId, NotificationType.TAKE_COMMENT)) return;
             Notification n = notificationRepository
                     .findFirstByUserIdAndTypeAndFeedEventId(recipientId, NotificationType.TAKE_COMMENT, feedEventId)
                     .orElseGet(() -> {
@@ -194,7 +195,11 @@ public class NotificationService {
     @Transactional
     public void onTakePosted(FeedEvent takeEvent, Long authorId) {
         try {
-            List<Long> followers = followRepository.findFollowerIds(authorId);
+            // quem silenciou "takes novos" fica de fora
+            List<Long> followers = userRepository.findAllById(followRepository.findFollowerIds(authorId)).stream()
+                    .filter(u -> !u.isMuted(NotificationType.TAKE))
+                    .map(User::getId)
+                    .toList();
             if (followers.isEmpty()) return;
             List<Notification> batch = new ArrayList<>();
             for (Long fid : followers) {
@@ -227,7 +232,8 @@ public class NotificationService {
 
     private void upsertGroupNotification(NotificationType type, Long recipientId, Long actorId, Long conversationId) {
         try {
-            if (recipientId == null || conversationId == null || recipientId.equals(actorId)) return;
+            if (recipientId == null || conversationId == null || recipientId.equals(actorId)
+                    || muted(recipientId, type)) return;
             Notification n = notificationRepository
                     .findByUserIdAndTypeAndConversationId(recipientId, type, conversationId)
                     .orElseGet(() -> {
@@ -244,6 +250,11 @@ public class NotificationService {
         } catch (Exception e) {
             log.warn("upsertGroupNotification({}) falhou (conv {}): {}", type, conversationId, e.getMessage());
         }
+    }
+
+    /** A pessoa silenciou esse tipo de aviso nas configurações? */
+    private boolean muted(Long userId, NotificationType type) {
+        return userRepository.findById(userId).map(u -> u.isMuted(type)).orElse(false);
     }
 
     // ── Leitura ────────────────────────────────────────────────────────
