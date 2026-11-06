@@ -1,5 +1,6 @@
 package br.com.myrank.service.external;
 
+import java.net.URI;
 import br.com.myrank.dto.external.GoogleBookItemDTO;
 import br.com.myrank.dto.external.MalAnimeNodeDTO;
 import br.com.myrank.dto.external.RawgGameDetailsDTO;
@@ -57,7 +58,7 @@ class CardDetailsMappingTest {
                 {"id":1535,"title":"Death Note","num_episodes":37,"media_type":"tv","status":"finished_airing",
                  "genres":[{"id":7,"name":"Mystery"},{"id":37,"name":"Supernatural"}]}
                 """, MalAnimeNodeDTO.class);
-        when(restTemplate.exchange(contains("/anime/1535"), eq(HttpMethod.GET), any(HttpEntity.class), eq(MalAnimeNodeDTO.class)))
+        when(restTemplate.exchange(argThat((URI uri) -> uri.toString().contains("/anime/1535")), eq(HttpMethod.GET), any(HttpEntity.class), eq(MalAnimeNodeDTO.class)))
                 .thenReturn(ResponseEntity.ok(anime));
 
         var details = new MyAnimeListService(restTemplate, "client").getAnimeDetails(1535L).getDetails();
