@@ -28,11 +28,18 @@ notificação "quer te seguir".
 
 ## Feed
 
-- **Só takes entram no feed** (avaliar, adicionar obra e ganhar conquista viram
-  eventos, mas não aparecem).
-- Aparecem os takes de quem a pessoa segue, os dela mesma e os de **qualquer
+- **Takes e avaliações agrupadas.** Cada take é um card. Avaliar (adicionar obra
+  ou mudar a nota) nunca aparece solto: vira um card por pessoa por dia, tipo
+  "avaliou 5 obras", com até 8 capas e o total de obras diferentes. Ganhar
+  conquista vira evento, mas não aparece.
+- Aparecem as coisas de quem a pessoa segue, as dela mesma e as de **qualquer
   perfil público** (é a timeline geral).
-- Ordem do mais novo para o mais antigo, páginas de até 50.
+- Ordem do mais novo para o mais antigo. A página é de até 50 **takes**; as
+  avaliações de cada página são as que caem entre o último take da página
+  anterior e o último desta. Só entram avaliações dos últimos 30 dias, porque o
+  backfill criou um evento por obra antiga.
+- O card agrupado tem id negativo (não é um evento só) e não recebe reação nem
+  comentário.
 - Na primeira subida com o social, cada obra já cadastrada virou um evento
   com a data dela, pra o histórico não nascer vazio.
 
@@ -59,9 +66,15 @@ reação são agrupadas por take e tipo.
 
 ## Comparar gosto
 
-A afinidade entre duas pessoas é calculada no front a partir das obras em
-comum (fórmula em [ranking.md](ranking.md#afinidade-comparar-com-outra-pessoa)).
-Só funciona com quem a pessoa pode ver.
+A afinidade entre duas pessoas sai das obras em comum (fórmula em
+[ranking.md](ranking.md#afinidade-comparar-com-outra-pessoa)). Só funciona com
+quem a pessoa pode ver.
+
+- **Na tela de comparar e no perfil**, o front calcula com a lista inteira.
+- **Nas listas** (seguindo, seguidores, sugestões, busca), o back manda
+  `sharedCount` (obras em comum) e `matchPct`, com a mesma conta. A % só vem
+  com **3 obras ou mais em comum**; com menos, um número sozinho engana.
+- As sugestões vêm de quem tem a % mais alta; sem % vão pro fim.
 
 ## Notificações
 

@@ -29,6 +29,15 @@ deixar o motivo.
 - **Botão "Atualizar dados" no item**, para obras em andamento (One Piece,
   série no ar).
 - **No feed social, a linha de detalhes do card mostra só o criador.**
+- **Avaliações voltaram ao feed, mas só agrupadas** (2026-11): um card por
+  pessoa por dia ("avaliou 5 obras", com as capas), nunca uma avaliação solta.
+  Antes o feed era só de takes, para não virar spam de nota; o agrupamento
+  resolve isso e deixa o feed vivo quando ninguém escreve. Só olham 30 dias pra
+  trás, porque o backfill criou um evento por obra antiga. Conquistas continuam
+  fora, e o card agrupado não recebe reação.
+- **% de gosto parecido nas listas da Social**, calculada no backend com a
+  mesma conta do Comparar e só mostrada com 3 obras ou mais em comum. As
+  sugestões vêm de quem tem o gosto mais parecido.
 - **Nota ponderada pelo tempo é opcional**, ligada por um botão. Não vale para
   Músicas, Álbuns e Mangás, onde o tempo gasto não diz nada sobre o quanto a
   pessoa gostou.
