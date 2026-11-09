@@ -37,7 +37,8 @@ public class OAuthService {
         return authenticateOAuth(verifyGoogleToken(idToken), AuthProvider.GOOGLE);
     }
 
-    public LoginResponseDTO loginWithDiscord(String accessToken) {
+    /** Privado de propósito: o token só pode vir da troca do código feita aqui (ver exchangeDiscordCode). */
+    private LoginResponseDTO loginWithDiscord(String accessToken) {
         return authenticateOAuth(verifyDiscordToken(accessToken), AuthProvider.DISCORD);
     }
 

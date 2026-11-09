@@ -139,11 +139,11 @@ public class AuthController {
         return ResponseEntity.ok(oAuthService.loginWithGoogle(dto.token()));
     }
 
-    @PostMapping("/oauth/discord")
-    public ResponseEntity<LoginResponseDTO> loginWithDiscord(@Valid @RequestBody OAuthTokenRequestDTO dto) {
-        return ResponseEntity.ok(oAuthService.loginWithDiscord(dto.token()));
-    }
-
+    /**
+     * Discord só entra pelo código de autorização: quem troca o código pelo token é o
+     * back, com o client secret, então o token é sempre do MyRank. A rota que recebia o
+     * access_token pronto saiu porque aceitava token emitido para qualquer outro app.
+     */
     @PostMapping("/oauth/discord/callback")
     public ResponseEntity<LoginResponseDTO> loginWithDiscordCallback(@Valid @RequestBody OAuthCodeRequestDTO dto) {
         return ResponseEntity.ok(oAuthService.loginWithDiscordCode(dto.code(), dto.redirectUri()));
