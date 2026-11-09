@@ -6,16 +6,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
 public interface FeedEventRepository extends JpaRepository<FeedEvent, Long> {
 
     /**
-     * Feed = só TAKEs (posts escritos). Traz os takes de quem o viewer segue +
-     * ele mesmo (`userIds`) e os takes de qualquer perfil público (timeline geral).
-     * RATED / ADDED / BADGE não entram no feed. `takeType` vai como parâmetro de
-     * propósito — enum PG por literal em @Query gera cast quebrado no Hibernate.
+     * Takes do feed (posts escritos): de quem o viewer segue + ele mesmo
+     * (`userIds`) e de qualquer perfil público (timeline geral). As avaliações
+     * entram à parte, agrupadas (ver {@link #findRatingsBetween}). `takeType` vai
+     * como parâmetro de propósito — enum PG por literal em @Query gera cast
+     * quebrado no Hibernate.
      */
     @Query("""
             select e from FeedEvent e
@@ -33,6 +35,22 @@ public interface FeedEventRepository extends JpaRepository<FeedEvent, Long> {
                    or exists (select 1 from User u where u.id = e.userId and u.isPublic = true))
             """)
     long countFeed(Collection<Long> userIds, FeedEventType takeType);
+
+    /**
+     * Avaliações (obra adicionada ou nota mudada) das mesmas pessoas do feed,
+     * dentro de (`after`, `before`]. O feed junta isso num card por pessoa por dia.
+     */
+    @Query("""
+            select e from FeedEvent e
+            where e.type in :types
+              and e.workId is not null
+              and e.createdAt > :after and e.createdAt <= :before
+              and (e.userId in :userIds
+                   or exists (select 1 from User u where u.id = e.userId and u.isPublic = true))
+            order by e.createdAt desc, e.id desc
+            """)
+    List<FeedEvent> findRatingsBetween(Collection<Long> userIds, Collection<FeedEventType> types,
+                                       LocalDateTime after, LocalDateTime before, Pageable pageable);
 
     java.util.Optional<FeedEvent> findByTakeId(Long takeId);
 }

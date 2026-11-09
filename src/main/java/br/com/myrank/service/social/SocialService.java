@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -20,6 +22,13 @@ public class SocialService {
     private static final int MAX_LIST = 20;
     private static final int TAKE_MIN = 3;
     private static final int TAKE_MAX = 280;
+    /** Avaliações mais velhas que isso não viram card: o backfill criou um evento por obra antiga. */
+    private static final int RATED_DAY_WINDOW_DAYS = 30;
+    /** Capas por card "avaliou N obras". */
+    private static final int RATED_DAY_COVERS = 8;
+    /** Teto de eventos lidos pra montar os cards de uma página (uma importação grande não pesa). */
+    private static final int RATED_DAY_SCAN_MAX = 2000;
+    private static final List<FeedEventType> RATING_TYPES = List.of(FeedEventType.ADDED, FeedEventType.RATED);
 
     private final FollowRepository followRepository;
     private final FollowRequestRepository followRequestRepository;
@@ -33,6 +42,7 @@ public class SocialService {
     private final BadgeRepository badgeRepository;
     private final FeedEventService feedEventService;
     private final NotificationService notificationService;
+    private final Clock clock;
 
     public SocialService(FollowRepository followRepository,
                          FollowRequestRepository followRequestRepository,
@@ -45,7 +55,8 @@ public class SocialService {
                          UserBadgeRepository userBadgeRepository,
                          BadgeRepository badgeRepository,
                          FeedEventService feedEventService,
-                         NotificationService notificationService) {
+                         NotificationService notificationService,
+                         Clock clock) {
         this.followRepository = followRepository;
         this.followRequestRepository = followRequestRepository;
         this.feedEventRepository = feedEventRepository;
@@ -58,6 +69,7 @@ public class SocialService {
         this.badgeRepository = badgeRepository;
         this.feedEventService = feedEventService;
         this.notificationService = notificationService;
+        this.clock = clock;
     }
 
     // ── Resumo ──────────────────────────────────────────────────────────
@@ -73,11 +85,41 @@ public class SocialService {
 
     // ── Feed ────────────────────────────────────────────────────────────
 
+    /**
+     * Takes, paginados como sempre, e as avaliações do mesmo período juntadas num
+     * card por pessoa por dia ("avaliou 5 obras"). Cada página leva as avaliações
+     * entre o último take da página anterior e o último desta; a última página
+     * (ou um feed sem takes) vai até {@link #RATED_DAY_WINDOW_DAYS} dias atrás.
+     */
     @Transactional(readOnly = true)
     public List<FeedItemDTO> getFeed(Long viewerId, int page, int size) {
         int capped = Math.min(Math.max(size, 1), 50);
-        List<FeedEvent> events = feedEventRepository.findFeed(
-                feedActorIds(viewerId), FeedEventType.TAKE, PageRequest.of(Math.max(page, 0), capped));
+        int p = Math.max(page, 0);
+        Collection<Long> actors = feedActorIds(viewerId);
+        List<FeedEvent> events = feedEventRepository.findFeed(actors, FeedEventType.TAKE, PageRequest.of(p, capped));
+
+        LocalDateTime floor = LocalDateTime.now(clock).minusDays(RATED_DAY_WINDOW_DAYS);
+        // folga de um dia: o relógio é UTC e o evento grava a hora local do servidor
+        LocalDateTime before = LocalDateTime.now(clock).plusDays(1);
+        if (p > 0) {
+            // o último take da página anterior (página de tamanho 1 = deslocamento exato)
+            List<FeedEvent> prev = feedEventRepository.findFeed(
+                    actors, FeedEventType.TAKE, PageRequest.of(p * capped - 1, 1));
+            if (prev.isEmpty()) return List.of();
+            before = prev.get(0).getCreatedAt();
+        }
+        LocalDateTime after = floor;
+        if (events.size() == capped && events.get(events.size() - 1).getCreatedAt().isAfter(floor)) {
+            after = events.get(events.size() - 1).getCreatedAt();
+        }
+
+        List<FeedItemDTO> items = new ArrayList<>(takeItems(events, viewerId));
+        if (after.isBefore(before)) items.addAll(ratedDays(actors, after, before));
+        items.sort(Comparator.comparing(FeedItemDTO::createdAt).reversed());
+        return items;
+    }
+
+    private List<FeedItemDTO> takeItems(List<FeedEvent> events, Long viewerId) {
         if (events.isEmpty()) return List.of();
 
         Map<Long, User> users = byId(userRepository.findAllById(
@@ -110,6 +152,51 @@ public class SocialService {
                 viewerId,
                 summarize(reactionsByEvent.getOrDefault(e.getId(), List.of()), viewerId)
         )).toList();
+    }
+
+    /** Um card por pessoa por dia com as obras avaliadas (distintas, a mais recente primeiro). */
+    private List<FeedItemDTO> ratedDays(Collection<Long> actors, LocalDateTime after, LocalDateTime before) {
+        List<FeedEvent> ratings = feedEventRepository.findRatingsBetween(
+                actors, RATING_TYPES, after, before, PageRequest.of(0, RATED_DAY_SCAN_MAX));
+        if (ratings.isEmpty()) return List.of();
+
+        // já vem do mais novo pro mais velho: o 1º evento de cada grupo é o mais recente
+        Map<String, List<FeedEvent>> groups = new LinkedHashMap<>();
+        for (FeedEvent e : ratings) {
+            groups.computeIfAbsent(e.getUserId() + "|" + e.getCreatedAt().toLocalDate(), k -> new ArrayList<>()).add(e);
+        }
+        Map<String, List<Long>> workIds = new LinkedHashMap<>();
+        Set<Long> toLoad = new HashSet<>();
+        groups.forEach((key, list) -> {
+            List<Long> ids = list.stream().map(FeedEvent::getWorkId).distinct().toList();
+            workIds.put(key, ids);
+            toLoad.addAll(ids.subList(0, Math.min(ids.size(), RATED_DAY_COVERS)));
+        });
+        Map<Long, Work> works = byId(workRepository.findAllById(toLoad), Work::getId);
+        Map<Long, User> users = byId(userRepository.findAllById(
+                ratings.stream().map(FeedEvent::getUserId).collect(Collectors.toSet())), User::getId);
+
+        List<FeedItemDTO> items = new ArrayList<>();
+        groups.forEach((key, list) -> {
+            FeedEvent latest = list.get(0);
+            User actor = users.get(latest.getUserId());
+            List<Long> ids = workIds.get(key);
+            List<WorkMiniDTO> minis = ids.stream()
+                    .limit(RATED_DAY_COVERS)
+                    .map(works::get).filter(Objects::nonNull)
+                    .map(this::toWorkMini)
+                    .toList();
+            if (actor == null || minis.isEmpty()) return; // obra apagada ou conta removida
+            items.add(new FeedItemDTO(
+                    -latest.getId(),
+                    "RATED_DAY",
+                    new ActorDTO(actor.getId(), actor.getUsername(), actor.getAvatarUrl()),
+                    latest.getCreatedAt(),
+                    null, null, null, null, 0, false, false, null, null,
+                    minis,
+                    ids.size()));
+        });
+        return items;
     }
 
     // ── Listas de usuários ──────────────────────────────────────────────
@@ -418,7 +505,9 @@ public class SocialService {
                 takeEdited,
                 canManage,
                 e.getScore(),
-                reactions
+                reactions,
+                List.of(),
+                0
         );
     }
 
