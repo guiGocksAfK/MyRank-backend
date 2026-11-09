@@ -13,5 +13,9 @@ public record SocialUserDTO(
         boolean followsYou,
         boolean isPublic,
         /** eu já pedi pra seguir este usuário (pendente). */
-        boolean requested
+        boolean requested,
+        /** obras com o mesmo título nos dois rankings (0 se não dá pra ver as obras). */
+        int sharedCount,
+        /** % de gosto parecido; null com menos de 3 obras em comum. */
+        Integer matchPct
 ) {}
