@@ -33,7 +33,9 @@ notificação "quer te seguir".
   "avaliou 5 obras", com até 8 capas e o total de obras diferentes. Ganhar
   conquista vira evento, mas não aparece.
 - Aparecem as coisas de quem a pessoa segue, as dela mesma e as de **qualquer
-  perfil público** (é a timeline geral).
+  perfil público** (é a timeline geral). Com `?scope=following` sai a timeline
+  geral e fica só quem ela segue e ela mesma ("Só quem eu sigo"). O filtro é no
+  back, e não no front, pra página não vir cheia de desconhecidos e sumir.
 - Ordem do mais novo para o mais antigo. A página é de até 50 **takes**; as
   avaliações de cada página são as que caem entre o último take da página
   anterior e o último desta. Só entram avaliações dos últimos 30 dias, porque o

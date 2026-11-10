@@ -98,10 +98,16 @@ public class SocialService {
      */
     @Transactional(readOnly = true)
     public List<FeedItemDTO> getFeed(Long viewerId, int page, int size) {
+        return getFeed(viewerId, page, size, true);
+    }
+
+    /** {@code everyone} false = "Só quem eu sigo": sem os perfis públicos de desconhecidos. */
+    @Transactional(readOnly = true)
+    public List<FeedItemDTO> getFeed(Long viewerId, int page, int size, boolean everyone) {
         int capped = Math.min(Math.max(size, 1), 50);
         int p = Math.max(page, 0);
         Collection<Long> actors = feedActorIds(viewerId);
-        List<FeedEvent> events = feedEventRepository.findFeed(actors, FeedEventType.TAKE, PageRequest.of(p, capped));
+        List<FeedEvent> events = feedEventRepository.findFeed(actors, everyone, FeedEventType.TAKE, PageRequest.of(p, capped));
 
         LocalDateTime floor = LocalDateTime.now(clock).minusDays(RATED_DAY_WINDOW_DAYS);
         // folga de um dia: o relógio é UTC e o evento grava a hora local do servidor
@@ -109,7 +115,7 @@ public class SocialService {
         if (p > 0) {
             // o último take da página anterior (página de tamanho 1 = deslocamento exato)
             List<FeedEvent> prev = feedEventRepository.findFeed(
-                    actors, FeedEventType.TAKE, PageRequest.of(p * capped - 1, 1));
+                    actors, everyone, FeedEventType.TAKE, PageRequest.of(p * capped - 1, 1));
             if (prev.isEmpty()) return List.of();
             before = prev.get(0).getCreatedAt();
         }
@@ -119,7 +125,7 @@ public class SocialService {
         }
 
         List<FeedItemDTO> items = new ArrayList<>(takeItems(events, viewerId));
-        if (after.isBefore(before)) items.addAll(ratedDays(actors, after, before));
+        if (after.isBefore(before)) items.addAll(ratedDays(actors, everyone, after, before));
         items.sort(Comparator.comparing(FeedItemDTO::createdAt).reversed());
         return items;
     }
@@ -160,9 +166,9 @@ public class SocialService {
     }
 
     /** Um card por pessoa por dia com as obras avaliadas (distintas, a mais recente primeiro). */
-    private List<FeedItemDTO> ratedDays(Collection<Long> actors, LocalDateTime after, LocalDateTime before) {
+    private List<FeedItemDTO> ratedDays(Collection<Long> actors, boolean everyone, LocalDateTime after, LocalDateTime before) {
         List<FeedEvent> ratings = feedEventRepository.findRatingsBetween(
-                actors, RATING_TYPES, after, before, PageRequest.of(0, RATED_DAY_SCAN_MAX));
+                actors, everyone, RATING_TYPES, after, before, PageRequest.of(0, RATED_DAY_SCAN_MAX));
         if (ratings.isEmpty()) return List.of();
 
         // já vem do mais novo pro mais velho: o 1º evento de cada grupo é o mais recente
