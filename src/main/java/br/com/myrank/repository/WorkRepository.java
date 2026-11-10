@@ -24,6 +24,9 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
     @Query("select w from Work w left join fetch w.category left join fetch w.subcategory where w.user.id = :userId")
     List<Work> findByUserId(Long userId);
 
+    /** Obras de várias pessoas de uma vez (conta de gosto parecido das sugestões). */
+    List<Work> findByUserIdIn(java.util.Collection<Long> userIds);
+
     @Query("""
             select w from Work w
             left join fetch w.category
