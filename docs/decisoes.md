@@ -29,6 +29,25 @@ deixar o motivo.
 - **Botão "Atualizar dados" no item**, para obras em andamento (One Piece,
   série no ar).
 - **No feed social, a linha de detalhes do card mostra só o criador.**
+- **Avaliações voltaram ao feed, mas só agrupadas** (2026-11): um card por
+  pessoa por dia ("avaliou 5 obras", com as capas), nunca uma avaliação solta.
+  Antes o feed era só de takes, para não virar spam de nota; o agrupamento
+  resolve isso e deixa o feed vivo quando ninguém escreve. Só olham 30 dias pra
+  trás, porque o backfill criou um evento por obra antiga. Conquistas continuam
+  fora, e o card agrupado não recebe reação.
+- **% de gosto parecido nas listas da Social**, calculada no backend com a
+  mesma conta do Comparar. As sugestões vêm de quem tem o gosto mais parecido.
+- **Conta do gosto parecido revista** (2026-11). A primeira versão só olhava a
+  diferença das notas e tinha quatro falhas: 3 obras em comum valiam tanto
+  quanto 50; quem dá 9 pra tudo combinava com todo mundo que também dá; "Duna"
+  filme e livro contavam como a mesma obra; e não dava pra separar parecido de
+  diferente. Agora: título + tipo, mistura da nota com o gosto relativo (o
+  quanto cada um gostou acima ou abaixo da própria média, com mais peso), a %
+  puxada pros 50% quando há poucas obras, e mínimo de 5 em comum. Os números
+  mudaram pra todo mundo de propósito.
+- **"Pra debater"**: quem tem o gosto mais diferente do seu, pra quem quer
+  discutir. Pede 8 obras em comum (discordar com poucas é acaso) e % até 60, e
+  mostra a obra da maior briga como gancho.
 - **Nota ponderada pelo tempo é opcional**, ligada por um botão. Não vale para
   Músicas, Álbuns e Mangás, onde o tempo gasto não diz nada sobre o quanto a
   pessoa gostou.
