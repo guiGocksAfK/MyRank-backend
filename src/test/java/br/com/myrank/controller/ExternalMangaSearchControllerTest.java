@@ -1,6 +1,7 @@
 package br.com.myrank.controller;
 
 import java.net.URI;
+import br.com.myrank.config.GlobalExceptionHandler;
 import br.com.myrank.dto.external.MalListResponseDTO;
 import br.com.myrank.dto.external.MalMangaNodeDTO;
 import br.com.myrank.exception.ExternalApiExceptionHandler;
@@ -43,7 +44,7 @@ class ExternalMangaSearchControllerTest {
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new ExternalSearchController(
             mock(TmdbService.class), mock(RawgService.class), new MyAnimeListService(restTemplate, "client-id-de-teste"),
             mock(GoogleBooksService.class), mock(ShowcaseService.class), mock(DeezerService.class)))
-            .setControllerAdvice(new ExternalApiExceptionHandler()).build();
+            .setControllerAdvice(new ExternalApiExceptionHandler(), new GlobalExceptionHandler()).build();
 
     @Test
     void buscaDeMangaDevolveContratoExistenteDeSugestao() throws Exception {
@@ -90,13 +91,17 @@ class ExternalMangaSearchControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"0", "-1", "abc", "9999999999999999999999"})
     void idInvalidoRetorna400SemChamadaAoMyAnimeList(String id) throws Exception {
-        mvc.perform(get("/api/external/manga/" + id)).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/external/manga/" + id))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").isString());
         verifyNoInteractions(restTemplate);
     }
 
     @Test
     void buscaExigeParametroQuery() throws Exception {
-        mvc.perform(get("/api/external/search/manga")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/external/search/manga"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Parâmetro obrigatório ausente: query."));
         verifyNoInteractions(restTemplate);
     }
 

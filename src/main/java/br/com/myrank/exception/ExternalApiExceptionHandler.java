@@ -1,5 +1,6 @@
 package br.com.myrank.exception;
 
+import br.com.myrank.controller.ExternalSearchController;
 import br.com.myrank.dto.ErrorResponseDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ import org.springframework.web.client.RestClientException;
  * Escopo: só os controllers de integração externa (ExternalSearchController).
  * Não interfere em exceções de outras partes da aplicação (Work, Category, etc.).
  */
-@RestControllerAdvice(basePackages = "br.com.myrank.controller")
+@RestControllerAdvice(assignableTypes = ExternalSearchController.class)
 public class ExternalApiExceptionHandler {
 
     /** Erro já tratado/relançado explicitamente pelos nossos services externos. */
