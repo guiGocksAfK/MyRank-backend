@@ -30,7 +30,6 @@ public class BadgeService {
     private final UserBadgeRepository userBadgeRepository;
     private final WorkRepository workRepository;
     private final CategoryRepository categoryRepository;
-    private final MasterTableGroupRepository masterTableGroupRepository;
     private final UserRepository userRepository;
     private final FeedEventService feedEventService;
 
@@ -38,21 +37,19 @@ public class BadgeService {
                         UserBadgeRepository userBadgeRepository,
                         WorkRepository workRepository,
                         CategoryRepository categoryRepository,
-                        MasterTableGroupRepository masterTableGroupRepository,
                         UserRepository userRepository,
                         FeedEventService feedEventService) {
         this.badgeRepository = badgeRepository;
         this.userBadgeRepository = userBadgeRepository;
         this.workRepository = workRepository;
         this.categoryRepository = categoryRepository;
-        this.masterTableGroupRepository = masterTableGroupRepository;
         this.userRepository = userRepository;
         this.feedEventService = feedEventService;
     }
 
     /**
      * Recálculo em segundo plano — chamado pelos CRUDs de obra pra não segurar a
-     * resposta da escrita enquanto reprocessa as 48 badges. Roda no `badgeExecutor`,
+     * resposta da escrita enquanto reprocessa as 72 badges. Roda no `badgeExecutor`,
      * em transação própria (o CRUD que disparou já commitou).
      */
     @Async("badgeExecutor")
@@ -159,12 +156,11 @@ public class BadgeService {
         boolean hasBio = user.getBio() != null && !user.getBio().isBlank();
         boolean hasCustomCategory = categoryRepository.findByUserId(userId).stream()
                 .anyMatch(c -> !c.isDefault());
-        boolean hasMasterGroup = !masterTableGroupRepository.findByUserId(userId).isEmpty();
         long accountAgeDays = user.getCreatedAt() != null
                 ? ChronoUnit.DAYS.between(user.getCreatedAt().toLocalDate(), LocalDate.now())
                 : 0L;
 
-        return new BadgeContext(views, hasAvatar, hasBio, hasCustomCategory, hasMasterGroup, accountAgeDays);
+        return new BadgeContext(views, hasAvatar, hasBio, hasCustomCategory, accountAgeDays);
     }
 
 }

@@ -20,7 +20,7 @@ class BadgeContextTest {
     }
 
     private static BadgeContext contexto(BadgeContext.WorkView... works) {
-        return new BadgeContext(List.of(works), false, false, false, false, 0);
+        return new BadgeContext(List.of(works), false, false, false, 0);
     }
 
     @Test

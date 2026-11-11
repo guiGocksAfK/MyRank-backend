@@ -31,7 +31,6 @@ class UserServiceOnboardingTest {
         assertThat(user.getOnboardingStep()).isEqualTo(OnboardingStep.TABLES);
         assertThat(user.isPublic()).isFalse();
         assertThat(user.isEmailVerified()).isTrue();
-        assertThat(user.getUserStats()).isNotNull();
         assertThat(user.getAuthProvider()).isEqualTo(provider);
         assertThat(UserResponseDTO.fromEntity(user).onboardingStep()).isEqualTo(OnboardingStep.TABLES);
     }

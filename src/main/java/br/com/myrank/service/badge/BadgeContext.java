@@ -26,16 +26,14 @@ public class BadgeContext {
     private final boolean hasAvatar;
     private final boolean hasBio;
     private final boolean hasCustomCategory;
-    private final boolean hasMasterGroup;
     private final long accountAgeDays;
 
     public BadgeContext(List<WorkView> works, boolean hasAvatar, boolean hasBio,
-                        boolean hasCustomCategory, boolean hasMasterGroup, long accountAgeDays) {
+                        boolean hasCustomCategory, long accountAgeDays) {
         this.works = works;
         this.hasAvatar = hasAvatar;
         this.hasBio = hasBio;
         this.hasCustomCategory = hasCustomCategory;
-        this.hasMasterGroup = hasMasterGroup;
         this.accountAgeDays = accountAgeDays;
     }
 
@@ -125,10 +123,6 @@ public class BadgeContext {
     }
 
     // ── notas ─────────────────────────────────────────────────
-    public boolean hasTenOfType(String type) {
-        return works.stream().anyMatch(w -> w.type().equals(type) && w.score() >= TEN);
-    }
-
     public long tensTotal() {
         return works.stream().filter(w -> w.score() >= TEN).count();
     }
@@ -147,11 +141,6 @@ public class BadgeContext {
 
     public boolean hasScoreLte(double v) {
         return works.stream().anyMatch(w -> w.score() <= v);
-    }
-
-    public double avgOfType(String type) {
-        return works.stream().filter(w -> w.type().equals(type))
-                .mapToDouble(BadgeContext.WorkView::score).average().orElse(0);
     }
 
     public double avgAll() {
@@ -185,6 +174,5 @@ public class BadgeContext {
     public boolean hasAvatar() { return hasAvatar; }
     public boolean hasBio() { return hasBio; }
     public boolean hasCustomCategory() { return hasCustomCategory; }
-    public boolean hasMasterGroup() { return hasMasterGroup; }
     public long accountAgeDays() { return accountAgeDays; }
 }
