@@ -77,6 +77,7 @@ public class BadgeService {
 
             LocalDateTime now = LocalDateTime.now();
             List<Long> justUnlocked = new java.util.ArrayList<>();
+            List<UserBadge> toSave = new java.util.ArrayList<>();
 
             for (BadgeDefinition def : BadgeDefinition.values()) {
                 Badge badge = catalog.get(def.code());
@@ -87,15 +88,24 @@ public class BadgeService {
                 boolean reached = raw >= def.target();
 
                 UserBadge ub = existing.get(badge.getId());
-                if (ub == null) ub = new UserBadge(userId, badge.getId());
+                boolean isNew = ub == null;
+                if (isNew) ub = new UserBadge(userId, badge.getId());
 
+                boolean changed = isNew || ub.getCurrentProgress() != clamped;
                 ub.setCurrentProgress(clamped);
                 // uma vez conquistada, continua conquistada
                 if (reached && ub.getUnlockedAt() == null) {
                     ub.setUnlockedAt(now);
                     justUnlocked.add(badge.getId());
+                    changed = true;
                 }
-                userBadgeRepository.save(ub);
+                if (changed) {
+                    toSave.add(ub);
+                }
+            }
+
+            if (!toSave.isEmpty()) {
+                userBadgeRepository.saveAll(toSave);
             }
 
             // feed: um evento por badge recém-conquistada

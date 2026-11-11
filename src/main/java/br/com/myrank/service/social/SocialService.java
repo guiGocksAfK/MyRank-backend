@@ -214,20 +214,18 @@ public class SocialService {
 
     @Transactional(readOnly = true)
     public List<SocialUserDTO> getFollowing(Long viewerId) {
-        List<TasteMatch.Rated> mine = myRated(viewerId);
-        return userRepository.findAllById(followRepository.findFollowedIds(viewerId)).stream()
+        List<User> users = userRepository.findAllById(followRepository.findFollowedIds(viewerId)).stream()
                 .sorted(Comparator.comparing(u -> u.getUsername().toLowerCase()))
-                .map(u -> toSocialUser(u, viewerId, mine))
                 .toList();
+        return toSocialUsers(users, viewerId);
     }
 
     @Transactional(readOnly = true)
     public List<SocialUserDTO> getFollowers(Long viewerId) {
-        List<TasteMatch.Rated> mine = myRated(viewerId);
-        return userRepository.findAllById(followRepository.findFollowerIds(viewerId)).stream()
+        List<User> users = userRepository.findAllById(followRepository.findFollowerIds(viewerId)).stream()
                 .sorted(Comparator.comparing(u -> u.getUsername().toLowerCase()))
-                .map(u -> toSocialUser(u, viewerId, mine))
                 .toList();
+        return toSocialUsers(users, viewerId);
     }
 
     /** Últimos N seguidores, na ordem em que te seguiram. */
@@ -238,11 +236,11 @@ public class SocialService {
         if (ids.isEmpty()) return List.of();
         Map<Long, User> byId = userRepository.findAllById(ids).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
-        return ids.stream()
+        List<User> ordered = ids.stream()
                 .map(byId::get)
                 .filter(Objects::nonNull)
-                .map(u -> toSocialUser(u, viewerId))
                 .toList();
+        return toSocialUsers(ordered, viewerId);
     }
 
     /**
@@ -252,23 +250,24 @@ public class SocialService {
      */
     @Transactional(readOnly = true)
     public List<SocialUserDTO> getSuggestions(Long viewerId) {
-        Set<Long> excluded = new HashSet<>(followRepository.findFollowedIds(viewerId));
-        excluded.addAll(followRequestRepository.findRequestedTargetIdsAll(viewerId)); // já pediu
+        Set<Long> following = new HashSet<>(followRepository.findFollowedIds(viewerId));
+        Set<Long> requested = new HashSet<>(followRequestRepository.findRequestedTargetIdsAll(viewerId));
+        Set<Long> excluded = new HashSet<>(following);
+        excluded.addAll(requested); // já pediu
         if (excluded.isEmpty()) excluded.add(-1L);
         List<TasteMatch.Rated> mine = myRated(viewerId);
         List<User> pool = userRepository.findSuggestions(viewerId, excluded, PageRequest.of(0, TASTE_POOL));
         // privado que você não segue: as obras são fechadas, então não entra na conta
-        Map<Long, TasteMatch.Result> taste = tasteOf(mine, pool.stream().filter(User::isPublic).toList());
+        List<User> visibleInPool = pool.stream().filter(User::isPublic).toList();
+        Map<Long, List<Work>> worksByUser = worksByUser(visibleInPool);
+        Map<Long, TasteMatch.Result> taste = tasteOf(mine, worksByUser);
         Comparator<User> best = Comparator
                 .comparing((User u) -> taste.getOrDefault(u.getId(), TasteMatch.Result.NONE).pct(),
                         Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(u -> taste.getOrDefault(u.getId(), TasteMatch.Result.NONE).shared(),
                         Comparator.reverseOrder());
-        return pool.stream()
-                .sorted(best)
-                .limit(MAX_LIST)
-                .map(u -> toSocialUser(u, viewerId, mine))
-                .toList();
+        List<User> top = pool.stream().sorted(best).limit(MAX_LIST).toList();
+        return toSocialUsers(top, viewerId, mine, following, null, requested, worksByUser, taste);
     }
 
     /**
@@ -282,8 +281,9 @@ public class SocialService {
         List<TasteMatch.Rated> mine = myRated(viewerId);
         List<User> pool = userRepository.findSuggestions(viewerId, Set.of(-1L), PageRequest.of(0, TASTE_POOL))
                 .stream().filter(u -> u.isPublic() || following.contains(u.getId())).toList();
-        Map<Long, TasteMatch.Result> taste = tasteOf(mine, pool);
-        return pool.stream()
+        Map<Long, List<Work>> worksByUser = worksByUser(pool);
+        Map<Long, TasteMatch.Result> taste = tasteOf(mine, worksByUser);
+        List<User> top = pool.stream()
                 .filter(u -> {
                     TasteMatch.Result r = taste.get(u.getId());
                     return r != null && r.pct() != null && r.shared() >= TasteMatch.DEBATE_MIN_SHARED
@@ -291,16 +291,19 @@ public class SocialService {
                 })
                 .sorted(Comparator.comparing((User u) -> taste.get(u.getId()).pct()))
                 .limit(DEBATE_MAX)
-                .map(u -> toSocialUser(u, viewerId, mine))
                 .toList();
+        return toSocialUsers(top, viewerId, mine, following, null, null, worksByUser, taste);
     }
 
-    /** Gosto parecido de várias pessoas, com as obras de todas numa consulta só. */
-    private Map<Long, TasteMatch.Result> tasteOf(List<TasteMatch.Rated> mine, List<User> people) {
-        if (mine.isEmpty() || people.isEmpty()) return Map.of();
-        Map<Long, List<Work>> worksByUser = workRepository
-                .findByUserIdIn(people.stream().map(User::getId).toList()).stream()
+    private Map<Long, List<Work>> worksByUser(List<User> people) {
+        if (people.isEmpty()) return Map.of();
+        return workRepository.findByUserIdIn(people.stream().map(User::getId).toList()).stream()
                 .collect(Collectors.groupingBy(w -> w.getUser().getId()));
+    }
+
+    /** Gosto parecido de várias pessoas, a partir das obras já carregadas em lote. */
+    private Map<Long, TasteMatch.Result> tasteOf(List<TasteMatch.Rated> mine, Map<Long, List<Work>> worksByUser) {
+        if (mine.isEmpty() || worksByUser.isEmpty()) return Map.of();
         Map<Long, TasteMatch.Result> out = new HashMap<>();
         worksByUser.forEach((id, works) -> out.put(id, TasteMatch.compare(mine, rated(works))));
         return out;
@@ -312,10 +315,7 @@ public class SocialService {
         if (q.length() < 2) return List.of();
         // perfis privados também aparecem — pra poder pedir pra seguir; o conteúdo
         // continua protegido no getProfile.
-        List<TasteMatch.Rated> mine = myRated(viewerId);
-        return userRepository.searchByUsername(viewerId, q, PageRequest.of(0, MAX_LIST)).stream()
-                .map(u -> toSocialUser(u, viewerId, mine))
-                .toList();
+        return toSocialUsers(userRepository.searchByUsername(viewerId, q, PageRequest.of(0, MAX_LIST)), viewerId);
     }
 
     // ── Pedidos de seguir (perfis privados) ────────────────────────────
@@ -326,11 +326,11 @@ public class SocialService {
         if (ids.isEmpty()) return List.of();
         Map<Long, User> byId = userRepository.findAllById(ids).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
-        return ids.stream()
+        List<User> ordered = ids.stream()
                 .map(byId::get)
                 .filter(Objects::nonNull)
-                .map(u -> toSocialUser(u, viewerId))
                 .toList();
+        return toSocialUsers(ordered, viewerId);
     }
 
     @Transactional
@@ -572,12 +572,80 @@ public class SocialService {
         return new WorkMiniDTO(w.getId(), w.getTitle(), type, w.getImageUrl(), w.getScore());
     }
 
-    private SocialUserDTO toSocialUser(User u, Long viewerId) {
-        return toSocialUser(u, viewerId, null);
+    private List<SocialUserDTO> toSocialUsers(List<User> users, Long viewerId) {
+        if (users.isEmpty()) return List.of();
+        return toSocialUsers(users, viewerId, myRated(viewerId), null, null, null, null, null);
     }
 
-    /** {@code mine}: as obras avaliadas do viewer (null = busca agora). */
-    private SocialUserDTO toSocialUser(User u, Long viewerId, List<TasteMatch.Rated> mine) {
+    /**
+     * Monta cards de uma lista de usuários resolvendo relacionamentos e obras em lote,
+     * em vez de disparar 4 queries por pessoa (N+1).
+     */
+    private List<SocialUserDTO> toSocialUsers(List<User> users,
+                                              Long viewerId,
+                                              List<TasteMatch.Rated> mine,
+                                              Set<Long> followingPreloaded,
+                                              Set<Long> followersPreloaded,
+                                              Set<Long> requestedPreloaded,
+                                              Map<Long, List<Work>> worksPreloaded,
+                                              Map<Long, TasteMatch.Result> tastePreloaded) {
+        if (users.isEmpty()) return List.of();
+        Set<Long> following = followingPreloaded != null
+                ? followingPreloaded
+                : new HashSet<>(followRepository.findFollowedIds(viewerId));
+        Set<Long> followers = followersPreloaded != null
+                ? followersPreloaded
+                : new HashSet<>(followRepository.findFollowerIds(viewerId));
+        Set<Long> requested = requestedPreloaded != null
+                ? requestedPreloaded
+                : new HashSet<>(followRequestRepository.findRequestedTargetIdsAll(viewerId));
+
+        Map<Long, List<Work>> worksMap = worksPreloaded;
+        if (worksMap == null) {
+            List<User> visible = users.stream()
+                    .filter(u -> u.getId().equals(viewerId) || u.isPublic() || following.contains(u.getId()))
+                    .toList();
+            worksMap = worksByUser(visible);
+        }
+        final Map<Long, List<Work>> resolvedWorks = worksMap;
+
+        return users.stream().map(u -> {
+            boolean self = u.getId().equals(viewerId);
+            boolean isFollowing = !self && following.contains(u.getId());
+            boolean canSeeWorks = self || u.isPublic() || isFollowing;
+            List<Work> works = canSeeWorks ? resolvedWorks.getOrDefault(u.getId(), List.of()) : List.of();
+            boolean isRequested = !self && !isFollowing && !u.isPublic() && requested.contains(u.getId());
+            TasteMatch.Result taste;
+            if (self || works.isEmpty()) {
+                taste = TasteMatch.Result.NONE;
+            } else if (tastePreloaded != null && tastePreloaded.containsKey(u.getId())) {
+                taste = tastePreloaded.get(u.getId());
+            } else {
+                taste = TasteMatch.compare(mine, rated(works));
+            }
+            TasteMatch.Fight fight = taste.fight();
+            return new SocialUserDTO(
+                    u.getId(),
+                    u.getUsername(),
+                    u.getAvatarUrl(),
+                    u.getBio(),
+                    u.getPlan().name(),
+                    works.size(),
+                    avgScore(works),
+                    isFollowing,
+                    !self && followers.contains(u.getId()),
+                    u.isPublic(),
+                    isRequested,
+                    taste.shared(),
+                    taste.pct(),
+                    fight == null ? null : fight.title(),
+                    fight == null ? null : fight.mine(),
+                    fight == null ? null : fight.theirs()
+            );
+        }).toList();
+    }
+
+    private SocialUserDTO toSocialUser(User u, Long viewerId) {
         boolean self = u.getId().equals(viewerId);
         boolean following = !self && followRepository.existsByFollowerIdAndFollowedId(viewerId, u.getId());
         boolean canSeeWorks = self || u.isPublic() || following;
@@ -586,7 +654,7 @@ public class SocialService {
                 && followRequestRepository.existsByRequesterIdAndTargetId(viewerId, u.getId());
         TasteMatch.Result taste = self || works.isEmpty()
                 ? TasteMatch.Result.NONE
-                : TasteMatch.compare(mine != null ? mine : myRated(viewerId), rated(works));
+                : TasteMatch.compare(myRated(viewerId), rated(works));
         TasteMatch.Fight fight = taste.fight();
         return new SocialUserDTO(
                 u.getId(),

@@ -26,14 +26,11 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     private static final String UID_ATTR = "myrank_uid";
 
     private final JwtService jwtService;
-    private final CustomUserDetailsService userDetailsService;
     private final UserRepository userRepository;
 
     public StompAuthChannelInterceptor(JwtService jwtService,
-                                       CustomUserDetailsService userDetailsService,
                                        UserRepository userRepository) {
         this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
     }
 
@@ -68,7 +65,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         if (user == null || !jwtService.isTokenValid(token, user)) {
             throw new MessagingException("Token de chat inválido.");
         }
-        UserDetails ud = userDetailsService.loadUserByUsername(user.getEmail());
+        UserDetails ud = new AuthenticatedUser(user);
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(ud, null, ud.getAuthorities());
         accessor.setUser(auth);
@@ -89,9 +86,13 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         Map<String, Object> attrs = accessor.getSessionAttributes();
         if (attrs != null && attrs.get(UID_ATTR) instanceof Long id) return id;
         // fallback: resolve pelo principal
-        if (accessor.getUser() instanceof UsernamePasswordAuthenticationToken auth
-                && auth.getPrincipal() instanceof UserDetails ud) {
-            return userRepository.findByEmail(ud.getUsername()).map(User::getId).orElse(null);
+        if (accessor.getUser() instanceof UsernamePasswordAuthenticationToken auth) {
+            if (auth.getPrincipal() instanceof AuthenticatedUser au) {
+                return au.getUser().getId();
+            }
+            if (auth.getPrincipal() instanceof UserDetails ud) {
+                return userRepository.findByEmail(ud.getUsername()).map(User::getId).orElse(null);
+            }
         }
         return null;
     }
