@@ -22,7 +22,6 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final CustomUserDetailsService userDetailsService;
     private final UserRepository userRepository;
 
     private static final List<AntPathRequestMatcher> PUBLIC_ROUTES = List.of(
@@ -30,10 +29,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             new AntPathRequestMatcher("/api/users", "POST")
     );
 
-    public JwtAuthenticationFilter(JwtService jwtService, CustomUserDetailsService userDetailsService,
-                                   UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
         this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
     }
 
@@ -64,9 +61,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 User user = userRepository.findById(userId).orElseThrow();
-                UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
 
                 if (jwtService.isTokenValid(token, user)) {
+                    UserDetails userDetails = new AuthenticatedUser(user);
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities()
                     );
