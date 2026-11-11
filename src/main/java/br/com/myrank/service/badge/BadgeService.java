@@ -10,10 +10,12 @@ import br.com.myrank.service.CreatorNames;
 import br.com.myrank.service.social.FeedEventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -32,19 +34,23 @@ public class BadgeService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final FeedEventService feedEventService;
+    private final Clock clock;
 
+    @Autowired
     public BadgeService(BadgeRepository badgeRepository,
                         UserBadgeRepository userBadgeRepository,
                         WorkRepository workRepository,
                         CategoryRepository categoryRepository,
                         UserRepository userRepository,
-                        FeedEventService feedEventService) {
+                        FeedEventService feedEventService,
+                        Clock clock) {
         this.badgeRepository = badgeRepository;
         this.userBadgeRepository = userBadgeRepository;
         this.workRepository = workRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.feedEventService = feedEventService;
+        this.clock = clock;
     }
 
     /**
@@ -75,7 +81,7 @@ public class BadgeService {
                 existing.put(ub.getBadgeId(), ub);
             }
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(clock);
             List<Long> justUnlocked = new java.util.ArrayList<>();
             List<UserBadge> toSave = new java.util.ArrayList<>();
 
@@ -167,7 +173,7 @@ public class BadgeService {
         boolean hasCustomCategory = categoryRepository.findByUserId(userId).stream()
                 .anyMatch(c -> !c.isDefault());
         long accountAgeDays = user.getCreatedAt() != null
-                ? ChronoUnit.DAYS.between(user.getCreatedAt().toLocalDate(), LocalDate.now())
+                ? ChronoUnit.DAYS.between(user.getCreatedAt().toLocalDate(), LocalDate.now(clock))
                 : 0L;
 
         return new BadgeContext(views, hasAvatar, hasBio, hasCustomCategory, accountAgeDays);

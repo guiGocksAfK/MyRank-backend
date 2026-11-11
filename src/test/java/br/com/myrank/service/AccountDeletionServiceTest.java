@@ -5,11 +5,14 @@ import br.com.myrank.dto.AccountDeleteRequestDTO;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.service.email.BrevoEmailClient;
 import br.com.myrank.service.social.ChatService;
+import br.com.myrank.support.MutableClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,8 +33,9 @@ class AccountDeletionServiceTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final ChatService chatService = mock(ChatService.class);
     private final BrevoEmailClient emailClient = mock(BrevoEmailClient.class);
+    private final MutableClock clock = new MutableClock(Instant.parse("2026-11-11T12:00:00Z"));
     private final AccountDeletionService service =
-            new AccountDeletionService(userRepository, chatService, emailClient);
+            new AccountDeletionService(userRepository, chatService, emailClient, clock);
 
     @BeforeEach
     void setUp() {
@@ -94,5 +98,21 @@ class AccountDeletionServiceTest {
         order.verify(userRepository).hardDeleteById(42L);
         // 1º email = código, 2º = comprovante de exclusão
         verify(emailClient, times(2)).send(eq("dono@example.com"), anyString(), anyString());
+    }
+
+    @Test
+    void respeitaCooldownDeUmMinuto_eExpiraAposDezMinutos() {
+        User u = user("hash");
+        String code = issueAndCaptureCode(u);
+
+        assertThatThrownBy(() -> service.issueDeletionCode(u))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Aguarde um minuto");
+
+        clock.advance(Duration.ofMinutes(11));
+        assertThatThrownBy(() -> service.deleteAccount(u, new AccountDeleteRequestDTO("dono", code)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("inválido ou expirado");
+        verify(userRepository, never()).hardDeleteById(anyLong());
     }
 }
