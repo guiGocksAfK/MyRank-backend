@@ -35,12 +35,17 @@ public class UserService {
      * quem acabou de provar a posse do email.
      */
     public User createUser(UserCreateDTO dto, String email) {
+        String username = dto.username() == null ? "" : dto.username().trim();
+        if (username.length() < 3 || username.length() > 50) {
+            throw new IllegalArgumentException("O nome de usuário deve ter de 3 a 50 caracteres.");
+        }
+
         Optional<User> pending = userRepository.findByEmail(email)
                 .filter(existing -> existing.getAuthProvider() == AuthProvider.LOCAL && !existing.isEmailVerified());
 
         boolean usernameTaken = pending
-                .map(existing -> userRepository.existsByUsernameAndIdNot(dto.username(), existing.getId()))
-                .orElseGet(() -> userRepository.existsByUsername(dto.username()));
+                .map(existing -> userRepository.existsByUsernameAndIdNot(username, existing.getId()))
+                .orElseGet(() -> userRepository.existsByUsername(username));
         if (usernameTaken) {
             throw new IllegalArgumentException("Username já está em uso.");
         }
@@ -49,7 +54,7 @@ public class UserService {
         }
 
         User user = pending.orElseGet(User::new);
-        user.setUsername(dto.username());
+        user.setUsername(username);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(dto.password()));
         user.setAuthProvider(AuthProvider.LOCAL);
@@ -72,11 +77,15 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
 
-        if (dto.username() != null && !dto.username().isBlank()) {
-            if (userRepository.existsByUsernameAndIdNot(dto.username(), id)) {
+        if (dto.username() != null) {
+            String username = dto.username().trim();
+            if (username.length() < 3 || username.length() > 50) {
+                throw new IllegalArgumentException("O nome de usuário deve ter de 3 a 50 caracteres.");
+            }
+            if (userRepository.existsByUsernameAndIdNot(username, id)) {
                 throw new IllegalArgumentException("Username já está em uso.");
             }
-            user.setUsername(dto.username());
+            user.setUsername(username);
         }
 
         if (dto.bio() != null) {
