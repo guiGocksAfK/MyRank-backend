@@ -1,7 +1,6 @@
 package br.com.myrank.service;
 
 import br.com.myrank.domain.entity.User;
-import br.com.myrank.domain.entity.UserStats;
 import br.com.myrank.domain.enums.AuthProvider;
 import br.com.myrank.domain.enums.DmPolicy;
 import br.com.myrank.domain.enums.NotificationGroup;
@@ -62,17 +61,11 @@ public class UserService {
         }
 
         if (pending.isEmpty()) {
-            user.setUserStats(new UserStats(user));
             user.setPublic(false);
             user.setOnboardingStep(OnboardingStep.TABLES);
         }
 
         return userRepository.save(user);
-    }
-
-    public User getByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
     }
 
     public User updateUser(Long id, UserUpdateDTO dto) {
@@ -232,9 +225,6 @@ public class UserService {
         user.setPublic(false);
         user.setOnboardingStep(OnboardingStep.TABLES);
         linkDiscordId(user, info, provider);
-
-        UserStats stats = new UserStats(user);
-        user.setUserStats(stats);
 
         return userRepository.save(user);
     }

@@ -83,9 +83,6 @@ public class PasswordResetService {
                 .orElseThrow(() -> new IllegalArgumentException("O código expirou. Peça um novo."));
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
-        // restos do fluxo antigo por link (colunas da V15), se houver
-        user.setPasswordResetTokenHash(null);
-        user.setPasswordResetExpiresAt(null);
         // quem acertou o código provou que é dono do email
         user.setEmailVerified(true);
         // derruba as sessões de todos os aparelhos; quem chama emite o token novo depois disso

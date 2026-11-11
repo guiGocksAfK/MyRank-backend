@@ -69,13 +69,6 @@ public class User {
     @Column(name = "account_deletion_code_expires_at")
     private LocalDateTime accountDeletionCodeExpiresAt;
 
-    /** SHA-256 (hex) do token do link de redefinição de senha — o token em si nunca é salvo. */
-    @Column(name = "password_reset_token_hash", length = 64)
-    private String passwordResetTokenHash;
-
-    @Column(name = "password_reset_expires_at")
-    private LocalDateTime passwordResetExpiresAt;
-
     /** Vai dentro de cada token de login; aumentar derruba todas as sessões abertas (V16). */
     @Column(name = "token_version", nullable = false)
     private int tokenVersion;
@@ -130,9 +123,6 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private UserStats userStats;
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -180,11 +170,6 @@ public class User {
     public void setAccountDeletionCodeHash(String accountDeletionCodeHash) { this.accountDeletionCodeHash = accountDeletionCodeHash; }
     public LocalDateTime getAccountDeletionCodeExpiresAt() { return accountDeletionCodeExpiresAt; }
     public void setAccountDeletionCodeExpiresAt(LocalDateTime accountDeletionCodeExpiresAt) { this.accountDeletionCodeExpiresAt = accountDeletionCodeExpiresAt; }
-
-    public String getPasswordResetTokenHash() { return passwordResetTokenHash; }
-    public void setPasswordResetTokenHash(String passwordResetTokenHash) { this.passwordResetTokenHash = passwordResetTokenHash; }
-    public LocalDateTime getPasswordResetExpiresAt() { return passwordResetExpiresAt; }
-    public void setPasswordResetExpiresAt(LocalDateTime passwordResetExpiresAt) { this.passwordResetExpiresAt = passwordResetExpiresAt; }
 
     public int getTokenVersion() { return tokenVersion; }
     public void setTokenVersion(int tokenVersion) { this.tokenVersion = tokenVersion; }
@@ -244,7 +229,4 @@ public class User {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
-
-    public UserStats getUserStats() { return userStats; }
-    public void setUserStats(UserStats userStats) { this.userStats = userStats; }
 }
