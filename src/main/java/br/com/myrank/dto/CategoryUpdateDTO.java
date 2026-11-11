@@ -1,6 +1,5 @@
 package br.com.myrank.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import br.com.myrank.domain.enums.TableTemplate;
 
@@ -8,7 +7,7 @@ import java.util.List;
 
 public class CategoryUpdateDTO {
 
-    @NotBlank(message = "Informe o nome da tabela.")
+    /** null mantém o nome atual; se enviado, não pode ficar em branco (validado no service). */
     @Size(max = 60, message = "O nome deve ter no máximo 60 caracteres.")
     private String name;
 
