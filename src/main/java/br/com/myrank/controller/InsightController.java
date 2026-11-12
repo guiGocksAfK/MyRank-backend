@@ -30,7 +30,7 @@ public class InsightController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody InsightGenerateRequestDTO body) {
         User user = authUtils.getUser(userDetails);
-        return ResponseEntity.ok(insightService.generate(user.getId(), body));
+        return ResponseEntity.ok(insightService.generate(user.getId(), body, user.getLanguage()));
     }
 
     /** Última análise que o usuário já gerou (para abrir a página direto). */
@@ -50,6 +50,6 @@ public class InsightController {
             @PathVariable Long id,
             @Valid @RequestBody InsightChatRequestDTO body) {
         User user = authUtils.getUser(userDetails);
-        return ResponseEntity.ok(insightService.chat(user.getId(), id, body.question()));
+        return ResponseEntity.ok(insightService.chat(user.getId(), id, body.question(), user.getLanguage()));
     }
 }

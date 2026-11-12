@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -26,17 +27,19 @@ public class AiUsageService {
 
     private final AiUsageRepository repository;
     private final NamedParameterJdbcTemplate jdbc;
+    private final Clock clock;
 
-    public AiUsageService(AiUsageRepository repository, NamedParameterJdbcTemplate jdbc) {
+    public AiUsageService(AiUsageRepository repository, NamedParameterJdbcTemplate jdbc, Clock clock) {
         this.repository = repository;
         this.jdbc = jdbc;
+        this.clock = clock;
     }
 
     public record Reservation(LocalDateTime windowStart, int remaining) {}
 
     /** Início da janela vigente: as {@link #RESET_HOUR}h de hoje, ou de ontem se ainda não deu essa hora. */
     private LocalDateTime currentWindowStart() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         LocalDate day = now.toLocalTime().isBefore(LocalTime.of(RESET_HOUR, 0))
                 ? now.toLocalDate().minusDays(1)
                 : now.toLocalDate();

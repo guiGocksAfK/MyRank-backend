@@ -6,11 +6,13 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -27,6 +29,15 @@ public class JwtService {
 
     @Value("${jwt.expiration}")
     private long expirationMs;
+
+    private Clock clock = Clock.systemUTC();
+
+    public JwtService() {}
+
+    @Autowired
+    public JwtService(Clock clock) {
+        this.clock = clock;
+    }
 
     /**
      * Falha o boot se o segredo não foi configurado (ou é curto demais). Sem isso
@@ -48,11 +59,12 @@ public class JwtService {
     }
 
     public String generateToken(User user) {
+        long nowMs = clock.millis();
         return Jwts.builder()
                 .subject(user.getId().toString())
                 .claim(VERSION_CLAIM, user.getTokenVersion())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .issuedAt(new Date(nowMs))
+                .expiration(new Date(nowMs + expirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -69,7 +81,7 @@ public class JwtService {
         Claims claims = parse(token);
         Integer version = claims.get(VERSION_CLAIM, Integer.class);
         return claims.getSubject().equals(user.getId().toString())
-                && claims.getExpiration().after(new Date())
+                && claims.getExpiration().after(new Date(clock.millis()))
                 && (version == null ? 0 : version) == user.getTokenVersion();
     }
 

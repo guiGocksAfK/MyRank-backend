@@ -76,8 +76,11 @@ public class CategoryService {
     public CategoryResponseDTO updateCategory(Long categoryId, Long userId, CategoryUpdateDTO dto) {
         Category category = lockedOwnedCategory(categoryId, userId);
 
-        if (dto.getName() != null && !dto.getName().isBlank()) {
-            String newName = dto.getName();
+        if (dto.getName() != null) {
+            String newName = dto.getName().trim();
+            if (newName.isEmpty()) {
+                throw new IllegalArgumentException("Informe o nome da tabela.");
+            }
             if (!category.getName().equalsIgnoreCase(newName)
                     && categoryRepository.existsByUserIdAndNameIgnoreCase(userId, newName)) {
                 throw new IllegalArgumentException("Você já tem uma categoria com esse nome.");

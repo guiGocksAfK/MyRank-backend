@@ -8,6 +8,7 @@ import br.com.myrank.dto.MasterTableGroupUpdateDTO;
 import br.com.myrank.repository.CategoryRepository;
 import br.com.myrank.repository.MasterTableGroupRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,6 +26,7 @@ public class MasterTableGroupService {
         this.categoryRepository = categoryRepository;
     }
 
+    @Transactional
     public MasterTableGroup createGroup(User user, MasterTableGroupCreateDTO dto) {
         if (groupRepository.existsByUserIdAndNameIgnoreCase(user.getId(), dto.name())) {
             throw new IllegalArgumentException("Você já tem um agrupamento com esse nome.");
@@ -40,10 +42,12 @@ public class MasterTableGroupService {
         return groupRepository.save(group);
     }
 
+    @Transactional(readOnly = true)
     public List<MasterTableGroup> getGroupsByUser(Long userId) {
         return groupRepository.findByUserId(userId);
     }
 
+    @Transactional
     public MasterTableGroup updateGroup(Long groupId, Long userId, MasterTableGroupUpdateDTO dto) {
         MasterTableGroup group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Agrupamento não encontrado."));
@@ -57,11 +61,14 @@ public class MasterTableGroupService {
         }
         if (dto.categoryIds() != null) {
             group.setCategories(resolveOwnedCategories(userId, dto.categoryIds()));
+        } else {
+            group.getCategories().size(); // inicializa dentro da transação para o DTO
         }
 
         return groupRepository.save(group);
     }
 
+    @Transactional
     public MasterTableGroup updateOrder(Long groupId, Long userId, List<String> order) {
         MasterTableGroup group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Agrupamento não encontrado."));
@@ -71,9 +78,11 @@ public class MasterTableGroupService {
         }
 
         group.setManualOrder(order == null ? new ArrayList<>() : order);
+        group.getCategories().size(); // inicializa dentro da transação para o DTO
         return groupRepository.save(group);
     }
 
+    @Transactional
     public void deleteGroup(Long groupId, Long userId) {
         MasterTableGroup group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Agrupamento não encontrado."));

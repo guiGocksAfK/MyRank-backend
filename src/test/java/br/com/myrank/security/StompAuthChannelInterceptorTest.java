@@ -17,8 +17,7 @@ import static org.mockito.Mockito.mock;
 class StompAuthChannelInterceptorTest {
 
     private final StompAuthChannelInterceptor interceptor = new StompAuthChannelInterceptor(
-            mock(JwtService.class), mock(CustomUserDetailsService.class),
-            mock(UserRepository.class));
+            mock(JwtService.class), mock(UserRepository.class));
 
     private Message<byte[]> frame(StompCommand command, String destination, Long userId) {
         StompHeaderAccessor headers = StompHeaderAccessor.create(command);

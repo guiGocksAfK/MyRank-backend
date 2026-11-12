@@ -37,8 +37,10 @@ public class SocialController {
     public ResponseEntity<List<FeedItemDTO>> feed(
             @AuthenticationPrincipal UserDetails ud,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(socialService.getFeed(me(ud), page, size));
+            @RequestParam(defaultValue = "20") int size,
+            // "following" = só quem a pessoa segue (e ela mesma); qualquer outro valor = todos
+            @RequestParam(defaultValue = "all") String scope) {
+        return ResponseEntity.ok(socialService.getFeed(me(ud), page, size, !"following".equals(scope)));
     }
 
     @GetMapping("/following")
@@ -56,6 +58,11 @@ public class SocialController {
             @AuthenticationPrincipal UserDetails ud,
             @RequestParam(defaultValue = "5") int limit) {
         return ResponseEntity.ok(socialService.getRecentFollowers(me(ud), limit));
+    }
+
+    @GetMapping("/debaters")
+    public ResponseEntity<List<SocialUserDTO>> debaters(@AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.ok(socialService.getDebaters(me(ud)));
     }
 
     @GetMapping("/suggestions")

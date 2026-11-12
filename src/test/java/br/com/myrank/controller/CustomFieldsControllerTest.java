@@ -140,4 +140,22 @@ class CustomFieldsControllerTest {
                 .andExpect(jsonPath("$.details.fields.f_text0001").doesNotExist())
                 .andExpect(jsonPath("$.details.fields.f_bool0001").value(false));
     }
+
+    @Test
+    void atualizarApenasTemplatesSemEnviarNomeMantemNomeAtual() throws Exception {
+        mvc.perform(put("/api/categories/10").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"templates\":[\"custom\",\"movie\",\"game\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Coleção"))
+                .andExpect(jsonPath("$.templates.length()").value(3));
+    }
+
+    @Test
+    void atualizarCategoriaComNomeEmBrancoRetorna400() throws Exception {
+        mvc.perform(put("/api/categories/10").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Informe o nome da tabela."));
+        verify(categories, never()).save(any());
+    }
 }

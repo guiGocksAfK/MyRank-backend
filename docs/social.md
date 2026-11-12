@@ -33,7 +33,9 @@ notificação "quer te seguir".
   "avaliou 5 obras", com até 8 capas e o total de obras diferentes. Ganhar
   conquista vira evento, mas não aparece.
 - Aparecem as coisas de quem a pessoa segue, as dela mesma e as de **qualquer
-  perfil público** (é a timeline geral).
+  perfil público** (é a timeline geral). Com `?scope=following` sai a timeline
+  geral e fica só quem ela segue e ela mesma ("Só quem eu sigo"). O filtro é no
+  back, e não no front, pra página não vir cheia de desconhecidos e sumir.
 - Ordem do mais novo para o mais antigo. A página é de até 50 **takes**; as
   avaliações de cada página são as que caem entre o último take da página
   anterior e o último desta. Só entram avaliações dos últimos 30 dias, porque o
@@ -72,9 +74,14 @@ quem a pessoa pode ver.
 
 - **Na tela de comparar e no perfil**, o front calcula com a lista inteira.
 - **Nas listas** (seguindo, seguidores, sugestões, busca), o back manda
-  `sharedCount` (obras em comum) e `matchPct`, com a mesma conta. A % só vem
-  com **3 obras ou mais em comum**; com menos, um número sozinho engana.
-- As sugestões vêm de quem tem a % mais alta; sem % vão pro fim.
+  `sharedCount` (obras em comum), `matchPct` e a obra da maior briga
+  (`fightTitle`, `fightMine`, `fightTheirs`), com a mesma conta. A % só vem com
+  **5 obras ou mais em comum**; com menos, um número sozinho engana.
+- **Sugestões:** a conta roda sobre as 200 contas mais novas que a pessoa ainda
+  não segue (as obras de todas numa consulta só) e volta as 20 de % mais alta;
+  sem % vão pro fim. Perfil privado que ela não segue não entra na conta.
+- **Pra debater** (`GET /api/social/debaters`): até 10 pessoas de % mais baixa,
+  com **8 obras ou mais em comum** e % até 60. Entra quem ela já segue também.
 
 ## Notificações
 

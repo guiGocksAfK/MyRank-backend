@@ -39,14 +39,14 @@ class SocialFeedRatedDayTest {
     @Test
     void ratingsOfTheSameDayBecomeOneCardWithDistinctWorks() {
         when(follows.findFollowedIds(1L)).thenReturn(List.of(2L));
-        when(events.findFeed(any(), eq(FeedEventType.TAKE), any())).thenReturn(List.of());
+        when(events.findFeed(any(), anyBoolean(), eq(FeedEventType.TAKE), any())).thenReturn(List.of());
         // dia 9: obra 10 avaliada duas vezes + obra 11; dia 8: obra 12
         List<FeedEvent> ratings = List.of(
                 rating(103, 2L, 10L, NOW.minusHours(1)),
                 rating(102, 2L, 11L, NOW.minusHours(2)),
                 rating(101, 2L, 10L, NOW.minusHours(3)),
                 rating(100, 2L, 12L, NOW.minusDays(1)));
-        when(events.findRatingsBetween(any(), any(), any(), any(), any())).thenReturn(ratings);
+        when(events.findRatingsBetween(any(), anyBoolean(), any(), any(), any(), any())).thenReturn(ratings);
         when(works.findAllById(any())).thenReturn(List.of(work(10L), work(11L), work(12L)));
         User marina = new User();
         marina.setId(2L);
@@ -65,11 +65,22 @@ class SocialFeedRatedDayTest {
     @Test
     void ratingsOnlyLookBackThirtyDays() {
         when(follows.findFollowedIds(1L)).thenReturn(List.of());
-        when(events.findFeed(any(), eq(FeedEventType.TAKE), any())).thenReturn(List.of());
+        when(events.findFeed(any(), anyBoolean(), eq(FeedEventType.TAKE), any())).thenReturn(List.of());
 
         service.getFeed(1L, 0, 20);
 
-        verify(events).findRatingsBetween(any(), any(), eq(NOW.minusDays(30)), any(), any());
+        verify(events).findRatingsBetween(any(), eq(true), any(), eq(NOW.minusDays(30)), any(), any());
+    }
+
+    @Test
+    void followingOnlyLeavesStrangersOut() {
+        when(follows.findFollowedIds(1L)).thenReturn(List.of(2L));
+        when(events.findFeed(any(), anyBoolean(), eq(FeedEventType.TAKE), any())).thenReturn(List.of());
+
+        service.getFeed(1L, 0, 20, false);
+
+        verify(events).findFeed(any(), eq(false), eq(FeedEventType.TAKE), any());
+        verify(events).findRatingsBetween(any(), eq(false), any(), any(), any(), any());
     }
 
     private static FeedEvent rating(long id, long userId, long workId, LocalDateTime at) {

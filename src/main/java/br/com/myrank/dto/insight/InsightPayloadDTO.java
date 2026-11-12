@@ -3,6 +3,7 @@ package br.com.myrank.dto.insight;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import java.text.Normalizer;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -101,7 +102,9 @@ public record InsightPayloadDTO(
     }
 
     private static String norm(String title) {
-        return title.trim().toLowerCase(Locale.ROOT);
+        if (title == null) return "";
+        String noAccents = Normalizer.normalize(title, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return noAccents.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
     }
 
     /** Sanity check do que voltou do modelo antes de persistir (o perfil de gosto vem do código). */

@@ -63,4 +63,14 @@ class RecommendationCoversTest {
         assertThat(out.recommendations()).extracting(Recommendation::posterUrl).containsExactly("https://img/cb.jpg", "");
         assertThat(covers.needsFill(out)).isFalse();
     }
+
+    @Test
+    void ignoraPontuacaoAoCompararTituloDaRecomendacaoComABusca() {
+        RecommendationCovers covers = new RecommendationCovers(Map.of(
+                "anime", q -> List.of(hit("Steins;Gate", "2011-04-06", "https://img/sg.jpg"))));
+
+        InsightPayloadDTO out = covers.fill(payload(rec("Steins Gate", 2011, "Anime", null)));
+
+        assertThat(out.recommendations().get(0).posterUrl()).isEqualTo("https://img/sg.jpg");
+    }
 }

@@ -32,7 +32,7 @@ see [Documentation](#documentation) for the full list.
   a feed, reactions, **takes** with threaded comments and taste affinity.
 - **Chat** with direct messages, groups and invite links, in real time over
   WebSocket.
-- **Achievements**: 48 badges evaluated server-side whenever a work changes.
+- **Achievements**: 72 badges evaluated server-side whenever a work changes.
 - **Accounts** with e-mail and password, Google or Discord. E-mail ownership is
   proven by a code before the account exists; password recovery and account
   deletion also work by e-mail code. A short onboarding lets new users pick

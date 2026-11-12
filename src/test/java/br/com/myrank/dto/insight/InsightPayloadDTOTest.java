@@ -42,9 +42,9 @@ class InsightPayloadDTOTest {
     @Test
     void limpezaTiraObraDoRankingRepetidaESemTituloECortaEmTres() {
         InsightPayloadDTO clean = withRecos(
-                reco("Breaking Bad"), reco("Dark"), reco("dark "), reco(" "),
+                reco("Breaking Bad"), reco("Steins Gate"), reco("Dark"), reco("dark "), reco(" "),
                 reco("Hades"), reco("Arcane"), reco("Fargo"))
-                .withCleanRecommendations(Set.of("breaking bad", "One Piece"));
+                .withCleanRecommendations(Set.of("breaking bad", "Steins;Gate", "One Piece"));
 
         assertThat(clean.recommendations()).extracting(InsightPayloadDTO.Recommendation::title)
                 .containsExactly("Dark", "Hades", "Arcane");

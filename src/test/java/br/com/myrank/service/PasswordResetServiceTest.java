@@ -71,7 +71,6 @@ class PasswordResetServiceTest {
     @Test
     void codigoCerto_passeTrocaASenha_eConfirmaOEmail() {
         User user = localUser();
-        user.setPasswordResetTokenHash("hash-do-link-antigo");
         String pass = service.verifyCode("conta@myrank.dev", requestAndCaptureCode());
 
         User saved = service.reset(pass, "senha-nova-123");
@@ -79,7 +78,6 @@ class PasswordResetServiceTest {
         assertThat(saved).isSameAs(user);
         assertThat(encoder.matches("senha-nova-123", user.getPasswordHash())).isTrue();
         assertThat(user.isEmailVerified()).isTrue();
-        assertThat(user.getPasswordResetTokenHash()).isNull();
         assertThat(user.getTokenVersion()).isEqualTo(1); // sessões dos outros aparelhos caem
     }
 

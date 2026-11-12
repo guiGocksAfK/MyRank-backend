@@ -22,9 +22,11 @@ import java.util.stream.Collectors;
 public class BadgeCatalogInitializer implements ApplicationRunner {
 
     private final BadgeRepository badgeRepository;
+    private final BadgeService badgeService;
 
-    public BadgeCatalogInitializer(BadgeRepository badgeRepository) {
+    public BadgeCatalogInitializer(BadgeRepository badgeRepository, BadgeService badgeService) {
         this.badgeRepository = badgeRepository;
+        this.badgeService = badgeService;
     }
 
     @Override
@@ -50,5 +52,7 @@ public class BadgeCatalogInitializer implements ApplicationRunner {
         badgeRepository.findAll().stream()
                 .filter(b -> !known.contains(b.getCode()))
                 .forEach(badgeRepository::delete);
+
+        badgeService.invalidateCatalogCache();
     }
 }

@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.text.Normalizer;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -73,12 +72,18 @@ public class RecommendationCovers {
             List<ExternalSearchResultDTO> results = search.apply(r.title());
             if (results == null) return "";
             String title = norm(r.title());
-            return results.stream()
-                    .filter(x -> x.getPosterUrl() != null && !x.getPosterUrl().isBlank())
-                    .min(Comparator.comparingInt((ExternalSearchResultDTO x) -> score(x, title, r.year())))
-                    .filter(x -> score(x, title, r.year()) < 3) // nem título nem ano batem: melhor sem capa
-                    .map(ExternalSearchResultDTO::getPosterUrl)
-                    .orElse("");
+            ExternalSearchResultDTO best = null;
+            int bestScore = 3;
+            for (ExternalSearchResultDTO x : results) {
+                if (x == null || x.getPosterUrl() == null || x.getPosterUrl().isBlank()) continue;
+                int s = score(x, title, r.year());
+                if (s < bestScore) {
+                    bestScore = s;
+                    best = x;
+                    if (s == 0) break;
+                }
+            }
+            return best != null ? best.getPosterUrl() : "";
         } catch (RuntimeException e) {
             log.warn("Sem capa pra recomendação '{}': {}", r.title(), e.getMessage());
             return "";
@@ -97,7 +102,7 @@ public class RecommendationCovers {
 
     private static String norm(String s) {
         if (s == null) return "";
-        return Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
-                .toLowerCase(Locale.ROOT).trim();
+        String noAccents = Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return noAccents.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
     }
 }

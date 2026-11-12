@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 
@@ -39,13 +40,16 @@ public class AccountDeletionService {
     private final UserRepository userRepository;
     private final ChatService chatService;
     private final BrevoEmailClient emailClient;
+    private final Clock clock;
 
     public AccountDeletionService(UserRepository userRepository,
                                   ChatService chatService,
-                                  BrevoEmailClient emailClient) {
+                                  BrevoEmailClient emailClient,
+                                  Clock clock) {
         this.userRepository = userRepository;
         this.chatService = chatService;
         this.emailClient = emailClient;
+        this.clock = clock;
     }
 
     /** Manda o código que confirma a posse do email antes de excluir a conta. */
@@ -53,7 +57,7 @@ public class AccountDeletionService {
         if (!emailClient.isConfigured()) {
             throw new IllegalStateException("Envio de email indisponível. Tente novamente mais tarde.");
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         if (user.getAccountDeletionCodeExpiresAt() != null
                 && user.getAccountDeletionCodeExpiresAt().minusMinutes(CODE_TTL_MINUTES - 1).isAfter(now)) {
             throw new IllegalArgumentException("Aguarde um minuto antes de pedir outro código.");
@@ -83,7 +87,7 @@ public class AccountDeletionService {
         String supplied = dto.deletionCode() == null ? "" : dto.deletionCode().trim().toUpperCase();
         String expectedHash = user.getAccountDeletionCodeHash();
         if (expectedHash == null || user.getAccountDeletionCodeExpiresAt() == null
-                || !user.getAccountDeletionCodeExpiresAt().isAfter(LocalDateTime.now())
+                || !user.getAccountDeletionCodeExpiresAt().isAfter(LocalDateTime.now(clock))
                 || !MessageDigest.isEqual(expectedHash.getBytes(StandardCharsets.US_ASCII),
                 sha256(supplied).getBytes(StandardCharsets.US_ASCII))) {
             throw new IllegalArgumentException("Código de exclusão inválido ou expirado.");
@@ -174,8 +178,8 @@ public class AccountDeletionService {
 
         String html(String username, String code) {
             return EmailLayout.render(new EmailLayout.Content(
-                    preheader, greeting.formatted(username), intro, null, null, code,
-                    null, safetyTitle, safetyText, note, null, footer));
+                    preheader, greeting.formatted(username), intro, code,
+                    null, safetyTitle, safetyText, note, footer));
         }
     }
 
@@ -211,8 +215,8 @@ public class AccountDeletionService {
 
         String html(String username) {
             return EmailLayout.render(new EmailLayout.Content(
-                    preheader, greeting.formatted(username), intro, null, null, null,
-                    outro, null, null, null, null, footer));
+                    preheader, greeting.formatted(username), intro, null,
+                    outro, null, null, null, footer));
         }
     }
 }

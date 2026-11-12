@@ -2,7 +2,6 @@ package br.com.myrank.controller;
 
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.auth.CodeVerifyRequestDTO;
-import br.com.myrank.dto.auth.EmailVerifyRequestDTO;
 import br.com.myrank.dto.auth.ForgotPasswordRequestDTO;
 import br.com.myrank.dto.auth.ForgotPasswordResponseDTO;
 import br.com.myrank.dto.auth.LoginRequestDTO;
@@ -10,13 +9,11 @@ import br.com.myrank.dto.auth.LoginResponseDTO;
 import br.com.myrank.dto.auth.OAuthCodeRequestDTO;
 import br.com.myrank.dto.auth.OAuthTokenRequestDTO;
 import br.com.myrank.dto.auth.PassResponseDTO;
-import br.com.myrank.dto.auth.ResendVerificationRequestDTO;
 import br.com.myrank.dto.auth.ResetPasswordRequestDTO;
 import br.com.myrank.dto.auth.SignupCodeRequestDTO;
 import br.com.myrank.exception.EmailNotVerifiedException;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.security.JwtService;
-import br.com.myrank.service.EmailVerificationService;
 import br.com.myrank.service.OAuthService;
 import br.com.myrank.service.PasswordResetService;
 import br.com.myrank.service.SignupCodeService;
@@ -35,7 +32,6 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final OAuthService oAuthService;
-    private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
     private final SignupCodeService signupCodeService;
 
@@ -44,7 +40,6 @@ public class AuthController {
             JwtService jwtService,
             UserRepository userRepository,
             OAuthService oAuthService,
-            EmailVerificationService emailVerificationService,
             PasswordResetService passwordResetService,
             SignupCodeService signupCodeService
     ) {
@@ -52,7 +47,6 @@ public class AuthController {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.oAuthService = oAuthService;
-        this.emailVerificationService = emailVerificationService;
         this.passwordResetService = passwordResetService;
         this.signupCodeService = signupCodeService;
     }
@@ -96,21 +90,6 @@ public class AuthController {
         return ResponseEntity.ok(new LoginResponseDTO(token, user.getUsername()));
     }
 
-    /** Clique no link do email (contas pendentes do cadastro antigo): confirma e já devolve a sessão. */
-    @PostMapping("/verify-email")
-    public ResponseEntity<LoginResponseDTO> verifyEmail(@Valid @RequestBody EmailVerifyRequestDTO dto) {
-        User user = emailVerificationService.verify(dto.token());
-        String token = jwtService.generateToken(user);
-        return ResponseEntity.ok(new LoginResponseDTO(token, user.getUsername()));
-    }
-
-    /** Sempre 204, exista a conta ou não — não serve pra descobrir emails cadastrados. */
-    @PostMapping("/resend-verification")
-    public ResponseEntity<Void> resendVerification(@Valid @RequestBody ResendVerificationRequestDTO dto) {
-        emailVerificationService.resend(dto.email());
-        return ResponseEntity.noContent().build();
-    }
-
     /**
      * "Esqueci minha senha", etapa 1: manda o código. Conta com senha ou email sem
      * conta: SENT (mesma resposta). Conta só com Google/Discord: SOCIAL + provedor,
@@ -139,11 +118,11 @@ public class AuthController {
         return ResponseEntity.ok(oAuthService.loginWithGoogle(dto.token()));
     }
 
-    @PostMapping("/oauth/discord")
-    public ResponseEntity<LoginResponseDTO> loginWithDiscord(@Valid @RequestBody OAuthTokenRequestDTO dto) {
-        return ResponseEntity.ok(oAuthService.loginWithDiscord(dto.token()));
-    }
-
+    /**
+     * Discord só entra pelo código de autorização: quem troca o código pelo token é o
+     * back, com o client secret, então o token é sempre do MyRank. A rota que recebia o
+     * access_token pronto saiu porque aceitava token emitido para qualquer outro app.
+     */
     @PostMapping("/oauth/discord/callback")
     public ResponseEntity<LoginResponseDTO> loginWithDiscordCallback(@Valid @RequestBody OAuthCodeRequestDTO dto) {
         return ResponseEntity.ok(oAuthService.loginWithDiscordCode(dto.code(), dto.redirectUri()));

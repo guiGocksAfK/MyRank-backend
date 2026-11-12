@@ -116,14 +116,11 @@ public class BotAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            // O principal precisa ser um UserDetails com o EMAIL como username: é assim
-            // que o AuthUtils resolve o User real, igual ao fluxo do JWT.
-            UserDetails principal = org.springframework.security.core.userdetails.User
-                    .withUsername(email)
-                    .password("")
-                    .authorities(new SimpleGrantedAuthority("ROLE_USER"),
+            UserDetails principal = new AuthenticatedUser(
+                    user.get(),
+                    List.of(new SimpleGrantedAuthority("ROLE_USER"),
                             new SimpleGrantedAuthority("BOT_REQUEST"))
-                    .build();
+            );
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     principal, null, principal.getAuthorities());

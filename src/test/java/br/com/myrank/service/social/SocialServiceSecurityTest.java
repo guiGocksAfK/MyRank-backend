@@ -1,11 +1,16 @@
 package br.com.myrank.service.social;
 
 import br.com.myrank.domain.entity.FeedEvent;
+import br.com.myrank.domain.entity.Notification;
 import br.com.myrank.domain.entity.User;
+import br.com.myrank.domain.entity.Work;
 import br.com.myrank.domain.enums.FeedEventType;
+import br.com.myrank.domain.enums.NotificationType;
+import br.com.myrank.domain.enums.TableTemplate;
 import br.com.myrank.repository.*;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
@@ -74,6 +79,46 @@ class SocialServiceSecurityTest {
         service.react(1L, 77L, "up");
 
         verify(reactions).save(any());
+    }
+
+    @Test
+    void notificationDoesNotRevealWorkFromLockedAccount() {
+        NotificationRepository notifRepo = mock(NotificationRepository.class);
+        NotificationService notifService = new NotificationService(
+                notifRepo, reactions, events, follows, works, users, mock(ConversationRepository.class));
+
+        Notification n = new Notification();
+        n.setUserId(1L);
+        n.setType(NotificationType.TAKE);
+        n.setActorId(2L);
+        n.setFeedEventId(77L);
+        when(notifRepo.findByUserIdOrderByUpdatedAtDesc(eq(1L), any())).thenReturn(List.of(n));
+
+        User lockedAuthor = new User();
+        lockedAuthor.setId(2L);
+        lockedAuthor.setUsername("trancou");
+        lockedAuthor.setPublic(false);
+        when(users.findAllById(any())).thenReturn(List.of(lockedAuthor));
+
+        FeedEvent ev = mock(FeedEvent.class);
+        when(ev.getId()).thenReturn(77L);
+        when(ev.getUserId()).thenReturn(2L);
+        when(ev.getType()).thenReturn(FeedEventType.TAKE);
+        when(ev.getWorkId()).thenReturn(99L);
+        when(events.findAllById(any())).thenReturn(List.of(ev));
+
+        Work work = new Work();
+        work.setId(99L);
+        work.setTitle("Obra Secreta");
+        work.setTemplate(TableTemplate.MOVIE);
+        work.setScore(BigDecimal.TEN);
+        when(works.findAllById(any())).thenReturn(List.of(work));
+        when(follows.findFollowedIds(1L)).thenReturn(List.of());
+
+        var dto = notifService.list(1L, 0, 10).get(0);
+
+        assertThat(dto.work()).isNull();
+        assertThat(dto.message()).doesNotContain("Obra Secreta");
     }
 
 }

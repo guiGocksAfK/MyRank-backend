@@ -1,7 +1,6 @@
 package br.com.myrank.service;
 
 import br.com.myrank.domain.entity.User;
-import br.com.myrank.domain.entity.UserStats;
 import br.com.myrank.domain.enums.AuthProvider;
 import br.com.myrank.domain.enums.DmPolicy;
 import br.com.myrank.domain.enums.NotificationGroup;
@@ -36,12 +35,17 @@ public class UserService {
      * quem acabou de provar a posse do email.
      */
     public User createUser(UserCreateDTO dto, String email) {
+        String username = dto.username() == null ? "" : dto.username().trim();
+        if (username.length() < 3 || username.length() > 50) {
+            throw new IllegalArgumentException("O nome de usuário deve ter de 3 a 50 caracteres.");
+        }
+
         Optional<User> pending = userRepository.findByEmail(email)
                 .filter(existing -> existing.getAuthProvider() == AuthProvider.LOCAL && !existing.isEmailVerified());
 
         boolean usernameTaken = pending
-                .map(existing -> userRepository.existsByUsernameAndIdNot(dto.username(), existing.getId()))
-                .orElseGet(() -> userRepository.existsByUsername(dto.username()));
+                .map(existing -> userRepository.existsByUsernameAndIdNot(username, existing.getId()))
+                .orElseGet(() -> userRepository.existsByUsername(username));
         if (usernameTaken) {
             throw new IllegalArgumentException("Username já está em uso.");
         }
@@ -50,19 +54,16 @@ public class UserService {
         }
 
         User user = pending.orElseGet(User::new);
-        user.setUsername(dto.username());
+        user.setUsername(username);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(dto.password()));
         user.setAuthProvider(AuthProvider.LOCAL);
         user.setEmailVerified(true);
-        user.setEmailVerificationTokenHash(null);
-        user.setEmailVerificationExpiresAt(null);
         if (dto.language() != null && LANGUAGES.contains(dto.language().trim().toUpperCase())) {
             user.setLanguage(dto.language().trim().toUpperCase());
         }
 
         if (pending.isEmpty()) {
-            user.setUserStats(new UserStats(user));
             user.setPublic(false);
             user.setOnboardingStep(OnboardingStep.TABLES);
         }
@@ -70,20 +71,19 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User getByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
-    }
-
     public User updateUser(Long id, UserUpdateDTO dto) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
 
-        if (dto.username() != null && !dto.username().isBlank()) {
-            if (userRepository.existsByUsernameAndIdNot(dto.username(), id)) {
+        if (dto.username() != null) {
+            String username = dto.username().trim();
+            if (username.length() < 3 || username.length() > 50) {
+                throw new IllegalArgumentException("O nome de usuário deve ter de 3 a 50 caracteres.");
+            }
+            if (userRepository.existsByUsernameAndIdNot(username, id)) {
                 throw new IllegalArgumentException("Username já está em uso.");
             }
-            user.setUsername(dto.username());
+            user.setUsername(username);
         }
 
         if (dto.bio() != null) {
@@ -213,8 +213,6 @@ public class UserService {
                     // provedor, então a senha é descartada e a conta passa a ser dele.
                     user.setPasswordHash(null);
                     user.setEmailVerified(true);
-                    user.setEmailVerificationTokenHash(null);
-                    user.setEmailVerificationExpiresAt(null);
                 }
 
                 user.setProviderId(info.providerId());
@@ -232,9 +230,6 @@ public class UserService {
         user.setPublic(false);
         user.setOnboardingStep(OnboardingStep.TABLES);
         linkDiscordId(user, info, provider);
-
-        UserStats stats = new UserStats(user);
-        user.setUserStats(stats);
 
         return userRepository.save(user);
     }

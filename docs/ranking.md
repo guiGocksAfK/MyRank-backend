@@ -61,11 +61,19 @@ escritores, estúdios e criadores, cada um com as obras dele.
 ## Afinidade (comparar com outra pessoa)
 
 No front (`computeTasteMatch`, em `socialData.js`, também usada no exemplo da
-home) e, para as listas da Social, no back (`SocialService`, que só devolve a %
-com 3 obras ou mais em comum). As duas fazem a mesma conta.
+home) e, para as listas da Social, no back (`TasteMatch`). As duas fazem a
+mesma conta e precisam continuar iguais.
 
-- Obras em comum são achadas pelo **título** (sem diferenciar maiúsculas).
-- `afinidade = 100 − (média das diferenças absolutas de nota × 12)`, limitada
-  entre 0 e 100. Uma diferença média de 1 ponto dá 88%.
+- Obras em comum são achadas pelo **título e pelo tipo** ("Duna" filme e
+  "Duna" livro são obras diferentes). Título sem maiúscula nem espaço nas pontas.
+- Duas medidas, cada uma `100 − 12 × diferença média`:
+  - **nota:** a diferença entre as notas;
+  - **gosto relativo:** a diferença entre o quanto cada um deu acima ou abaixo
+    da **própria média**. Assim quem é exigente e quem é generoso, com a mesma
+    ordem de preferência, saem parecidos.
+- `combinada = 0,6 × relativa + 0,4 × nota`.
+- **Poucas obras puxam pros 50%:** `% = (n × combinada + 5 × 50) / (n + 5)`,
+  com `n` obras em comum. Com 5 obras iguais dá 75%; com 40, mais de 90%.
+- Só tem % com **5 obras ou mais em comum**. Limitada entre 0 e 100.
 - Mostra as 3 maiores concordâncias, as 3 maiores discordâncias (diferença de
   pelo menos 1 ponto) e os favoritos em comum (as duas notas ≥ 8,5).

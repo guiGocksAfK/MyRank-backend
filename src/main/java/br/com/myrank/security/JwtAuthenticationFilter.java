@@ -11,29 +11,19 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final CustomUserDetailsService userDetailsService;
     private final UserRepository userRepository;
 
-    private static final List<AntPathRequestMatcher> PUBLIC_ROUTES = List.of(
-            new AntPathRequestMatcher("/api/auth/**"),
-            new AntPathRequestMatcher("/api/users", "POST")
-    );
-
-    public JwtAuthenticationFilter(JwtService jwtService, CustomUserDetailsService userDetailsService,
-                                   UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
         this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
     }
 
@@ -44,8 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        boolean isPublic = PUBLIC_ROUTES.stream().anyMatch(matcher -> matcher.matches(request));
-        if (isPublic) {
+        if (isPublicRoute(request)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -64,9 +53,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 User user = userRepository.findById(userId).orElseThrow();
-                UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
 
                 if (jwtService.isTokenValid(token, user)) {
+                    UserDetails userDetails = new AuthenticatedUser(user);
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities()
                     );
@@ -81,5 +70,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private static boolean isPublicRoute(HttpServletRequest request) {
+        String path = request.getServletPath();
+        if (path == null || path.isEmpty()) {
+            path = request.getRequestURI();
+        }
+        return path.startsWith("/api/auth/")
+                || ("POST".equalsIgnoreCase(request.getMethod()) && "/api/users".equals(path));
     }
 }

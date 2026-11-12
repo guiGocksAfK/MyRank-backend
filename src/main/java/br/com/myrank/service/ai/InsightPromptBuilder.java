@@ -72,6 +72,28 @@ final class InsightPromptBuilder {
             direto, no máximo 2 parágrafos curtos. Texto puro, sem markdown, sem títulos.
             """;
 
+    static String system(String language) {
+        return switch (normalizeLang(language)) {
+            case "EN" -> SYSTEM + "\nIMPORTANTE: Escreva todos os textos dos campos do JSON em inglês (English), em segunda pessoa (\"you\"), mantendo o campo \"category\" das recomendações em português (Filme, Série, Anime, Mangá, Jogo, Livro, Música ou Álbum).";
+            case "ES" -> SYSTEM + "\nIMPORTANTE: Escreva todos os textos dos campos do JSON em espanhol (Español), em segunda pessoa (\"tú\"), mantendo o campo \"category\" das recomendações em português (Filme, Série, Anime, Mangá, Jogo, Livro, Música ou Álbum).";
+            default -> SYSTEM;
+        };
+    }
+
+    static String chatSystem(String language) {
+        return switch (normalizeLang(language)) {
+            case "EN" -> CHAT_SYSTEM + "\nIMPORTANTE: Responda em inglês (English), em segunda pessoa (\"you\").";
+            case "ES" -> CHAT_SYSTEM + "\nIMPORTANTE: Responda em espanhol (Español), em segunda pessoa (\"tú\").";
+            default -> CHAT_SYSTEM;
+        };
+    }
+
+    static String normalizeLang(String language) {
+        if (language == null) return "PT";
+        String upper = language.trim().toUpperCase();
+        return ("EN".equals(upper) || "ES".equals(upper)) ? upper : "PT";
+    }
+
     static String user(TasteFacts facts) {
         return """
                 RANKING (título | tipo | criador | ano | nota | tempo | posição na tabela | gêneros | take):

@@ -27,6 +27,7 @@ repositório do front.
 | Headers HTTP | Padrões do Spring Security: HSTS (1 ano, com subdomínios; o Spring reconhece o HTTPS que chega pelo Caddy), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` e `Cache-Control: no-store`. Conferido na produção. |
 | CORS | Origens explícitas em `CORS_ALLOWED_ORIGINS`, sem curinga. |
 | Segredos | Tudo por variável de ambiente. O `.env` da VM não vai pro git. |
+| Contêiner | Imagem final roda com usuário sem privilégio (`myrank:myrank`). |
 | Banco | Neon com TLS obrigatório (`sslmode=require`). Schema sob Flyway, e o Hibernate só valida (`ddl-auto=validate`). |
 
 ## Pendências e decisões abertas
@@ -56,43 +57,40 @@ repositório do front.
    houver mais de uma instância, mover os três pra um store compartilhado
    (Redis).
 
-4. **Contêiner roda como root.** O `Dockerfile` não troca de usuário. Correção
-   simples: criar um usuário sem privilégio na imagem final e usar `USER`.
-
-5. **Custo do BCrypt no padrão (10).** Subir pra 12 dobra duas vezes o trabalho
+4. **Custo do BCrypt no padrão (10).** Subir pra 12 dobra duas vezes o trabalho
    de quem tenta quebrar hashes vazados (~200ms por login, imperceptível).
    Hashes antigos continuam válidos, porque o custo vai gravado no próprio hash,
    e migram sozinhos na próxima troca de senha.
 
-6. **Logout não revoga o token no servidor.** Sair apaga o token no navegador,
+5. **Logout não revoga o token no servidor.** Sair apaga o token no navegador,
    mas um token copiado antes continua válido até expirar (24h). A revogação
-   imediata hoje só acontece trocando a senha (versão de sessão). Um "sair de
-   todos os aparelhos" seria só aumentar essa versão, e foi descartado por ora.
+   imediata hoje só acontece trocando a senha (versão de sessão). O botão "sair
+   dos outros aparelhos" nas Configurações aumenta essa versão.
 
-7. **Sem bloqueio por conta no login.** O limite é por IP; alguém com muitos IPs
+6. **Sem bloqueio por conta no login.** O limite é por IP; alguém com muitos IPs
    pode tentar senhas numa mesma conta devagar. Opções: atraso progressivo por
    conta, ou código por email depois de N erros.
 
-8. **Sem CSP nem `Referrer-Policy` na API.** A API manda os padrões do Spring
+7. **Sem CSP nem `Referrer-Policy` na API.** A API manda os padrões do Spring
    Security (ver "Em vigor"), mas não esses dois. Como ela só devolve JSON, o
    risco é baixo; as duas fazem diferença mesmo é no front, que já as tem.
 
-9. **Avatar por URL externa.** A foto de perfil é um link que a própria pessoa
+8. **Avatar por URL externa.** A foto de perfil é um link que a própria pessoa
    informa e que o navegador de quem vê o perfil carrega direto. Quem controla
    o servidor da imagem enxerga o IP de quem abriu o perfil. O mesmo vale pra
    capa das obras, que aparece no feed e no perfil de outras pessoas e aceita
    `http` (o Google Books devolve capas assim; o front sobe tudo pra `https`
    pela CSP). Alternativa: upload com armazenamento próprio, ou proxy de imagens.
 
-10. **LGPD: exportação só das obras.** A exclusão de conta existe, e nas
-    Configurações dá para baixar as obras (CSV ou JSON). Ainda não saem num
-    arquivo os takes, comentários, conversas e seguidores.
+9. **LGPD: exportação só das obras.** A exclusão de conta existe, e nas
+   Configurações dá para baixar as obras (CSV ou JSON). Ainda não saem num
+   arquivo os takes, comentários, conversas e seguidores.
 
-11. **Sem auditoria e sem análise de dependências automática.** Não há trilha
+10. **Sem auditoria e sem análise de dependências automática.** Não há trilha
     de quem alterou o quê, e não há CI rodando os testes nem checando CVEs das
     dependências (por exemplo com o OWASP Dependency-Check).
 
-12. **WebSocket não reconfere a sessão depois de conectar.** O JWT e a versão de
+11. **WebSocket não reconfere a sessão depois de conectar.** O JWT e a versão de
     sessão são checados no `CONNECT`. Depois de uma troca de senha, ou de o
     token vencer, uma conexão já aberta continua recebendo eventos das conversas
     até cair (a participação em cada conversa continua sendo conferida a cada

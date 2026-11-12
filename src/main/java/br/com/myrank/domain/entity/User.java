@@ -50,31 +50,17 @@ public class User {
     private String discordId;
 
     /**
-     * Conta LOCAL só pode logar com isso true (clicou no link do email). Contas
+     * Conta LOCAL só pode logar com isso true (confirmou o email). Contas
      * criadas pelo Google/Discord já nascem true — o provedor verificou o email.
      */
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
-
-    /** SHA-256 (hex) do token do link de confirmação — o token em si nunca é salvo. */
-    @Column(name = "email_verification_token_hash", length = 64)
-    private String emailVerificationTokenHash;
-
-    @Column(name = "email_verification_expires_at")
-    private LocalDateTime emailVerificationExpiresAt;
 
     @Column(name = "account_deletion_code_hash", length = 64)
     private String accountDeletionCodeHash;
 
     @Column(name = "account_deletion_code_expires_at")
     private LocalDateTime accountDeletionCodeExpiresAt;
-
-    /** SHA-256 (hex) do token do link de redefinição de senha — o token em si nunca é salvo. */
-    @Column(name = "password_reset_token_hash", length = 64)
-    private String passwordResetTokenHash;
-
-    @Column(name = "password_reset_expires_at")
-    private LocalDateTime passwordResetExpiresAt;
 
     /** Vai dentro de cada token de login; aumentar derruba todas as sessões abertas (V16). */
     @Column(name = "token_version", nullable = false)
@@ -130,9 +116,6 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private UserStats userStats;
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -171,20 +154,10 @@ public class User {
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
 
-    public String getEmailVerificationTokenHash() { return emailVerificationTokenHash; }
-    public void setEmailVerificationTokenHash(String emailVerificationTokenHash) { this.emailVerificationTokenHash = emailVerificationTokenHash; }
-
-    public LocalDateTime getEmailVerificationExpiresAt() { return emailVerificationExpiresAt; }
-    public void setEmailVerificationExpiresAt(LocalDateTime emailVerificationExpiresAt) { this.emailVerificationExpiresAt = emailVerificationExpiresAt; }
     public String getAccountDeletionCodeHash() { return accountDeletionCodeHash; }
     public void setAccountDeletionCodeHash(String accountDeletionCodeHash) { this.accountDeletionCodeHash = accountDeletionCodeHash; }
     public LocalDateTime getAccountDeletionCodeExpiresAt() { return accountDeletionCodeExpiresAt; }
     public void setAccountDeletionCodeExpiresAt(LocalDateTime accountDeletionCodeExpiresAt) { this.accountDeletionCodeExpiresAt = accountDeletionCodeExpiresAt; }
-
-    public String getPasswordResetTokenHash() { return passwordResetTokenHash; }
-    public void setPasswordResetTokenHash(String passwordResetTokenHash) { this.passwordResetTokenHash = passwordResetTokenHash; }
-    public LocalDateTime getPasswordResetExpiresAt() { return passwordResetExpiresAt; }
-    public void setPasswordResetExpiresAt(LocalDateTime passwordResetExpiresAt) { this.passwordResetExpiresAt = passwordResetExpiresAt; }
 
     public int getTokenVersion() { return tokenVersion; }
     public void setTokenVersion(int tokenVersion) { this.tokenVersion = tokenVersion; }
@@ -244,7 +217,4 @@ public class User {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
-
-    public UserStats getUserStats() { return userStats; }
-    public void setUserStats(UserStats userStats) { this.userStats = userStats; }
 }

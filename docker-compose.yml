@@ -24,6 +24,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/myrank
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-nao-usar-em-producao-1234567890}
 
 volumes:
   postgres_data:

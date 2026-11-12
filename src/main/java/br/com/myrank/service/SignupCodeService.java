@@ -126,8 +126,8 @@ public class SignupCodeService {
 
         String html(String code) {
             return EmailLayout.render(new EmailLayout.Content(
-                    preheader, greeting, intro, null, null, code,
-                    outro, safetyTitle, safetyText, note, null, footer));
+                    preheader, greeting, intro, code,
+                    outro, safetyTitle, safetyText, note, footer));
         }
     }
 }

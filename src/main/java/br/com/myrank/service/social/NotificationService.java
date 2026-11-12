@@ -276,12 +276,16 @@ public class NotificationService {
                 .findByUserIdOrderByUpdatedAtDesc(userId, PageRequest.of(Math.max(page, 0), capped));
         if (rows.isEmpty()) return List.of();
 
-        Map<Long, User> actors = userRepository.findAllById(
-                        rows.stream().map(Notification::getActorId).filter(Objects::nonNull).collect(Collectors.toSet()))
-                .stream().collect(Collectors.toMap(User::getId, u -> u));
         Map<Long, FeedEvent> events = feedEventRepository.findAllById(
                         rows.stream().map(Notification::getFeedEventId).filter(Objects::nonNull).collect(Collectors.toSet()))
                 .stream().collect(Collectors.toMap(FeedEvent::getId, e -> e));
+
+        Set<Long> userIdsToLoad = new HashSet<>();
+        rows.stream().map(Notification::getActorId).filter(Objects::nonNull).forEach(userIdsToLoad::add);
+        events.values().stream().map(FeedEvent::getUserId).filter(Objects::nonNull).forEach(userIdsToLoad::add);
+        Map<Long, User> users = userRepository.findAllById(userIdsToLoad)
+                .stream().collect(Collectors.toMap(User::getId, u -> u));
+
         Map<Long, Work> works = workRepository.findAllById(
                         events.values().stream().map(FeedEvent::getWorkId).filter(Objects::nonNull).collect(Collectors.toSet()))
                 .stream().collect(Collectors.toMap(Work::getId, w -> w));
@@ -289,10 +293,24 @@ public class NotificationService {
                         rows.stream().map(Notification::getConversationId).filter(Objects::nonNull).collect(Collectors.toSet()))
                 .stream().collect(Collectors.toMap(Conversation::getId, c -> c));
 
+        boolean needsFollowCheck = events.values().stream().anyMatch(ev -> {
+            if (ev.getUserId() == null || ev.getUserId().equals(userId)) return false;
+            User owner = users.get(ev.getUserId());
+            return owner == null || !owner.isPublic();
+        });
+        Set<Long> following = needsFollowCheck
+                ? new HashSet<>(followRepository.findFollowedIds(userId))
+                : Set.of();
+
         return rows.stream().map(n -> {
-            User actor = n.getActorId() != null ? actors.get(n.getActorId()) : null;
+            User actor = n.getActorId() != null ? users.get(n.getActorId()) : null;
             FeedEvent ev = n.getFeedEventId() != null ? events.get(n.getFeedEventId()) : null;
-            Work work = ev != null && ev.getWorkId() != null ? works.get(ev.getWorkId()) : null;
+            boolean canSeeWork = true;
+            if (ev != null && ev.getUserId() != null && !ev.getUserId().equals(userId)) {
+                User owner = users.get(ev.getUserId());
+                canSeeWork = owner != null && (owner.isPublic() || following.contains(owner.getId()));
+            }
+            Work work = canSeeWork && ev != null && ev.getWorkId() != null ? works.get(ev.getWorkId()) : null;
             Conversation conv = n.getConversationId() != null ? convs.get(n.getConversationId()) : null;
             return render(n, actor, ev, work, conv);
         }).toList();

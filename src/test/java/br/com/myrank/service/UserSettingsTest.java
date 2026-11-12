@@ -124,4 +124,16 @@ class UserSettingsTest {
         assertThat(u.getTokenVersion()).isEqualTo(4);
         verify(users).save(u);
     }
+
+    @Test
+    void usernameRecebeTrim_eRecusaMenosDeTresCaracteresAposTrim() {
+        User u = user();
+
+        service.updateUser(7L, new UserUpdateDTO("  novo_nome  ", null, null, null, null, null, null, null, null));
+        assertThat(u.getUsername()).isEqualTo("novo_nome");
+
+        assertThatThrownBy(() -> service.updateUser(7L, new UserUpdateDTO("  ab  ", null, null, null, null, null, null, null, null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("O nome de usuário deve ter de 3 a 50 caracteres.");
+    }
 }

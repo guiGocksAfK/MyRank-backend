@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Chave = {@code request.getRemoteAddr()} (ou o usuário do Discord, quando a
  * requisição vem do bot — ver {@link #clientKey}) — NÃO confia em X-Forwarded-For (é
  * spoofável). Atrás de proxy em prod, configure
- * {@code server.forward-headers-strategy=framework} pra que o remoteAddr venha certo.
+ * {@code server.forward-headers-strategy=native} pra que o remoteAddr venha certo.
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -35,9 +35,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Rule[] RULES = {
             new Rule("/api/auth/login", "POST", 10),
             new Rule("/api/auth/oauth/", "POST", 15),
-            new Rule("/api/auth/verify-email", "POST", 10),
-            new Rule("/api/auth/resend-verification", "POST", 3), // cada chamada manda um email
-            new Rule("/api/auth/forgot-password", "POST", 3),     // idem
+            new Rule("/api/auth/forgot-password", "POST", 3),     // cada chamada manda um email
             new Rule("/api/auth/forgot-password/verify", "POST", 10),
             new Rule("/api/auth/reset-password", "POST", 10),
             new Rule("/api/auth/signup/code", "POST", 3),         // cada chamada manda um email
