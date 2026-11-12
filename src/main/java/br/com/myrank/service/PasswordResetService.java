@@ -148,8 +148,8 @@ public class PasswordResetService {
 
         String html(String username, String code) {
             return EmailLayout.render(new EmailLayout.Content(
-                    preheader, greeting.formatted(username), intro, null, null, code,
-                    null, safetyTitle, safetyText, note, null, footer));
+                    preheader, greeting.formatted(username), intro, code,
+                    null, safetyTitle, safetyText, note, footer));
         }
     }
 }

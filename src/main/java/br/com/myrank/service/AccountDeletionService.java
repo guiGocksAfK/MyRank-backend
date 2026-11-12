@@ -178,8 +178,8 @@ public class AccountDeletionService {
 
         String html(String username, String code) {
             return EmailLayout.render(new EmailLayout.Content(
-                    preheader, greeting.formatted(username), intro, null, null, code,
-                    null, safetyTitle, safetyText, note, null, footer));
+                    preheader, greeting.formatted(username), intro, code,
+                    null, safetyTitle, safetyText, note, footer));
         }
     }
 
@@ -215,8 +215,8 @@ public class AccountDeletionService {
 
         String html(String username) {
             return EmailLayout.render(new EmailLayout.Content(
-                    preheader, greeting.formatted(username), intro, null, null, null,
-                    outro, null, null, null, null, footer));
+                    preheader, greeting.formatted(username), intro, null,
+                    outro, null, null, null, footer));
         }
     }
 }

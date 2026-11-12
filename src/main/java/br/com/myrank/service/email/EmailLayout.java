@@ -20,50 +20,25 @@ public final class EmailLayout {
     /**
      * @param preheader     linha que aparece ao lado do assunto na caixa de entrada
      * @param greeting      "Olá, fulano!" (já com o nome)
-     * @param intro         parágrafo antes do botão
-     * @param button        texto do botão (null = sem botão)
-     * @param link          destino do botão (null = sem botão e sem link de reserva)
-     * @param code          código em destaque no lugar do botão (pode ser null)
-     * @param outro         parágrafo depois do botão (pode ser null)
+     * @param intro         parágrafo antes do código
+     * @param code          código em destaque (pode ser null em emails só de aviso)
+     * @param outro         parágrafo depois do código (pode ser null)
      * @param safetyTitle   título do aviso "não foi você?" (em destaque)
-     * @param safetyText    texto do aviso: sem clicar no botão, nada acontece
-     * @param note          observação curta, ex.: validade do link (pode ser null)
-     * @param fallbackLabel "O botão não funcionou? Copie este link:"
+     * @param safetyText    texto do aviso
+     * @param note          observação curta, ex.: validade do código (pode ser null)
      * @param footer        por que a pessoa recebeu o email
      */
-    public record Content(String preheader, String greeting, String intro, String button, String link,
+    public record Content(String preheader, String greeting, String intro,
                           String code, String outro, String safetyTitle, String safetyText, String note,
-                          String fallbackLabel, String footer) {}
+                          String footer) {}
 
     public static String render(Content c) {
-        String link = esc(c.link());
-        // ação principal: botão dourado, código em destaque, ou nada (email só de aviso)
-        String action;
-        if (c.code() != null) {
-            action = """
+        String action = c.code() != null
+                ? """
                     <p style="margin:24px 0;padding:16px 20px;background:#f7f7f7;border-radius:10px;text-align:center;font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;font-size:30px;font-weight:700;letter-spacing:6px;color:#111111">%s</p>
-                    """.formatted(esc(c.code()));
-        } else if (c.link() != null) {
-            action = """
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0">
-                      <tr>
-                        <td style="background:#d4af37;border-radius:999px">
-                          <a href="%s" style="display:inline-block;padding:14px 30px;font-family:%s;font-size:15px;font-weight:700;color:#111111;text-decoration:none;border-radius:999px">%s</a>
-                        </td>
-                      </tr>
-                    </table>
-                    """.formatted(link, FONT, esc(c.button()));
-        } else {
-            action = "<div style=\"height:12px\"></div>";
-        }
-        String fallback = c.link() == null ? "" : """
-                %s<br>
-                <a href="%s" style="color:#999999;word-break:break-all">%s</a>
-                <p style="margin:14px 0 0">%s</p>
-                """.formatted(esc(c.fallbackLabel()), link, link, esc(c.footer()));
-        String footer = c.link() == null
-                ? "<p style=\"margin:0\">%s</p>".formatted(esc(c.footer()))
-                : fallback;
+                    """.formatted(esc(c.code()))
+                : "<div style=\"height:12px\"></div>";
+        String footer = "<p style=\"margin:0\">%s</p>".formatted(esc(c.footer()));
         String outro = c.outro() == null ? "" : """
                 <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333">%s</p>
                 """.formatted(esc(c.outro()));
