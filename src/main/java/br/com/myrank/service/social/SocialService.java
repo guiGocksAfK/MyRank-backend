@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -20,6 +22,13 @@ public class SocialService {
     private static final int MAX_LIST = 20;
     private static final int TAKE_MIN = 3;
     private static final int TAKE_MAX = 280;
+    /** Avaliações mais velhas que isso não viram card: o backfill criou um evento por obra antiga. */
+    private static final int RATED_DAY_WINDOW_DAYS = 30;
+    /** Capas por card "avaliou N obras". */
+    private static final int RATED_DAY_COVERS = 8;
+    /** Teto de eventos lidos pra montar os cards de uma página (uma importação grande não pesa). */
+    private static final int RATED_DAY_SCAN_MAX = 2000;
+    private static final List<FeedEventType> RATING_TYPES = List.of(FeedEventType.ADDED, FeedEventType.RATED);
 
     private final FollowRepository followRepository;
     private final FollowRequestRepository followRequestRepository;
@@ -33,6 +42,7 @@ public class SocialService {
     private final BadgeRepository badgeRepository;
     private final FeedEventService feedEventService;
     private final NotificationService notificationService;
+    private final Clock clock;
 
     public SocialService(FollowRepository followRepository,
                          FollowRequestRepository followRequestRepository,
@@ -45,7 +55,8 @@ public class SocialService {
                          UserBadgeRepository userBadgeRepository,
                          BadgeRepository badgeRepository,
                          FeedEventService feedEventService,
-                         NotificationService notificationService) {
+                         NotificationService notificationService,
+                         Clock clock) {
         this.followRepository = followRepository;
         this.followRequestRepository = followRequestRepository;
         this.feedEventRepository = feedEventRepository;
@@ -58,6 +69,7 @@ public class SocialService {
         this.badgeRepository = badgeRepository;
         this.feedEventService = feedEventService;
         this.notificationService = notificationService;
+        this.clock = clock;
     }
 
     // ── Resumo ──────────────────────────────────────────────────────────
@@ -73,11 +85,41 @@ public class SocialService {
 
     // ── Feed ────────────────────────────────────────────────────────────
 
+    /**
+     * Takes, paginados como sempre, e as avaliações do mesmo período juntadas num
+     * card por pessoa por dia ("avaliou 5 obras"). Cada página leva as avaliações
+     * entre o último take da página anterior e o último desta; a última página
+     * (ou um feed sem takes) vai até {@link #RATED_DAY_WINDOW_DAYS} dias atrás.
+     */
     @Transactional(readOnly = true)
     public List<FeedItemDTO> getFeed(Long viewerId, int page, int size) {
         int capped = Math.min(Math.max(size, 1), 50);
-        List<FeedEvent> events = feedEventRepository.findFeed(
-                feedActorIds(viewerId), FeedEventType.TAKE, PageRequest.of(Math.max(page, 0), capped));
+        int p = Math.max(page, 0);
+        Collection<Long> actors = feedActorIds(viewerId);
+        List<FeedEvent> events = feedEventRepository.findFeed(actors, FeedEventType.TAKE, PageRequest.of(p, capped));
+
+        LocalDateTime floor = LocalDateTime.now(clock).minusDays(RATED_DAY_WINDOW_DAYS);
+        // folga de um dia: o relógio é UTC e o evento grava a hora local do servidor
+        LocalDateTime before = LocalDateTime.now(clock).plusDays(1);
+        if (p > 0) {
+            // o último take da página anterior (página de tamanho 1 = deslocamento exato)
+            List<FeedEvent> prev = feedEventRepository.findFeed(
+                    actors, FeedEventType.TAKE, PageRequest.of(p * capped - 1, 1));
+            if (prev.isEmpty()) return List.of();
+            before = prev.get(0).getCreatedAt();
+        }
+        LocalDateTime after = floor;
+        if (events.size() == capped && events.get(events.size() - 1).getCreatedAt().isAfter(floor)) {
+            after = events.get(events.size() - 1).getCreatedAt();
+        }
+
+        List<FeedItemDTO> items = new ArrayList<>(takeItems(events, viewerId));
+        if (after.isBefore(before)) items.addAll(ratedDays(actors, after, before));
+        items.sort(Comparator.comparing(FeedItemDTO::createdAt).reversed());
+        return items;
+    }
+
+    private List<FeedItemDTO> takeItems(List<FeedEvent> events, Long viewerId) {
         if (events.isEmpty()) return List.of();
 
         Map<Long, User> users = byId(userRepository.findAllById(
@@ -112,21 +154,68 @@ public class SocialService {
         )).toList();
     }
 
+    /** Um card por pessoa por dia com as obras avaliadas (distintas, a mais recente primeiro). */
+    private List<FeedItemDTO> ratedDays(Collection<Long> actors, LocalDateTime after, LocalDateTime before) {
+        List<FeedEvent> ratings = feedEventRepository.findRatingsBetween(
+                actors, RATING_TYPES, after, before, PageRequest.of(0, RATED_DAY_SCAN_MAX));
+        if (ratings.isEmpty()) return List.of();
+
+        // já vem do mais novo pro mais velho: o 1º evento de cada grupo é o mais recente
+        Map<String, List<FeedEvent>> groups = new LinkedHashMap<>();
+        for (FeedEvent e : ratings) {
+            groups.computeIfAbsent(e.getUserId() + "|" + e.getCreatedAt().toLocalDate(), k -> new ArrayList<>()).add(e);
+        }
+        Map<String, List<Long>> workIds = new LinkedHashMap<>();
+        Set<Long> toLoad = new HashSet<>();
+        groups.forEach((key, list) -> {
+            List<Long> ids = list.stream().map(FeedEvent::getWorkId).distinct().toList();
+            workIds.put(key, ids);
+            toLoad.addAll(ids.subList(0, Math.min(ids.size(), RATED_DAY_COVERS)));
+        });
+        Map<Long, Work> works = byId(workRepository.findAllById(toLoad), Work::getId);
+        Map<Long, User> users = byId(userRepository.findAllById(
+                ratings.stream().map(FeedEvent::getUserId).collect(Collectors.toSet())), User::getId);
+
+        List<FeedItemDTO> items = new ArrayList<>();
+        groups.forEach((key, list) -> {
+            FeedEvent latest = list.get(0);
+            User actor = users.get(latest.getUserId());
+            List<Long> ids = workIds.get(key);
+            List<WorkMiniDTO> minis = ids.stream()
+                    .limit(RATED_DAY_COVERS)
+                    .map(works::get).filter(Objects::nonNull)
+                    .map(this::toWorkMini)
+                    .toList();
+            if (actor == null || minis.isEmpty()) return; // obra apagada ou conta removida
+            items.add(new FeedItemDTO(
+                    -latest.getId(),
+                    "RATED_DAY",
+                    new ActorDTO(actor.getId(), actor.getUsername(), actor.getAvatarUrl()),
+                    latest.getCreatedAt(),
+                    null, null, null, null, 0, false, false, null, null,
+                    minis,
+                    ids.size()));
+        });
+        return items;
+    }
+
     // ── Listas de usuários ──────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public List<SocialUserDTO> getFollowing(Long viewerId) {
+        Map<String, Double> mine = tasteMap(viewerId);
         return userRepository.findAllById(followRepository.findFollowedIds(viewerId)).stream()
                 .sorted(Comparator.comparing(u -> u.getUsername().toLowerCase()))
-                .map(u -> toSocialUser(u, viewerId))
+                .map(u -> toSocialUser(u, viewerId, mine))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<SocialUserDTO> getFollowers(Long viewerId) {
+        Map<String, Double> mine = tasteMap(viewerId);
         return userRepository.findAllById(followRepository.findFollowerIds(viewerId)).stream()
                 .sorted(Comparator.comparing(u -> u.getUsername().toLowerCase()))
-                .map(u -> toSocialUser(u, viewerId))
+                .map(u -> toSocialUser(u, viewerId, mine))
                 .toList();
     }
 
@@ -150,9 +239,14 @@ public class SocialService {
         Set<Long> excluded = new HashSet<>(followRepository.findFollowedIds(viewerId));
         excluded.addAll(followRequestRepository.findRequestedTargetIdsAll(viewerId)); // já pediu
         if (excluded.isEmpty()) excluded.add(-1L);
+        Map<String, Double> mine = tasteMap(viewerId);
+        // quem tem o gosto mais parecido vem primeiro; sem obras em comum vai pro fim
         return userRepository
                 .findSuggestions(viewerId, excluded, PageRequest.of(0, MAX_LIST)).stream()
-                .map(u -> toSocialUser(u, viewerId))
+                .map(u -> toSocialUser(u, viewerId, mine))
+                .sorted(Comparator
+                        .comparing(SocialUserDTO::matchPct, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(SocialUserDTO::sharedCount, Comparator.reverseOrder()))
                 .toList();
     }
 
@@ -162,8 +256,9 @@ public class SocialService {
         if (q.length() < 2) return List.of();
         // perfis privados também aparecem — pra poder pedir pra seguir; o conteúdo
         // continua protegido no getProfile.
+        Map<String, Double> mine = tasteMap(viewerId);
         return userRepository.searchByUsername(viewerId, q, PageRequest.of(0, MAX_LIST)).stream()
-                .map(u -> toSocialUser(u, viewerId))
+                .map(u -> toSocialUser(u, viewerId, mine))
                 .toList();
     }
 
@@ -410,7 +505,9 @@ public class SocialService {
                 takeEdited,
                 canManage,
                 e.getScore(),
-                reactions
+                reactions,
+                List.of(),
+                0
         );
     }
 
@@ -420,12 +517,20 @@ public class SocialService {
     }
 
     private SocialUserDTO toSocialUser(User u, Long viewerId) {
+        return toSocialUser(u, viewerId, null);
+    }
+
+    /** {@code mine}: notas do viewer por título (null = busca agora). */
+    private SocialUserDTO toSocialUser(User u, Long viewerId, Map<String, Double> mine) {
         boolean self = u.getId().equals(viewerId);
         boolean following = !self && followRepository.existsByFollowerIdAndFollowedId(viewerId, u.getId());
         boolean canSeeWorks = self || u.isPublic() || following;
         List<Work> works = canSeeWorks ? workRepository.findByUserId(u.getId()) : List.of();
         boolean requested = !self && !following && !u.isPublic()
                 && followRequestRepository.existsByRequesterIdAndTargetId(viewerId, u.getId());
+        Taste taste = self || works.isEmpty()
+                ? Taste.NONE
+                : taste(mine != null ? mine : tasteMap(viewerId), works);
         return new SocialUserDTO(
                 u.getId(),
                 u.getUsername(),
@@ -437,7 +542,9 @@ public class SocialService {
                 following,
                 !self && followRepository.existsByFollowerIdAndFollowedId(u.getId(), viewerId),
                 u.isPublic(),
-                requested
+                requested,
+                taste.shared(),
+                taste.matchPct()
         );
     }
 
@@ -469,6 +576,49 @@ public class SocialService {
             if (r.getUserId().equals(viewerId)) mine = r.getKind().toClient();
         }
         return new ReactionSummaryDTO(up, agree, disagree, mine);
+    }
+
+    // ── Gosto parecido ──────────────────────────────────────────────────
+    // Mesma conta do Comparar no front: obras com o mesmo título (sem
+    // diferenciar maiúsculas) e 100 - 12 × diferença média das notas.
+
+    /** Com menos que isso em comum, a % ainda não diz nada; mostra só a contagem. */
+    private static final int MATCH_MIN_SHARED = 3;
+
+    private record Taste(int shared, Integer matchPct) {
+        static final Taste NONE = new Taste(0, null);
+    }
+
+    private static String titleKey(String title) {
+        return title == null ? "" : title.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /** Notas do usuário por título; obras sem nota ficam de fora. */
+    private Map<String, Double> tasteMap(Long userId) {
+        Map<String, Double> map = new HashMap<>();
+        for (Work w : workRepository.findByUserId(userId)) {
+            if (w.getScore() != null && w.getTitle() != null) {
+                map.putIfAbsent(titleKey(w.getTitle()), w.getScore().doubleValue());
+            }
+        }
+        return map;
+    }
+
+    private static Taste taste(Map<String, Double> mine, List<Work> theirs) {
+        Set<String> seen = new HashSet<>();
+        double sumDiff = 0;
+        int shared = 0;
+        for (Work w : theirs) {
+            if (w.getScore() == null) continue;
+            String key = titleKey(w.getTitle());
+            Double my = mine.get(key);
+            if (my == null || !seen.add(key)) continue;
+            sumDiff += Math.abs(my - w.getScore().doubleValue());
+            shared++;
+        }
+        if (shared < MATCH_MIN_SHARED) return new Taste(shared, null);
+        int pct = (int) Math.round(100 - (sumDiff / shared) * 12);
+        return new Taste(shared, Math.max(0, Math.min(100, pct)));
     }
 
     private static double avgScore(List<Work> works) {

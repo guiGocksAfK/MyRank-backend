@@ -60,8 +60,9 @@ escritores, estúdios e criadores, cada um com as obras dele.
 
 ## Afinidade (comparar com outra pessoa)
 
-Também só no front (`computeTasteMatch`, em `socialData.js`), e é a mesma conta
-usada no exemplo da home.
+No front (`computeTasteMatch`, em `socialData.js`, também usada no exemplo da
+home) e, para as listas da Social, no back (`SocialService`, que só devolve a %
+com 3 obras ou mais em comum). As duas fazem a mesma conta.
 
 - Obras em comum são achadas pelo **título** (sem diferenciar maiúsculas).
 - `afinidade = 100 − (média das diferenças absolutas de nota × 12)`, limitada

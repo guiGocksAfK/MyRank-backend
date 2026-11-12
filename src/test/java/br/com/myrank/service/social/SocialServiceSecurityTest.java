@@ -6,6 +6,7 @@ import br.com.myrank.domain.enums.FeedEventType;
 import br.com.myrank.repository.*;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,7 +26,7 @@ class SocialServiceSecurityTest {
             follows, mock(FollowRequestRepository.class), events,
             reactions, mock(TakeRepository.class), mock(TakeCommentRepository.class), works,
             users, mock(UserBadgeRepository.class), mock(BadgeRepository.class),
-            mock(FeedEventService.class), mock(NotificationService.class));
+            mock(FeedEventService.class), mock(NotificationService.class), Clock.systemUTC());
 
     @Test
     void suggestionsDoNotRevealPrivateWorkStatistics() {
