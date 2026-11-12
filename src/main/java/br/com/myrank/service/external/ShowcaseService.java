@@ -69,12 +69,17 @@ public class ShowcaseService {
         }
     }
 
-    /** Busca cada fonte (best-effort) e intercala os resultados pra variar o grid. */
+    /** Busca cada fonte (best-effort) em paralelo e intercala os resultados pra variar o grid. */
     private List<String> buildPosterList() {
-        List<String> tmdb = safe(tmdbService::getShowcasePosters);
-        List<String> rawg = safe(rawgService::getShowcasePosters);
-        List<String> anime = safe(myAnimeListService::getShowcasePosters);
-        List<String> books = safe(googleBooksService::getShowcasePosters);
+        CompletableFuture<List<String>> tmdbFuture = CompletableFuture.supplyAsync(() -> safe(tmdbService::getShowcasePosters));
+        CompletableFuture<List<String>> rawgFuture = CompletableFuture.supplyAsync(() -> safe(rawgService::getShowcasePosters));
+        CompletableFuture<List<String>> animeFuture = CompletableFuture.supplyAsync(() -> safe(myAnimeListService::getShowcasePosters));
+        CompletableFuture<List<String>> booksFuture = CompletableFuture.supplyAsync(() -> safe(googleBooksService::getShowcasePosters));
+
+        List<String> tmdb = tmdbFuture.join();
+        List<String> rawg = rawgFuture.join();
+        List<String> anime = animeFuture.join();
+        List<String> books = booksFuture.join();
         org.slf4j.LoggerFactory.getLogger(ShowcaseService.class).info(
                 "showcase refresh: tmdb={} rawg={} anime={} books={}",
                 tmdb.size(), rawg.size(), anime.size(), books.size());

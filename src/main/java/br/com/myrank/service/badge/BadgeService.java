@@ -36,6 +36,13 @@ public class BadgeService {
     private final FeedEventService feedEventService;
     private final Clock clock;
 
+    /**
+     * Catálogo de badges ordenado por sortOrder — a tabela `badges` só muda no boot
+     * (`BadgeCatalogInitializer`), então manter em memória evita consultar o banco
+     * em todo recálculo e listagem.
+     */
+    private volatile List<Badge> cachedCatalog;
+
     @Autowired
     public BadgeService(BadgeRepository badgeRepository,
                         UserBadgeRepository userBadgeRepository,
@@ -53,6 +60,22 @@ public class BadgeService {
         this.clock = clock;
     }
 
+    /** Invalida o cache do catálogo (chamado pelo `BadgeCatalogInitializer` após sincronizar o boot). */
+    public void invalidateCatalogCache() {
+        this.cachedCatalog = null;
+    }
+
+    private List<Badge> getCatalog() {
+        List<Badge> local = this.cachedCatalog;
+        if (local == null || local.isEmpty()) {
+            local = List.copyOf(badgeRepository.findAllByOrderBySortOrderAsc());
+            if (!local.isEmpty()) {
+                this.cachedCatalog = local;
+            }
+        }
+        return local;
+    }
+
     /**
      * Recálculo em segundo plano — chamado pelos CRUDs de obra pra não segurar a
      * resposta da escrita enquanto reprocessa as 72 badges. Roda no `badgeExecutor`,
@@ -67,16 +90,20 @@ public class BadgeService {
     /** Recalcula todo o progresso de badges do usuário. Nunca lança pra fora. */
     @Transactional
     public void recalculate(Long userId) {
+        recalculateAndGetProgress(userId, getCatalog());
+    }
+
+    private Map<Long, UserBadge> recalculateAndGetProgress(Long userId, List<Badge> catalogList) {
+        Map<Long, UserBadge> existing = new HashMap<>();
         try {
             User user = userRepository.findById(userId).orElse(null);
-            if (user == null) return;
+            if (user == null) return existing;
 
             BadgeContext ctx = buildContext(user);
 
-            Map<String, Badge> catalog = new HashMap<>();
-            for (Badge b : badgeRepository.findAll()) catalog.put(b.getCode(), b);
+            Map<String, Badge> catalog = new HashMap<>(catalogList.size() * 2);
+            for (Badge b : catalogList) catalog.put(b.getCode(), b);
 
-            Map<Long, UserBadge> existing = new HashMap<>();
             for (UserBadge ub : userBadgeRepository.findByUserId(userId)) {
                 existing.put(ub.getBadgeId(), ub);
             }
@@ -95,7 +122,10 @@ public class BadgeService {
 
                 UserBadge ub = existing.get(badge.getId());
                 boolean isNew = ub == null;
-                if (isNew) ub = new UserBadge(userId, badge.getId());
+                if (isNew) {
+                    ub = new UserBadge(userId, badge.getId());
+                    existing.put(badge.getId(), ub);
+                }
 
                 boolean changed = isNew || ub.getCurrentProgress() != clamped;
                 ub.setCurrentProgress(clamped);
@@ -119,19 +149,16 @@ public class BadgeService {
         } catch (Exception e) {
             log.warn("Falha ao recalcular badges do usuário {}: {}", userId, e.getMessage());
         }
+        return existing;
     }
 
     /** Recalcula e devolve o catálogo com o progresso do usuário. */
     @Transactional
     public List<BadgeResponseDTO> listForUser(Long userId) {
-        recalculate(userId);
+        List<Badge> catalogList = getCatalog();
+        Map<Long, UserBadge> progress = recalculateAndGetProgress(userId, catalogList);
 
-        Map<Long, UserBadge> progress = new HashMap<>();
-        for (UserBadge ub : userBadgeRepository.findByUserId(userId)) {
-            progress.put(ub.getBadgeId(), ub);
-        }
-
-        return badgeRepository.findAllByOrderBySortOrderAsc().stream().map(badge -> {
+        return catalogList.stream().map(badge -> {
             UserBadge ub = progress.get(badge.getId());
             int prog = ub != null ? ub.getCurrentProgress() : 0;
             LocalDateTime unlockedAt = ub != null ? ub.getUnlockedAt() : null;

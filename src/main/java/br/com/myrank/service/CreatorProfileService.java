@@ -16,9 +16,11 @@ import org.springframework.web.client.RestClientException;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -64,11 +66,13 @@ public class CreatorProfileService {
                 .stream().collect(Collectors.toMap(UserCreator::getCreatorKey, Function.identity()));
         List<CreatorPhoto.Id> ids = byKey.entrySet().stream()
                 .map(e -> new CreatorPhoto.Id(e.getValue().kind(), e.getKey())).toList();
-        Map<CreatorPhoto.Id, CreatorPhoto> cached = photoRepository.findAllById(ids).stream()
-                .collect(Collectors.toMap(CreatorPhoto::getId, Function.identity()));
+        Map<CreatorPhoto.Id, CreatorPhoto> cached = new HashMap<>(photoRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(CreatorPhoto::getId, Function.identity())));
 
-        int lookups = 0;
-        List<CreatorProfileDTO> out = new ArrayList<>();
+        record LookupTask(CreatorPhoto.Id id, String name, CreatorPhoto previous) {}
+        List<LookupTask> toLookup = new ArrayList<>();
+        Map<String, Boolean> pendingByKey = new HashMap<>();
+
         for (Map.Entry<String, CreatorProfilesRequestDTO.Item> entry : byKey.entrySet()) {
             String key = entry.getKey();
             CreatorProfilesRequestDTO.Item item = entry.getValue();
@@ -77,16 +81,36 @@ public class CreatorProfileService {
             CreatorPhoto.Id id = new CreatorPhoto.Id(item.kind(), key);
             CreatorPhoto photo = cached.get(id);
 
-            boolean pending = false;
             if (custom == null && needsLookup(photo)) {
-                if (lookups < LOOKUPS_PER_REQUEST) {
-                    lookups++;
-                    photo = lookup(id, item.name(), photo);
+                if (toLookup.size() < LOOKUPS_PER_REQUEST) {
+                    toLookup.add(new LookupTask(id, item.name(), photo));
                 } else {
-                    pending = true;
+                    pendingByKey.put(key, true);
                 }
             }
+        }
+
+        if (!toLookup.isEmpty()) {
+            List<CompletableFuture<CreatorPhoto>> futures = toLookup.stream()
+                    .map(task -> CompletableFuture.supplyAsync(() -> fetchFromTmdb(task.id(), task.name(), task.previous())))
+                    .toList();
+            for (CompletableFuture<CreatorPhoto> future : futures) {
+                CreatorPhoto fetched = future.join();
+                if (fetched != null) {
+                    cached.put(fetched.getId(), photoRepository.save(fetched));
+                }
+            }
+        }
+
+        List<CreatorProfileDTO> out = new ArrayList<>(byKey.size());
+        for (Map.Entry<String, CreatorProfilesRequestDTO.Item> entry : byKey.entrySet()) {
+            String key = entry.getKey();
+            CreatorProfilesRequestDTO.Item item = entry.getValue();
+            UserCreator mine = edited.get(key);
+            String custom = mine != null ? mine.getPhotoUrl() : null;
+            CreatorPhoto photo = cached.get(new CreatorPhoto.Id(item.kind(), key));
             String auto = photo != null ? photo.getPhotoUrl() : null;
+            boolean pending = pendingByKey.getOrDefault(key, false);
             out.add(new CreatorProfileDTO(key, custom != null ? custom : auto, custom != null,
                     mine != null ? mine.getCreatorType() : null, pending));
         }
@@ -128,17 +152,17 @@ public class CreatorProfileService {
                 && photo.getFetchedAt().isBefore(LocalDateTime.now(clock).minusDays(RETRY_NOT_FOUND_DAYS));
     }
 
-    /** Procura na TMDB e guarda o resultado (inclusive "não achou"). Se a TMDB falhar, não guarda nada. */
-    private CreatorPhoto lookup(CreatorPhoto.Id id, String name, CreatorPhoto previous) {
+    /** Procura na TMDB e monta a entidade atualizada (inclusive "não achou"). Se a TMDB falhar, devolve null. */
+    private CreatorPhoto fetchFromTmdb(CreatorPhoto.Id id, String name, CreatorPhoto previous) {
         try {
             String url = "COMPANY".equals(id.getKind()) ? tmdbService.findCompanyLogo(name) : tmdbService.findPersonPhoto(name);
             CreatorPhoto photo = previous != null ? previous : new CreatorPhoto(id, null, null);
             photo.setPhotoUrl(url);
             photo.setFetchedAt(LocalDateTime.now(clock));
-            return photoRepository.save(photo);
+            return photo;
         } catch (RestClientException e) {
             log.warn("Não deu pra buscar a foto de '{}' na TMDB: {}", name, e.getMessage());
-            return previous;
+            return null;
         }
     }
 }
