@@ -23,11 +23,12 @@ front na branch `remaster-e-ajustes`.
 Feito: o chat vê o ranking, dados completos por obra (com takes), fatos
 calculados no código, traços que citam obras, contradições, perfil de gosto com
 médias reais, raciocínio desligado (~24s → ~3s), nova tentativa automática,
-temperatura menor, teto de tamanho da resposta e versão do prompt no cache.
+temperatura menor, teto de tamanho da resposta, versão do prompt no cache e
+resposta no idioma da conta (`PT`, `EN`, `ES`).
 
 Falta, sem data:
 
-- Responder no idioma da conta (hoje sempre em português) e analisar uma tabela só.
+- Analisar uma tabela só.
 
 ## 3. Remaster das telas internas
 
@@ -71,8 +72,3 @@ genérica; ideias testadas e guardadas pra voltar depois:
 
 - **Podcasts** como template (descartado por ora; voltar se houver público).
 - Pendências de segurança: lista completa no [SECURITY.md](../SECURITY.md).
-- **Notificações antigas de perfil que virou privado** (ou de quem deixou de
-  seguir) continuam mostrando título, capa e nota da obra. Esconder a obra quando
-  quem vê já não teria acesso a ela.
-- Apagar as colunas do fluxo antigo de link (`email_verification_*`,
-  `password_reset_*`) quando não houver mais conta pendente desse fluxo.

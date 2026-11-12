@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 
 /**
- * Autentica o frame CONNECT do STOMP pelo header Authorization (mesmo JWT do REST)
- * e só permite os canais privados do próprio usuário.
+ * Autentica o frame CONNECT do STOMP com o mesmo JWT do REST (do cookie da sessão
+ * ou do header Authorization) e só permite os canais privados do próprio usuário.
  * O cliente não publica eventos no broker; o servidor os envia após validar o REST.
  */
 @Component
@@ -50,11 +50,10 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     private void authenticate(StompHeaderAccessor accessor) {
-        String bearer = accessor.getFirstNativeHeader("Authorization");
-        if (bearer == null || !bearer.startsWith("Bearer ")) {
+        String token = resolveToken(accessor);
+        if (token == null) {
             throw new MessagingException("Sessão de chat sem token.");
         }
-        String token = bearer.substring(7);
         Long uid;
         try {
             uid = jwtService.extractUserId(token);
@@ -72,6 +71,20 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
         Map<String, Object> attrs = accessor.getSessionAttributes();
         if (attrs != null) attrs.put(UID_ATTR, uid);
+    }
+
+    /**
+     * Header Authorization do CONNECT (front antigo) ou, sem ele, o token que o
+     * handshake leu do cookie da sessão ({@link SessionCookieHandshakeInterceptor}).
+     */
+    private static String resolveToken(StompHeaderAccessor accessor) {
+        String bearer = accessor.getFirstNativeHeader("Authorization");
+        if (bearer != null && bearer.startsWith("Bearer ")) return bearer.substring(7);
+        Map<String, Object> attrs = accessor.getSessionAttributes();
+        if (attrs != null && attrs.get(SessionCookieHandshakeInterceptor.TOKEN_ATTR) instanceof String fromCookie) {
+            return fromCookie;
+        }
+        return null;
     }
 
     private void authorizeSubscription(StompHeaderAccessor accessor) {

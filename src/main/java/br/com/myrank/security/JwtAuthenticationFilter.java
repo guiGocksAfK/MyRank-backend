@@ -15,16 +15,22 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Set;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    /** Métodos que só leem: não precisam da conferência de origem. */
+    private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS");
+
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final SessionCookie sessionCookie;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository, SessionCookie sessionCookie) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.sessionCookie = sessionCookie;
     }
 
     @Override
@@ -39,14 +45,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        final String authHeader = request.getHeader("Authorization");
+        final String token = resolveToken(request);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (token == null) {
             filterChain.doFilter(request, response);
             return;
         }
-
-        final String token = authHeader.substring(7);
 
         try {
             final Long userId = jwtService.extractUserId(token);
@@ -70,6 +74,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * O token vem do header {@code Authorization} (front antigo, enquanto a troca
+     * não termina) ou do cookie da sessão. O header é imune a CSRF, porque só o
+     * código do próprio front consegue colocá-lo; o cookie vai sozinho, então
+     * requisição que muda algo só vale se a origem for a do front.
+     */
+    private String resolveToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        String fromCookie = sessionCookie.read(request);
+        if (fromCookie == null) return null;
+        if (!SAFE_METHODS.contains(request.getMethod()) && !sessionCookie.isTrustedOrigin(request)) {
+            return null;
+        }
+        return fromCookie;
     }
 
     private static boolean isPublicRoute(HttpServletRequest request) {
