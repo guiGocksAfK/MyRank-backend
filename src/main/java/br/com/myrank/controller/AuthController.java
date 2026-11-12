@@ -14,10 +14,12 @@ import br.com.myrank.dto.auth.SignupCodeRequestDTO;
 import br.com.myrank.exception.EmailNotVerifiedException;
 import br.com.myrank.repository.UserRepository;
 import br.com.myrank.security.JwtService;
+import br.com.myrank.security.SessionCookie;
 import br.com.myrank.service.OAuthService;
 import br.com.myrank.service.PasswordResetService;
 import br.com.myrank.service.SignupCodeService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -34,6 +36,7 @@ public class AuthController {
     private final OAuthService oAuthService;
     private final PasswordResetService passwordResetService;
     private final SignupCodeService signupCodeService;
+    private final SessionCookie sessionCookie;
 
     public AuthController(
             AuthenticationManager authenticationManager,
@@ -41,7 +44,8 @@ public class AuthController {
             UserRepository userRepository,
             OAuthService oAuthService,
             PasswordResetService passwordResetService,
-            SignupCodeService signupCodeService
+            SignupCodeService signupCodeService,
+            SessionCookie sessionCookie
     ) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
@@ -49,6 +53,7 @@ public class AuthController {
         this.oAuthService = oAuthService;
         this.passwordResetService = passwordResetService;
         this.signupCodeService = signupCodeService;
+        this.sessionCookie = sessionCookie;
     }
 
     /** Cadastro, etapa 1: manda o código de 6 dígitos pro email. */
@@ -87,7 +92,19 @@ public class AuthController {
         }
 
         String token = jwtService.generateToken(user);
-        return ResponseEntity.ok(new LoginResponseDTO(token, user.getUsername()));
+        return sessionCookie.signedIn(new LoginResponseDTO(token, user.getUsername()));
+    }
+
+    /**
+     * Sair: apaga o cookie da sessão neste navegador. O JavaScript do front não
+     * consegue apagar um cookie HttpOnly, por isso precisa desta rota. Os outros
+     * aparelhos continuam logados (pra derrubar todos existe "sair dos outros aparelhos").
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, sessionCookie.clearHeader())
+                .build();
     }
 
     /**
@@ -110,12 +127,12 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<LoginResponseDTO> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO dto) {
         User user = passwordResetService.reset(dto.resetPass(), dto.password());
-        return ResponseEntity.ok(new LoginResponseDTO(jwtService.generateToken(user), user.getUsername()));
+        return sessionCookie.signedIn(new LoginResponseDTO(jwtService.generateToken(user), user.getUsername()));
     }
 
     @PostMapping("/oauth/google")
     public ResponseEntity<LoginResponseDTO> loginWithGoogle(@Valid @RequestBody OAuthTokenRequestDTO dto) {
-        return ResponseEntity.ok(oAuthService.loginWithGoogle(dto.token()));
+        return sessionCookie.signedIn(oAuthService.loginWithGoogle(dto.token()));
     }
 
     /**
@@ -125,6 +142,6 @@ public class AuthController {
      */
     @PostMapping("/oauth/discord/callback")
     public ResponseEntity<LoginResponseDTO> loginWithDiscordCallback(@Valid @RequestBody OAuthCodeRequestDTO dto) {
-        return ResponseEntity.ok(oAuthService.loginWithDiscordCode(dto.code(), dto.redirectUri()));
+        return sessionCookie.signedIn(oAuthService.loginWithDiscordCode(dto.code(), dto.redirectUri()));
     }
 }

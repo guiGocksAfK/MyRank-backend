@@ -9,6 +9,7 @@ import br.com.myrank.dto.UserUpdateDTO;
 import br.com.myrank.dto.auth.LoginResponseDTO;
 import br.com.myrank.security.AuthUtils;
 import br.com.myrank.security.JwtService;
+import br.com.myrank.security.SessionCookie;
 import br.com.myrank.service.AccountDeletionService;
 import br.com.myrank.service.SignupCodeService;
 import br.com.myrank.service.UserService;
@@ -26,14 +27,17 @@ public class UserController {
     private final AuthUtils authUtils;
     private final SignupCodeService signupCodeService;
     private final JwtService jwtService;
+    private final SessionCookie sessionCookie;
 
     public UserController(UserService userService, AccountDeletionService accountDeletionService, AuthUtils authUtils,
-                          SignupCodeService signupCodeService, JwtService jwtService) {
+                          SignupCodeService signupCodeService, JwtService jwtService,
+                          SessionCookie sessionCookie) {
         this.userService = userService;
         this.accountDeletionService = accountDeletionService;
         this.authUtils = authUtils;
         this.signupCodeService = signupCodeService;
         this.jwtService = jwtService;
+        this.sessionCookie = sessionCookie;
     }
 
     /** Última etapa do cadastro: o email vem do passe do código, e a conta já entra logada. */
@@ -41,7 +45,7 @@ public class UserController {
     public ResponseEntity<LoginResponseDTO> create(@Valid @RequestBody UserCreateDTO dto) {
         String email = signupCodeService.emailFromPass(dto.signupPass());
         User user = userService.createUser(dto, email);
-        return ResponseEntity.ok(new LoginResponseDTO(jwtService.generateToken(user), user.getUsername()));
+        return sessionCookie.signedIn(new LoginResponseDTO(jwtService.generateToken(user), user.getUsername()));
     }
 
     @GetMapping("/me")
@@ -54,7 +58,7 @@ public class UserController {
     @PostMapping("/me/sessions/revoke")
     public ResponseEntity<LoginResponseDTO> revokeSessions(@AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.revokeSessions(authUtils.getUser(userDetails).getId());
-        return ResponseEntity.ok(new LoginResponseDTO(jwtService.generateToken(user), user.getUsername()));
+        return sessionCookie.signedIn(new LoginResponseDTO(jwtService.generateToken(user), user.getUsername()));
     }
 
     @PutMapping("/me")
