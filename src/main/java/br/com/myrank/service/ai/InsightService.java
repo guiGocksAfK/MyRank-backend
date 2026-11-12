@@ -88,6 +88,11 @@ public class InsightService {
      */
     @Transactional
     public InsightResponseDTO chat(Long userId, Long insightId, String rawQuestion) {
+        return chat(userId, insightId, rawQuestion, "PT");
+    }
+
+    @Transactional
+    public InsightResponseDTO chat(Long userId, Long insightId, String rawQuestion, String language) {
         AiInsight insight = insightRepository.findById(insightId)
                 .filter(i -> i.getUserId().equals(userId))
                 .orElseThrow(() -> new IllegalArgumentException("Análise não encontrada."));
@@ -106,7 +111,7 @@ public class InsightService {
         String answer;
         try {
             answer = gemini.chat(
-                    InsightPromptBuilder.CHAT_SYSTEM,
+                    InsightPromptBuilder.chatSystem(language),
                     InsightPromptBuilder.chatContext(analysis, facts),
                     thread,
                     question);
@@ -126,12 +131,18 @@ public class InsightService {
 
     @Transactional
     public InsightResponseDTO generate(Long userId, InsightGenerateRequestDTO req) {
+        return generate(userId, req, "PT");
+    }
+
+    @Transactional
+    public InsightResponseDTO generate(Long userId, InsightGenerateRequestDTO req, String language) {
         List<Work> works = selectWorks(userId, req.workIds());
         if (works.isEmpty()) {
             throw new IllegalArgumentException("Selecione ao menos uma obra para analisar.");
         }
 
-        String hash = selectionHash(works);
+        String lang = InsightPromptBuilder.normalizeLang(language);
+        String hash = selectionHash(works, lang);
 
         if (!req.refresh()) {
             Optional<AiInsight> cached = insightRepository.findByUserIdAndSelectionHash(userId, hash);
@@ -147,7 +158,7 @@ public class InsightService {
         try {
             TasteFacts facts = facts(userId, works);
             Set<String> rankedTitles = works.stream().map(Work::getTitle).collect(Collectors.toSet());
-            payload = gemini.analyze(InsightPromptBuilder.SYSTEM, InsightPromptBuilder.user(facts))
+            payload = gemini.analyze(InsightPromptBuilder.system(lang), InsightPromptBuilder.user(facts))
                     .withTasteProfile(facts.tasteProfile())
                     .withCleanRecommendations(rankedTitles);
             payload = covers.fill(payload); // capa de cada recomendação, guardada junto
@@ -193,14 +204,17 @@ public class InsightService {
     }
 
     /**
-     * SHA-256 de (modelo + versão do prompt + obras ordenadas por id + notas).
-     * Mesma seleção → mesmo hash → cache.
+     * SHA-256 de (modelo + versão do prompt + idioma + obras ordenadas por id + notas).
+     * Mesma seleção e mesmo idioma → mesmo hash → cache.
      */
-    private String selectionHash(List<Work> works) {
+    private String selectionHash(List<Work> works, String lang) {
+        String prefix = "PT".equals(lang)
+                ? gemini.model() + "#" + InsightPromptBuilder.VERSION + "#"
+                : gemini.model() + "#" + InsightPromptBuilder.VERSION + "#" + lang + "#";
         String basis = works.stream()
                 .sorted(Comparator.comparing(Work::getId))
                 .map(w -> w.getId() + ":" + w.getScore() + ":" + w.getFinalScore())
-                .collect(Collectors.joining("|", gemini.model() + "#" + InsightPromptBuilder.VERSION + "#", ""));
+                .collect(Collectors.joining("|", prefix, ""));
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest(basis.getBytes(StandardCharsets.UTF_8));
