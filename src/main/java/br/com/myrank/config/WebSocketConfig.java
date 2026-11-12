@@ -1,5 +1,6 @@
 package br.com.myrank.config;
 
+import br.com.myrank.security.SessionCookieHandshakeInterceptor;
 import br.com.myrank.security.StompAuthChannelInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -20,18 +21,23 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
+    private final SessionCookieHandshakeInterceptor sessionCookieHandshakeInterceptor;
 
     /** Mesma lista de origens do CORS REST — ver {@code cors.allowed-origins}. */
     @Value("${cors.allowed-origins:http://localhost:5173}")
     private String allowedOrigins;
 
-    public WebSocketConfig(StompAuthChannelInterceptor stompAuthChannelInterceptor) {
+    public WebSocketConfig(StompAuthChannelInterceptor stompAuthChannelInterceptor,
+                           SessionCookieHandshakeInterceptor sessionCookieHandshakeInterceptor) {
         this.stompAuthChannelInterceptor = stompAuthChannelInterceptor;
+        this.sessionCookieHandshakeInterceptor = sessionCookieHandshakeInterceptor;
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
+                // lê o cookie da sessão na abertura; vale também pros transportes do SockJS
+                .addInterceptors(sessionCookieHandshakeInterceptor)
                 .setAllowedOriginPatterns(allowedOrigins.split("\\s*,\\s*"))
                 .withSockJS();
     }
