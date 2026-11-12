@@ -1,0 +1,11 @@
+.git
+.github
+.mvn
+target
+*.log
+.env
+.env.*
+deploy
+docs
+*.md
+src/test

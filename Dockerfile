@@ -12,9 +12,13 @@ RUN mvn package -DskipTests
 
 FROM eclipse-temurin:17-jre
 
+RUN groupadd --system myrank && useradd --system --gid myrank --no-create-home myrank
+
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build --chown=myrank:myrank /app/target/*.jar app.jar
+
+USER myrank:myrank
 
 EXPOSE 8080
 
