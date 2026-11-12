@@ -59,8 +59,6 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(dto.password()));
         user.setAuthProvider(AuthProvider.LOCAL);
         user.setEmailVerified(true);
-        user.setEmailVerificationTokenHash(null);
-        user.setEmailVerificationExpiresAt(null);
         if (dto.language() != null && LANGUAGES.contains(dto.language().trim().toUpperCase())) {
             user.setLanguage(dto.language().trim().toUpperCase());
         }
@@ -215,8 +213,6 @@ public class UserService {
                     // provedor, então a senha é descartada e a conta passa a ser dele.
                     user.setPasswordHash(null);
                     user.setEmailVerified(true);
-                    user.setEmailVerificationTokenHash(null);
-                    user.setEmailVerificationExpiresAt(null);
                 }
 
                 user.setProviderId(info.providerId());

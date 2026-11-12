@@ -60,7 +60,6 @@ class UserServiceEmailVerificationTest {
     void cadastroPendenteDoFluxoAntigo_eReaproveitado_eConfirmado() {
         User pending = localUser(false);
         pending.setPublic(true);
-        pending.setEmailVerificationTokenHash("hash-do-link-antigo");
         when(userRepository.findByEmail("dono@myrank.dev")).thenReturn(Optional.of(pending));
 
         User user = service.createUser(new UserCreateDTO("passe", "outronome", "senha-nova", null), "dono@myrank.dev");
@@ -69,7 +68,6 @@ class UserServiceEmailVerificationTest {
         assertThat(user.getUsername()).isEqualTo("outronome");
         assertThat(user.getPasswordHash()).isEqualTo("hash:senha-nova");
         assertThat(user.isEmailVerified()).isTrue();
-        assertThat(user.getEmailVerificationTokenHash()).isNull();
         assertThat(user.getOnboardingStep()).isEqualTo(OnboardingStep.DONE);
         assertThat(user.isPublic()).isTrue();
     }

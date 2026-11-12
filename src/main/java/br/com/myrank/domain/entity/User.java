@@ -50,18 +50,11 @@ public class User {
     private String discordId;
 
     /**
-     * Conta LOCAL só pode logar com isso true (clicou no link do email). Contas
+     * Conta LOCAL só pode logar com isso true (confirmou o email). Contas
      * criadas pelo Google/Discord já nascem true — o provedor verificou o email.
      */
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
-
-    /** SHA-256 (hex) do token do link de confirmação — o token em si nunca é salvo. */
-    @Column(name = "email_verification_token_hash", length = 64)
-    private String emailVerificationTokenHash;
-
-    @Column(name = "email_verification_expires_at")
-    private LocalDateTime emailVerificationExpiresAt;
 
     @Column(name = "account_deletion_code_hash", length = 64)
     private String accountDeletionCodeHash;
@@ -161,11 +154,6 @@ public class User {
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
 
-    public String getEmailVerificationTokenHash() { return emailVerificationTokenHash; }
-    public void setEmailVerificationTokenHash(String emailVerificationTokenHash) { this.emailVerificationTokenHash = emailVerificationTokenHash; }
-
-    public LocalDateTime getEmailVerificationExpiresAt() { return emailVerificationExpiresAt; }
-    public void setEmailVerificationExpiresAt(LocalDateTime emailVerificationExpiresAt) { this.emailVerificationExpiresAt = emailVerificationExpiresAt; }
     public String getAccountDeletionCodeHash() { return accountDeletionCodeHash; }
     public void setAccountDeletionCodeHash(String accountDeletionCodeHash) { this.accountDeletionCodeHash = accountDeletionCodeHash; }
     public LocalDateTime getAccountDeletionCodeExpiresAt() { return accountDeletionCodeExpiresAt; }
