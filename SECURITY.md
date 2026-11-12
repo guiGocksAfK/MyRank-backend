@@ -14,10 +14,10 @@ repositório do front.
 | Passes entre etapas | Acertar o código gera um passe curto (JWT) que libera a etapa seguinte. Cada fluxo assina com uma chave derivada do segredo do login + propósito: o passe do cadastro não troca senha, e nenhum passe serve como sessão. |
 | Login | Conta social, email inexistente e senha errada dão a **mesma** mensagem. "Email não confirmado" só aparece depois que a senha confere, pra não revelar quais emails têm cadastro pendente. |
 | Recuperação de senha | Email sem conta segue o mesmo caminho de uma conta real (o código é gerado, só não é mandado), então resposta e erros não revelam quem tem conta. Exceção decidida: conta só com Google/Discord é avisada na hora de qual provedor usar. |
-| Sessão | JWT HS256 de 24h. `JWT_SECRET` é obrigatório no boot (mínimo 32 caracteres). A cada requisição o usuário é lido do banco. Cada token carrega a **versão de sessão** da conta: trocar a senha aumenta a versão e derruba todas as sessões abertas, em todos os aparelhos, na hora. |
-| Autenticação | Toda rota exige token, menos as abertas de propósito: `/api/auth/**`, `POST /api/users` (cadastro final, que exige o passe do código), `GET /api/health`, `GET /api/external/showcase` e o handshake do WebSocket. Sem login válido a resposta é **401**; sem permissão, **403**. |
+| Sessão | JWT HS256 de 24h gravado no cookie `myrank_session` (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`). `JWT_SECRET` é obrigatório no boot (mínimo 32 caracteres). A cada requisição o usuário é lido do banco. Cada token carrega a **versão de sessão** da conta: trocar a senha (ou usar "sair dos outros aparelhos") aumenta a versão e derruba todas as sessões abertas na hora. `POST /api/auth/logout` apaga o cookie neste navegador. |
+| Autenticação | Toda rota exige sessão válida (cookie `myrank_session` ou header `Authorization: Bearer` durante a transição), menos as abertas de propósito: `/api/auth/**`, `POST /api/users` (cadastro final, que exige o passe do código), `GET /api/health`, `GET /api/external/showcase` e o handshake do WebSocket. Quando autenticada pelo cookie, toda requisição de escrita (`POST`, `PUT`, `PATCH`, `DELETE`) exige `Origin` pertencente a `CORS_ALLOWED_ORIGINS` (defesa contra CSRF somada ao `SameSite=Strict`). Sem login válido a resposta é **401**; sem permissão, **403**. |
 | Autorização | Dono conferido em toda operação de tabela, obra, subdivisão e campo próprio. Perfil privado: obras, takes e comparação só pra quem segue. O item só aceita um template que a tabela tenha. |
-| Chat em tempo real | O `CONNECT` do STOMP exige JWT válido (com a mesma checagem de versão de sessão). Cada inscrição é autorizada por conversa, e publicar direto no broker é proibido: mensagem só entra pela API. |
+| Chat em tempo real | O handshake do WebSocket lê o cookie `myrank_session` e o `CONNECT` do STOMP exige JWT válido (do cookie ou do header `Authorization`, com a mesma checagem de versão de sessão). Cada inscrição é autorizada por conversa, e publicar direto no broker é proibido: mensagem só entra pela API. |
 | Bot do Discord | Header `X-Bot-Key` comparado em tempo constante, válido só num conjunto fechado de rotas. A pessoa precisa ter vinculado o Discord à conta. Rate limit por usuário do Discord (e não pelo IP do bot). |
 | Rate limiting | Janela fixa de 1 minuto, em memória, por IP: login 10, OAuth 15, envio de código 3, conferência de código 10, cadastro 5, exclusão de conta 5, busca externa 40, preencher detalhes de todas as obras 2. Não confia em `X-Forwarded-For` direto: atrás do Caddy, o Tomcat só aceita o IP real vindo da rede interna (`SERVER_FORWARD_HEADERS_STRATEGY=native`). |
 | Validação de entrada | Bean Validation nos DTOs, com tamanho máximo nos textos. O `details` de cada obra é sempre um objeto JSON de até 8 KB. Campos próprios validados pelo tipo: texto até 200, número finito, data real, sim/não sem conversão. |
@@ -32,16 +32,15 @@ repositório do front.
 
 ## Pendências e decisões abertas
 
-1. **JWT no `localStorage` do front.** Um XSS no front conseguiria roubar o
-   token e usar por até 24h. A defesa de pé hoje é a CSP restritiva do front.
-   O ideal é cookie `httpOnly`, mas front (Vercel) e API (duckdns) são sites
-   diferentes: o cookie precisaria de `SameSite=None`, o que abre uma
-   superfície de CSRF que hoje não existe (token no header `Authorization` é
-   imune a CSRF). O caminho certo, nesta ordem e junto:
-   1. pôr front e API sob o mesmo domínio (rewrite `/api` na Vercel, ou o Caddy
-      servindo os dois);
-   2. aí sim cookie `httpOnly; Secure; SameSite=Strict`;
-   3. no front, ler o usuário por `GET /api/users/me` em vez do token.
+1. **Concluir a migração da sessão por cookie no front e no domínio.** O backend
+   já emite e lê o cookie `myrank_session` (`HttpOnly; Secure; SameSite=Strict`),
+   confere `Origin` nas escritas e autentica o WebSocket pelo cookie. Falta:
+   1. pôr front e API sob o mesmo domínio registrável (ex.: `myrank.dev` e
+      `api.myrank.dev`) para o navegador enviar cookie `SameSite=Strict`;
+   2. no front, parar de salvar o JWT no `localStorage`, enviar cookies nas
+      chamadas (`credentials: 'include'`) e usar `POST /api/auth/logout`;
+   3. depois que o front novo estiver no ar, parar de devolver `token` no corpo
+      do `LoginResponseDTO`.
 
 2. **Backups sem criptografia e só na VM.** O dump diário guarda 14 dias, mas
    em texto puro e no mesmo servidor da API: se a VM for perdida, sobra só o

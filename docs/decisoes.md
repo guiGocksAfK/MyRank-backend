@@ -107,6 +107,14 @@ deixar o motivo.
   grupos), não cada tipo, para a tela não virar uma lista de 8 chaves.
 - **"Sair dos outros aparelhos" sobe a versão da sessão** (a mesma da troca de
   senha) e devolve um token novo para quem pediu, que continua logado.
+- **Sessão em cookie `HttpOnly` (`SameSite=Strict`, `Secure`) + conferência de
+  `Origin` nas escritas.** Tira o JWT do `localStorage` para que um XSS não
+  consiga ler o token. Como o cookie vai sozinho, `SameSite=Strict` exige que
+  front e API fiquem sob o mesmo domínio registrável (ex.: `myrank.dev` e
+  `api.myrank.dev`) e o filtro recusa `POST`/`PUT`/`PATCH`/`DELETE` autenticados
+  por cookie cujo `Origin` não esteja em `CORS_ALLOWED_ORIGINS`. Durante a
+  transição o corpo do login continua trazendo `token` e o filtro ainda aceita
+  `Authorization: Bearer`.
 - **Exportar as obras é feito no navegador** (CSV ou JSON a partir do
   /works/unified), sem rota nova: os dados já chegam inteiros ao front.
 

@@ -79,13 +79,23 @@ POST `/api/auth/login` com `email` e `password`.
 ## Sessão
 
 - JWT HS256 de 24h, com o id da conta e a **versão de sessão** (claim `ver`).
+- Entrar (senha, Google, Discord, cadastro, troca de senha e "sair dos outros
+  aparelhos") grava o token num cookie `myrank_session` (`HttpOnly`, `Secure`,
+  `SameSite=Strict`, `Path=/`). O token continua vindo no corpo da resposta
+  durante a transição para o site atual não quebrar.
+- A API aceita o cookie ou o header `Authorization: Bearer`. Quando vem pelo
+  cookie, requisições que mudam dados (`POST`, `PUT`, `PATCH`, `DELETE`) só
+  valem se o header `Origin` bater com `CORS_ALLOWED_ORIGINS` (segunda trava
+  contra CSRF, além de `SameSite=Strict`).
+- No chat em tempo real (`/ws`), o handshake lê o cookie `myrank_session` e
+  guarda nos atributos da sessão para o `CONNECT` do STOMP validar.
 - A cada requisição a conta é lida do banco e o token só vale se a versão bate
   com `users.token_version`. Trocar a senha aumenta a versão; token sem versão
   (anterior a esse recurso) conta como 0.
 - `JWT_SECRET` com menos de 32 caracteres impede a API de subir.
-- No front, qualquer 401 apaga o token e leva ao login.
-- Sair só apaga o token no navegador; um token copiado vale até vencer
-  (pendência no SECURITY.md).
+- `POST /api/auth/logout` devolve um `Set-Cookie` com `Max-Age=0` para apagar o
+  cookie `HttpOnly` neste navegador (um token copiado antes continua válido até
+  expirar ou até aumentar a versão de sessão).
 
 ## Exclusão de conta
 
@@ -95,9 +105,3 @@ POST `/api/auth/login` com `email` e `password`.
    (`confirmUsername`): apaga de verdade, não é soft delete.
    DMs somem, grupos passam o dono para o próximo da hierarquia, e vai um
    comprovante por email.
-
-## Fluxo antigo por link
-
-`/api/auth/verify-email` e `/api/auth/resend-verification` continuam só para
-contas criadas antes do cadastro por código e nunca confirmadas. As colunas
-`email_verification_*` e `password_reset_*` são restos desse fluxo.
