@@ -4,6 +4,7 @@ import br.com.myrank.domain.entity.User;
 import br.com.myrank.dto.auth.CodeVerifyRequestDTO;
 import br.com.myrank.dto.auth.ForgotPasswordRequestDTO;
 import br.com.myrank.dto.auth.ForgotPasswordResponseDTO;
+import br.com.myrank.dto.auth.GoogleCodeRequestDTO;
 import br.com.myrank.dto.auth.LoginRequestDTO;
 import br.com.myrank.dto.auth.LoginResponseDTO;
 import br.com.myrank.dto.auth.OAuthCodeRequestDTO;
@@ -133,6 +134,16 @@ public class AuthController {
     @PostMapping("/oauth/google")
     public ResponseEntity<LoginResponseDTO> loginWithGoogle(@Valid @RequestBody OAuthTokenRequestDTO dto) {
         return sessionCookie.signedIn(oAuthService.loginWithGoogle(dto.token()));
+    }
+
+    /**
+     * Google pelo botão do próprio site: chega o código de autorização da janela do
+     * Google e o back troca pelo token. A rota de cima (token pronto) fica pro botão
+     * oficial do Google, que entrega o token direto.
+     */
+    @PostMapping("/oauth/google/callback")
+    public ResponseEntity<LoginResponseDTO> loginWithGoogleCallback(@Valid @RequestBody GoogleCodeRequestDTO dto) {
+        return sessionCookie.signedIn(oAuthService.loginWithGoogleCode(dto.code()));
     }
 
     /**

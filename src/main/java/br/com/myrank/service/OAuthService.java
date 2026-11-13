@@ -17,6 +17,9 @@ import org.springframework.web.client.RestClientResponseException;
 @Service
 public class OAuthService {
 
+    private static final String GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+    /** Valor fixo que o Google exige quando o código veio da janela (popup) aberta pelo site. */
+    private static final String GOOGLE_POPUP_REDIRECT_URI = "postmessage";
     private static final String GOOGLE_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo";
     private static final String DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token";
     private static final String DISCORD_USER_URL = "https://discord.com/api/users/@me";
@@ -35,6 +38,47 @@ public class OAuthService {
 
     public LoginResponseDTO loginWithGoogle(String idToken) {
         return authenticateOAuth(verifyGoogleToken(idToken), AuthProvider.GOOGLE);
+    }
+
+    /**
+     * Login pelo botão do site: o front abre a janela do Google e recebe um código
+     * de autorização; quem troca o código pelo token é o back, com o client secret.
+     * O token que volta passa pela mesma conferência do {@link #loginWithGoogle}.
+     */
+    public LoginResponseDTO loginWithGoogleCode(String code) {
+        return loginWithGoogle(exchangeGoogleCode(code));
+    }
+
+    private String exchangeGoogleCode(String code) {
+        String clientId = oAuthProperties.getGoogle().getClientId();
+        String clientSecret = oAuthProperties.getGoogle().getClientSecret();
+        if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+            throw new IllegalStateException("Google OAuth não configurado (client id/secret).");
+        }
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("client_id", clientId);
+        body.add("client_secret", clientSecret);
+        body.add("grant_type", "authorization_code");
+        body.add("code", code);
+        body.add("redirect_uri", GOOGLE_POPUP_REDIRECT_URI);
+
+        try {
+            GoogleTokenResponse tokenResponse = restClient.post()
+                    .uri(GOOGLE_TOKEN_URL)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(body)
+                    .retrieve()
+                    .body(GoogleTokenResponse.class);
+
+            if (tokenResponse == null || tokenResponse.idToken() == null || tokenResponse.idToken().isBlank()) {
+                throw new IllegalArgumentException("Não foi possível obter token do Google.");
+            }
+
+            return tokenResponse.idToken();
+        } catch (RestClientResponseException ex) {
+            throw new IllegalArgumentException("Code do Google inválido ou expirado.");
+        }
     }
 
     /** Privado de propósito: o token só pode vir da troca do código feita aqui (ver exchangeDiscordCode). */
@@ -184,6 +228,11 @@ public class OAuthService {
             @JsonProperty("expires_in") Integer expiresIn,
             @JsonProperty("refresh_token") String refreshToken,
             @JsonProperty("scope") String scope
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record GoogleTokenResponse(
+            @JsonProperty("id_token") String idToken
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
