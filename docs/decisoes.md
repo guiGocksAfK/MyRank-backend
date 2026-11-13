@@ -117,6 +117,13 @@ deixar o motivo.
   `Authorization: Bearer`.
 - **Exportar as obras é feito no navegador** (CSV ou JSON a partir do
   /works/unified), sem rota nova: os dados já chegam inteiros ao front.
+- **Login com Google por botão próprio e código de autorização**, e não pelo
+  botão oficial escondido. O botão oficial é um iframe do Google que ficava
+  invisível por cima do botão dourado; ele parou de aceitar clique de mouse (só
+  o teclado funcionava), e o Chrome trata um iframe transparente como "não
+  visível". Agora o botão é nosso, abre a janela do Google e o back troca o
+  código pelo token, igual ao Discord. Custo: a API precisa do
+  `GOOGLE_CLIENT_SECRET`.
 
 ## Tutorial pós-cadastro
 

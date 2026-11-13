@@ -41,8 +41,11 @@ Sem `BREVO_API_KEY`, os fluxos respondem que o envio está indisponível.
 
 ## Google e Discord
 
-- Google: o front manda o `idToken`, conferido no `tokeninfo` do Google.
-  Discord: o front manda o `code` do OAuth e o back troca pelo token.
+- Google e Discord: o front manda o `code` do OAuth e o back troca pelo token,
+  com o client secret. No Google o código vem da janela (popup) que o botão do
+  site abre; o `idToken` que volta da troca é conferido no `tokeninfo`.
+- A rota que recebe o `idToken` pronto do Google (`POST /api/auth/oauth/google`)
+  continua existindo: é a que o botão oficial do Google usa.
 - Só é aceito email **verificado pelo provedor**.
 - Email que já tem conta:
   - conta do mesmo provedor ou com senha confirmada: entra nela;
