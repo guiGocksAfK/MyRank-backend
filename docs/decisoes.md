@@ -124,6 +124,11 @@ deixar o motivo.
   visível". Agora o botão é nosso, abre a janela do Google e o back troca o
   código pelo token, igual ao Discord. Custo: a API precisa do
   `GOOGLE_CLIENT_SECRET`.
+- **A chave do bot de Discord vale numa lista fechada de rotas** (`BOT_ROUTES` no
+  `BotAuthenticationFilter`), que cresce por funcionalidade do bot: obras, tabelas,
+  conquistas, busca externa e, agora, o social. Ela age como qualquer pessoa
+  vinculada, então nunca entram `/api/auth` nem as rotas que apagam a conta ou
+  derrubam sessões; `/api/users` só pode entrar rota por rota, nunca pelo prefixo.
 
 ## Tutorial pós-cadastro
 

@@ -53,12 +53,16 @@ public class BotAuthenticationFilter extends OncePerRequestFilter {
      * Prefixos em que a bot key vale. {@code /api/external} entra porque o cadastro
      * pelo bot busca a obra pela própria API do MyRank — a alternativa seria o bot
      * falar direto com TMDB/RAWG/Jikan, duplicando a integração e as chaves.
+     * {@code /api/social} entra para o bot ter perfis, seguir, feed e takes; nada ali
+     * apaga conta nem derruba sessão. A lista cresce por funcionalidade, nunca com
+     * {@code /api/auth} ou com o prefixo inteiro de {@code /api/users}.
      */
     private static final List<String> BOT_ROUTES = List.of(
             "/api/works",
             "/api/categories",
             "/api/badges",
-            "/api/external"
+            "/api/external",
+            "/api/social"
     );
 
     private final UserRepository userRepository;

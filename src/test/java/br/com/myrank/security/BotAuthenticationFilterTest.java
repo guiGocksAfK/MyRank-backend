@@ -5,6 +5,8 @@ import br.com.myrank.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -113,11 +115,21 @@ class BotAuthenticationFilterTest {
         verifyNoInteractions(userRepository);
     }
 
-    /** Fora do conjunto fechado de rotas a key é ignorada — exige JWT normal. */
-    @Test
-    void rotaForaDoEscopo_keyIgnorada() throws Exception {
+    /**
+     * Fora do conjunto fechado de rotas a key é ignorada — exige JWT normal. As rotas
+     * daqui nunca podem entrar: apagam a conta, derrubam sessões ou mexem no login.
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "DELETE, /api/users/me",
+            "POST, /api/users/me/deletion-code",
+            "POST, /api/users/me/sessions/revoke",
+            "POST, /api/auth/logout",
+            "GET, /api/socialx",
+    })
+    void rotaForaDoEscopo_keyIgnorada(String method, String uri) throws Exception {
         BotAuthenticationFilter filter = new BotAuthenticationFilter(userRepository, KEY);
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/social/takes");
+        MockHttpServletRequest request = new MockHttpServletRequest(method, uri);
         request.addHeader("X-Bot-Key", KEY);
         request.addHeader("X-Discord-Id", "123");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -127,5 +139,21 @@ class BotAuthenticationFilterTest {
         verify(chain).doFilter(request, response);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verifyNoInteractions(userRepository);
+    }
+
+    /** O social (perfis, seguir, feed, takes) vale para o bot. */
+    @Test
+    void social_autenticaPeloBot() throws Exception {
+        when(userRepository.findByDiscordId("123")).thenReturn(Optional.of(linkedUser("123")));
+        BotAuthenticationFilter filter = new BotAuthenticationFilter(userRepository, KEY);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/social/takes");
+        request.addHeader("X-Bot-Key", KEY);
+        request.addHeader("X-Discord-Id", "123");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertThat(request.getAttribute(BotAuthenticationFilter.DISCORD_ID_ATTRIBUTE)).isEqualTo("123");
     }
 }
