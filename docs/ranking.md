@@ -34,6 +34,12 @@ Junta várias tabelas numa lista só.
 - O front monta a lista com as obras das tabelas escolhidas e ordena ali mesmo.
   (`GET /api/works/unified` traz todas as obras da conta por `finalScore`; é o
   que o perfil e o rodapé usam.)
+- **`GET /api/rankings/unified?sort=score|weighted|time`** faz a mesma conta no
+  back, para quem não é o site (o bot de Discord): tabelas do agrupamento
+  "Unificado" (todas, se ele não existir ou estiver vazio), ordem manual nos
+  empates. Com `&table=id`, só aquela tabela, desempatando pela posição. Sem
+  `sort`, vale a configuração "nota ponderada" da conta. Os filtros da barra
+  continuam só no site.
 - **A seleção e a ordem manual ficam num agrupamento** (`/api/master-table-groups`)
   chamado "Unificado", criado pelo front no primeiro acesso com todas as tabelas
   marcadas. Cada conta só pode ter um agrupamento com o mesmo nome, e só com
@@ -49,8 +55,13 @@ Junta várias tabelas numa lista só.
 
 ## Ranking de criadores
 
-Calculado só no front (`CreatorsPanel`), a partir das obras da conta: diretores,
-escritores, estúdios e criadores, cada um com as obras dele.
+Calculado no front (`CreatorsPanel`) e, com a mesma regra, em
+**`GET /api/rankings/creators?order=avg|weighted|works&type=`** (`RankingService`,
+para o bot de Discord), a partir das obras da conta: diretores, escritores,
+estúdios e criadores, cada um com as obras dele. Cada pessoa do campo criador
+conta à parte; quem tem exatamente as mesmas obras vira uma linha só; quem só tem
+obras que já estão com alguém de mais obras não ganha linha. O tipo é o escolhido
+pela pessoa (se todos da linha concordam) ou o que mais aparece nas obras.
 
 - Nota do criador: média das notas das obras dele (obras com nota 0 ficam de fora).
 - Com a ponderação ligada: média das notas **ponderada pelos minutos** de cada
