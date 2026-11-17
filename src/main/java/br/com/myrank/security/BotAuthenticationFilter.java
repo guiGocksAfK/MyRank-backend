@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Autentica o bot de Discord por API key de serviço, em vez de JWT de usuário —
@@ -53,16 +54,33 @@ public class BotAuthenticationFilter extends OncePerRequestFilter {
      * Prefixos em que a bot key vale. {@code /api/external} entra porque o cadastro
      * pelo bot busca a obra pela própria API do MyRank — a alternativa seria o bot
      * falar direto com TMDB/RAWG/Jikan, duplicando a integração e as chaves.
-     * {@code /api/social} entra para o bot ter perfis, seguir, feed e takes; nada ali
-     * apaga conta nem derruba sessão. A lista cresce por funcionalidade, nunca com
-     * {@code /api/auth} ou com o prefixo inteiro de {@code /api/users}.
+     * {@code /api/social} entra para o bot ter perfis, seguir, feed e takes;
+     * {@code /api/notifications} e {@code /api/insights}, para as notificações e a IA
+     * (o limite diário de mensagens de IA é o mesmo do site, contado por conta);
+     * {@code /api/rankings}, para o ranking geral e o de criadores, só de leitura. Nada
+     * disso apaga conta nem derruba sessão. A lista cresce por funcionalidade, nunca
+     * com {@code /api/auth} ou com o prefixo inteiro de {@code /api/users}.
      */
     private static final List<String> BOT_ROUTES = List.of(
             "/api/works",
             "/api/categories",
             "/api/badges",
             "/api/external",
-            "/api/social"
+            "/api/social",
+            "/api/notifications",
+            "/api/insights",
+            "/api/rankings"
+    );
+
+    /**
+     * Rotas que valem só com este método e este caminho exatos, para as áreas que
+     * misturam o que o bot pode e o que não pode. Em {@code /api/users} o bot lê e
+     * muda as configurações ({@code GET}/{@code PUT /me}), mas nunca alcança
+     * {@code DELETE /me}, o código de exclusão nem "sair dos outros aparelhos".
+     */
+    private static final Set<String> BOT_EXACT_ROUTES = Set.of(
+            "GET /api/users/me",
+            "PUT /api/users/me"
     );
 
     private final UserRepository userRepository;
@@ -143,6 +161,9 @@ public class BotAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean isBotRoute(HttpServletRequest request) {
         String uri = request.getRequestURI();
+        if (BOT_EXACT_ROUTES.contains(request.getMethod() + " " + uri)) {
+            return true;
+        }
         for (String prefix : BOT_ROUTES) {
             if (uri.equals(prefix) || uri.startsWith(prefix + "/")) {
                 return true;

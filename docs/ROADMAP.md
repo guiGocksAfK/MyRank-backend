@@ -71,4 +71,8 @@ genérica; ideias testadas e guardadas pra voltar depois:
 ## Ideias sem data
 
 - **Podcasts** como template (descartado por ora; voltar se houver público).
+- **Front usar `/api/rankings`.** O ranking geral e o de criadores agora também são
+  calculados no back (para o bot de Discord), com a mesma regra do front. Passar o
+  front a usar essas rotas tira a conta duplicada; enquanto isso, mudar a regra de
+  um lado pede mudar do outro.
 - Pendências de segurança: lista completa no [SECURITY.md](../SECURITY.md).

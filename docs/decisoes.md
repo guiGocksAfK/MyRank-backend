@@ -126,9 +126,14 @@ deixar o motivo.
   `GOOGLE_CLIENT_SECRET`.
 - **A chave do bot de Discord vale numa lista fechada de rotas** (`BOT_ROUTES` no
   `BotAuthenticationFilter`), que cresce por funcionalidade do bot: obras, tabelas,
-  conquistas, busca externa e, agora, o social. Ela age como qualquer pessoa
+  conquistas, busca externa, social, notificações, IA Insights, rankings e as
+  configurações (`GET`/`PUT /api/users/me`, só esses dois, por método e caminho
+  exatos). Ela age como qualquer pessoa
   vinculada, então nunca entram `/api/auth` nem as rotas que apagam a conta ou
   derrubam sessões; `/api/users` só pode entrar rota por rota, nunca pelo prefixo.
+- **Ranking geral e de criadores também no back** (`/api/rankings`), com a regra do
+  front, para o bot não ter que refazer conta nenhuma. O front ainda calcula do
+  jeito dele; trocar para as rotas novas está no ROADMAP.
 
 ## Tutorial pós-cadastro
 

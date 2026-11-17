@@ -126,6 +126,10 @@ class BotAuthenticationFilterTest {
             "POST, /api/users/me/sessions/revoke",
             "POST, /api/auth/logout",
             "GET, /api/socialx",
+            "POST, /api/users",
+            "DELETE, /api/users/me/",
+            "GET, /api/users/me/",
+            "PATCH, /api/users/me",
     })
     void rotaForaDoEscopo_keyIgnorada(String method, String uri) throws Exception {
         BotAuthenticationFilter filter = new BotAuthenticationFilter(userRepository, KEY);
@@ -141,12 +145,22 @@ class BotAuthenticationFilterTest {
         verifyNoInteractions(userRepository);
     }
 
-    /** O social (perfis, seguir, feed, takes) vale para o bot. */
-    @Test
-    void social_autenticaPeloBot() throws Exception {
+    /** Social, notificações, IA e as configurações da conta valem para o bot. */
+    @ParameterizedTest
+    @CsvSource({
+            "POST, /api/social/takes",
+            "GET, /api/notifications",
+            "POST, /api/notifications/read-all",
+            "POST, /api/insights/generate",
+            "POST, /api/insights/7/chat",
+            "GET, /api/users/me",
+            "PUT, /api/users/me",
+            "GET, /api/rankings/creators",
+    })
+    void rotasDoBot_autenticam(String method, String uri) throws Exception {
         when(userRepository.findByDiscordId("123")).thenReturn(Optional.of(linkedUser("123")));
         BotAuthenticationFilter filter = new BotAuthenticationFilter(userRepository, KEY);
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/social/takes");
+        MockHttpServletRequest request = new MockHttpServletRequest(method, uri);
         request.addHeader("X-Bot-Key", KEY);
         request.addHeader("X-Discord-Id", "123");
         MockHttpServletResponse response = new MockHttpServletResponse();
