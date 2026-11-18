@@ -229,7 +229,7 @@ class OnboardingIntegrationTest {
                     });
                     return true;
                 } catch (IllegalArgumentException ex) {
-                    assertThat(ex).hasMessageContaining("TABLES");
+                    assertThat(ex).hasMessageContaining("já foi feita");
                     return false;
                 }
             })).toList();
