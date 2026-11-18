@@ -62,6 +62,6 @@ final class MusicCatalogSupport {
         } catch (NumberFormatException e) {
             // Valores fora do intervalo de long também são IDs inválidos.
         }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de música ou álbum inválido.");
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Essa música ou álbum não foi encontrado.");
     }
 }
