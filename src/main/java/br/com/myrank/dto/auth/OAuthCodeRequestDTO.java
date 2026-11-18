@@ -3,8 +3,8 @@ package br.com.myrank.dto.auth;
 import jakarta.validation.constraints.NotBlank;
 
 public record OAuthCodeRequestDTO(
-        @NotBlank(message = "Code é obrigatório.")
+        @NotBlank(message = "A autorização não chegou. Tente de novo.")
         String code,
-        @NotBlank(message = "Redirect URI é obrigatório.")
+        @NotBlank(message = "A autorização não chegou. Tente de novo.")
         String redirectUri
 ) {}

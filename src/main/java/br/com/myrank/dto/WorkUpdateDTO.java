@@ -15,12 +15,12 @@ public record WorkUpdateDTO(
         @Size(max = 300, message = "O título é longo demais.")
         String title,
 
-        @Size(max = 1000) String imageUrl,
-        @Size(max = 200) String creator,
+        @Size(max = 1000, message = "O link da capa é longo demais.") String imageUrl,
+        @Size(max = 200, message = "O criador passa de 200 caracteres.") String creator,
         LocalDate releaseDate,
 
-        @Min(0) @Max(1_000_000) Integer timeMinutes,
-        @DecimalMin("0.0") @DecimalMax("10.0") Double score,
+        @Min(value = 0, message = "O tempo não pode ser negativo.") @Max(value = 1_000_000, message = "O tempo informado é grande demais.") Integer timeMinutes,
+        @DecimalMin(value = "0.0", message = "A nota precisa ser de 0 a 10.") @DecimalMax(value = "10.0", message = "A nota precisa ser de 0 a 10.") Double score,
         /** null = não mexe; 0 = tira da subcategoria; outro = move pra essa subcategoria. */
         Long subcategoryId,
         TableTemplate template,
