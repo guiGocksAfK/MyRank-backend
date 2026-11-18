@@ -446,15 +446,15 @@ public class SocialService {
     @Transactional
     public ReactionSummaryDTO react(Long viewerId, Long feedEventId, String kindRaw) {
         FeedEvent event = feedEventRepository.findById(feedEventId)
-                .orElseThrow(() -> new IllegalArgumentException("Item do feed não encontrado."));
+                .orElseThrow(() -> new IllegalArgumentException("Esse item do feed não existe mais."));
         if (event.getType() != FeedEventType.TAKE) {
-            throw new IllegalArgumentException("Item do feed não encontrado.");
+            throw new IllegalArgumentException("Esse item do feed não existe mais.");
         }
         User author = userRepository.findById(event.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("Item do feed não encontrado."));
+                .orElseThrow(() -> new IllegalArgumentException("Esse item do feed não existe mais."));
         if (!event.getUserId().equals(viewerId) && !author.isPublic()
                 && !followRepository.existsByFollowerIdAndFollowedId(viewerId, author.getId())) {
-            throw new IllegalArgumentException("Item do feed não encontrado.");
+            throw new IllegalArgumentException("Esse item do feed não existe mais.");
         }
         ReactionKind kind = ReactionKind.fromClient(kindRaw);
 
@@ -516,7 +516,7 @@ public class SocialService {
         take = takeRepository.save(take); // @PreUpdate bumpa updatedAt
 
         FeedEvent event = feedEventRepository.findByTakeId(takeId)
-                .orElseThrow(() -> new IllegalArgumentException("Evento do take não encontrado."));
+                .orElseThrow(() -> new IllegalArgumentException("Take não encontrado."));
         Work work = workRepository.findById(take.getWorkId()).orElse(null);
         User author = userRepository.findById(viewerId).orElseThrow();
         int comments = (int) takeCommentRepository.countByTakeId(takeId);

@@ -51,10 +51,10 @@ public class WorkService {
     @Transactional
     public Work createWork(User user, WorkCreateDTO dto) {
         Category category = categoryRepository.findByIdForUpdate(dto.categoryId())
-                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+                .orElseThrow(() -> new IllegalArgumentException("Tabela não encontrada."));
 
         if (!category.getUser().getId().equals(user.getId())) {
-            throw new IllegalArgumentException("Você não tem permissão para adicionar obras nessa categoria.");
+            throw new IllegalArgumentException("Essa tabela não é sua.");
         }
 
         Work work = new Work();
@@ -82,10 +82,10 @@ public class WorkService {
 
     public List<Work> getWorksByCategory(Long categoryId, Long userId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+                .orElseThrow(() -> new IllegalArgumentException("Tabela não encontrada."));
 
         if (!category.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Você não tem permissão para ver essa categoria.");
+            throw new IllegalArgumentException("Essa tabela não é sua.");
         }
 
         return workRepository.findByCategoryId(categoryId);
@@ -107,7 +107,7 @@ public class WorkService {
         BigDecimal previousScore = work.getScore();
 
         Category category = categoryRepository.findByIdForUpdate(work.getCategory().getId())
-                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+                .orElseThrow(() -> new IllegalArgumentException("Tabela não encontrada."));
         TableTemplate template = dto.template() != null ? resolveTemplate(category, dto.template()) : work.getTemplate();
         Map<String, Object> details = checkedDetails(category, template,
                 dto.details() != null ? dto.details() : work.getDetails());
@@ -156,7 +156,7 @@ public class WorkService {
         List<TableTemplate> allowed = category.getTemplates();
         if (requested == null) {
             if (allowed.size() == 1) return allowed.get(0);
-            throw new IllegalArgumentException("Escolha o tipo do item.");
+            throw new IllegalArgumentException("Escolha o tipo da obra.");
         }
         if (!allowed.contains(requested)) {
             throw new IllegalArgumentException("Esse tipo não faz parte da tabela.");
@@ -168,10 +168,10 @@ public class WorkService {
         if (details == null) return null;
         try {
             if (objectMapper.writeValueAsString(details).getBytes(StandardCharsets.UTF_8).length > MAX_DETAILS_BYTES) {
-                throw new IllegalArgumentException("Detalhes do item grandes demais.");
+                throw new IllegalArgumentException("Os dados dessa obra passaram do tamanho permitido.");
             }
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Detalhes do item inválidos.");
+            throw new IllegalArgumentException("Os dados dessa obra vieram num formato inválido.");
         }
         return CustomFieldPolicy.values(category, template, details);
     }

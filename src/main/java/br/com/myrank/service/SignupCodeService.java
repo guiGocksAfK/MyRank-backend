@@ -51,7 +51,7 @@ public class SignupCodeService {
             throw new IllegalArgumentException("Email já está em uso.");
         }
         if (!emailClient.isConfigured()) {
-            throw new IllegalStateException("Envio de email indisponível. Tente novamente mais tarde.");
+            throw new IllegalStateException("Envio de email indisponível. Tente de novo mais tarde.");
         }
 
         String code = codes.issue(email);
