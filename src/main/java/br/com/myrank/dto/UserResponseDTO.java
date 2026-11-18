@@ -23,7 +23,9 @@ public record UserResponseDTO(
         String dmPolicy,
         java.util.List<String> mutedNotifications,
         boolean weightedByDefault,
-        String rankingsView
+        String rankingsView,
+        /** Há um Discord ligado à conta (é o que o bot usa). */
+        boolean discordConnected
 ) {
     public static UserResponseDTO fromEntity(User user) {
         return new UserResponseDTO(
@@ -42,7 +44,8 @@ public record UserResponseDTO(
                 user.getDmPolicy().name(),
                 user.getMutedGroups().stream().map(Enum::name).sorted().toList(),
                 user.isWeightedByDefault(),
-                user.getRankingsView().name()
+                user.getRankingsView().name(),
+                user.getDiscordId() != null && !user.getDiscordId().isBlank()
         );
     }
 }

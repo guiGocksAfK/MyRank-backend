@@ -43,6 +43,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("/api/users", "POST", 5),      // registro
             new Rule("/api/users/me/deletion-code", "POST", 3),
             new Rule("/api/users/me", "DELETE", 5), // exclusão de conta confere senha
+            new Rule("/api/users/me/discord", "POST", 10), // cada um troca um código no Discord
             // Buscas e detalhes de músicas e álbuns compartilham o teto das demais integrações.
             new Rule("/api/external/", null, 40),
             new Rule("/api/works/refresh-details", "POST", 2), // dezenas de chamadas externas por pedido

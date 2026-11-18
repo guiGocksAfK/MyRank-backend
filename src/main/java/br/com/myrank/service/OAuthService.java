@@ -91,6 +91,28 @@ public class OAuthService {
         return loginWithDiscord(accessToken);
     }
 
+    /**
+     * "Conectar Discord" nas Configurações: troca o código e devolve só o id do
+     * Discord. Não olha o email, porque quem conecta já está logado na conta: é isso
+     * que resolve conta criada com Google ou com outro email.
+     */
+    public String discordIdFromCode(String code, String redirectUri) {
+        String accessToken = exchangeDiscordCode(code, redirectUri);
+        try {
+            DiscordUser discordUser = restClient.get()
+                    .uri(DISCORD_USER_URL)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .body(DiscordUser.class);
+            if (discordUser == null || discordUser.id() == null || discordUser.id().isBlank()) {
+                throw new IllegalArgumentException("Token do Discord inválido.");
+            }
+            return discordUser.id();
+        } catch (RestClientResponseException ex) {
+            throw new IllegalArgumentException("Token do Discord inválido ou expirado.");
+        }
+    }
+
     private String exchangeDiscordCode(String code, String redirectUri) {
         String clientId = oAuthProperties.getDiscord().getClientId();
         String clientSecret = oAuthProperties.getDiscord().getClientSecret();

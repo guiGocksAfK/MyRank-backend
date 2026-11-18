@@ -153,6 +153,35 @@ public class UserService {
     }
 
     /**
+     * Liga um Discord à conta logada (botão "Conectar Discord" das Configurações). É o
+     * que o bot de Discord usa para saber de quem é cada comando. Um Discord só pode
+     * estar em uma conta.
+     */
+    public User connectDiscord(Long userId, String discordId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
+        userRepository.findByDiscordId(discordId).ifPresent(owner -> {
+            if (!owner.getId().equals(userId)) {
+                throw new IllegalArgumentException(
+                        "Esta conta do Discord já está conectada a outra conta do MyRank.");
+            }
+        });
+        user.setDiscordId(discordId);
+        return userRepository.save(user);
+    }
+
+    /**
+     * Tira o Discord da conta: o bot para de responder por ela. O login não muda,
+     * porque quem entra com Discord é achado pelo provider_id, não por esta coluna.
+     */
+    public User disconnectDiscord(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
+        user.setDiscordId(null);
+        return userRepository.save(user);
+    }
+
+    /**
      * "Sair dos outros aparelhos": sobe a versão de sessão da conta, o que invalida
      * todos os tokens emitidos até agora. Quem pediu recebe um token novo na resposta.
      */
