@@ -13,6 +13,7 @@ o `GET /api/users/me` devolve o estado atual.
 | Privacidade | Quem pode te mandar mensagem | `dmPolicy`: `EVERYONE` \| `FOLLOWING` | `ChatService.startDirect` |
 | Notificações | Grupos de aviso | `mutedNotifications`: lista de `NotificationGroup` | `NotificationService` |
 | Conta | Como você entra | `authProvider` (só leitura): `LOCAL` \| `GOOGLE` \| `DISCORD` | — |
+| Conta | Discord (bot) | `discordConnected` (só leitura); `POST /api/users/me/discord` com o código do Discord conecta, `DELETE` desconecta | bot de Discord |
 | Conta | Trocar senha | fluxo do "esqueci a senha" (código no email) | só contas com senha (`hasPassword`) |
 | Conta | Sair dos outros aparelhos | `POST /api/users/me/sessions/revoke` | todos os tokens antigos |
 | Conta | Sair desta conta | só no front (apaga o token deste aparelho) | este aparelho |
@@ -20,6 +21,12 @@ o `GET /api/users/me` devolve o estado atual.
 | Seus dados | Excluir conta | ver autenticacao.md | — |
 
 ## Regras
+
+- **Discord:** conectar liga o Discord à conta **logada**, sem olhar o email nem
+  como a pessoa entra. É o que resolve conta criada com Google (que não podia
+  entrar com Discord) e Discord com outro email (que criava uma conta nova). Um
+  Discord só fica em uma conta. Desconectar só tira o vínculo do bot; o login com
+  Discord não muda. Essas rotas ficam fora da lista do bot.
 
 - **Mensagens:** com `FOLLOWING`, só abre conversa nova quem a pessoa segue. As
   conversas que já existem continuam abertas.

@@ -127,7 +127,7 @@ public class BotAuthenticationFilter extends OncePerRequestFilter {
         if (user.isEmpty()) {
             unauthorized(response,
                     "Esta conta do Discord não está vinculada a um usuário do MyRank. "
-                            + "Entre em myrank.duckdns.org com o Discord para vincular.");
+                            + "No site, abra Configurações e clique em Conectar Discord.");
             return;
         }
 

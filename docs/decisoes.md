@@ -131,6 +131,10 @@ deixar o motivo.
   exatos). Ela age como qualquer pessoa
   vinculada, então nunca entram `/api/auth` nem as rotas que apagam a conta ou
   derrubam sessões; `/api/users` só pode entrar rota por rota, nunca pelo prefixo.
+- **"Conectar Discord" nas Configurações**, e não só pelo login com Discord. Pelo
+  login, conta criada com Google dava "email já cadastrado com outro método", e
+  Discord com outro email criava uma conta nova e vazia. O botão liga o Discord à
+  conta que está logada, sem olhar o email.
 - **Ranking geral e de criadores também no back** (`/api/rankings`), com a regra do
   front, para o bot não ter que refazer conta nenhuma. O front ainda calcula do
   jeito dele; trocar para as rotas novas está no ROADMAP.

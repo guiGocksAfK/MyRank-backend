@@ -130,6 +130,8 @@ class BotAuthenticationFilterTest {
             "DELETE, /api/users/me/",
             "GET, /api/users/me/",
             "PATCH, /api/users/me",
+            "POST, /api/users/me/discord",
+            "DELETE, /api/users/me/discord",
     })
     void rotaForaDoEscopo_keyIgnorada(String method, String uri) throws Exception {
         BotAuthenticationFilter filter = new BotAuthenticationFilter(userRepository, KEY);
