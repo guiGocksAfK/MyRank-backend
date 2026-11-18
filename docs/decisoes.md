@@ -157,6 +157,21 @@ deixar o motivo.
 - **Análise em cache pela seleção** (obras + notas): a mesma seleção não gasta
   outra chamada.
 
+## Mensagens de erro
+
+- **O servidor responde os erros no idioma da pessoa** (PT, EN, ES), pelo
+  `Accept-Language` que o site manda. Sem ele (o bot de Discord), português.
+- **O texto em português fica no código e é a chave da tradução**
+  (`i18n/errors.json`), em vez de códigos como `error.table.notFound`: quem lê o
+  código entende o erro, e os testes que conferem a frase continuam valendo.
+- **Só vai para a tela o que está no arquivo de traduções.** Erro de biblioteca
+  ("For input string"), de rota que não existe ou de configuração do servidor
+  ("Discord OAuth não configurado") vira uma mensagem genérica, e o detalhe fica no
+  log. Antes, essas frases técnicas apareciam para a pessoa.
+- **Tom das mensagens:** dizer o que aconteceu e o que fazer ("Não foi possível X.
+  Tente de novo."), sem jargão (nada de "token", "template", "CUSTOM") e com as
+  palavras do site ("tabela", não "categoria").
+
 ## Banco e infraestrutura
 
 - **Squash das 16 migrations em 8**, separadas por área, com baseline na

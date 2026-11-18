@@ -51,6 +51,12 @@ pendente fica em [`docs/ROADMAP.md`](docs/ROADMAP.md), e o porquê das decisões
   bean `Clock` (`ClockConfig`), nunca de `Instant.now()` direto em regra testável.
 - Erros de regra são `IllegalArgumentException` (vira 400) ou
   `IllegalStateException` (vira 503); nada de stack trace na resposta.
+- **Mensagem de erro para a tela precisa de tradução** em
+  `src/main/resources/i18n/errors.json` (o texto em português é a chave; EN e ES
+  ao lado). Sem ela, a tela mostra a mensagem genérica. Com partes que mudam, use
+  `TemplatedArgumentException.of("... {0} ...", valor)`, nunca `"..." + valor`.
+  O `ErrorMessagesCatalogTest` falha se faltar tradução. Erro de configuração do
+  servidor fica fora do arquivo de propósito: vai para o log, não para a tela.
 - Toda operação confere o dono do recurso.
 - Estado em memória (códigos por email, rate limit, cache) só funciona com uma
   instância: está registrado no [SECURITY.md](SECURITY.md).
