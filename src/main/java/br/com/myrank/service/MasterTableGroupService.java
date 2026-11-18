@@ -96,15 +96,15 @@ public class MasterTableGroupService {
 
     private Set<Category> resolveOwnedCategories(Long userId, List<Long> categoryIds) {
         if (categoryIds == null || categoryIds.isEmpty()) {
-            throw new IllegalArgumentException("Selecione ao menos uma categoria.");
+            throw new IllegalArgumentException("Escolha pelo menos uma tabela.");
         }
 
         Set<Category> categories = new HashSet<>();
         for (Long id : categoryIds) {
             Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada: " + id));
+                    .orElseThrow(() -> new IllegalArgumentException("Uma das tabelas escolhidas não existe mais."));
             if (!category.getUser().getId().equals(userId)) {
-                throw new IllegalArgumentException("Você não tem permissão sobre a categoria: " + id);
+                throw new IllegalArgumentException("Uma das tabelas escolhidas não é sua.");
             }
             categories.add(category);
         }

@@ -1,5 +1,7 @@
 package br.com.myrank.service;
 
+import br.com.myrank.exception.TemplatedArgumentException;
+
 import br.com.myrank.dto.CategoryCreateDTO;
 import br.com.myrank.dto.CategoryResponseDTO;
 import br.com.myrank.dto.CategoryUpdateDTO;
@@ -44,7 +46,7 @@ public class CategoryService {
 
     public CategoryResponseDTO createCategory(User user, CategoryCreateDTO dto) {
         if (categoryRepository.existsByUserIdAndNameIgnoreCase(user.getId(), dto.getName())) {
-            throw new IllegalArgumentException("Você já tem uma categoria com esse nome.");
+            throw new IllegalArgumentException("Você já tem uma tabela com esse nome.");
         }
 
         Category category = new Category();
@@ -83,7 +85,7 @@ public class CategoryService {
             }
             if (!category.getName().equalsIgnoreCase(newName)
                     && categoryRepository.existsByUserIdAndNameIgnoreCase(userId, newName)) {
-                throw new IllegalArgumentException("Você já tem uma categoria com esse nome.");
+                throw new IllegalArgumentException("Você já tem uma tabela com esse nome.");
             }
             category.setName(newName);
         }
@@ -98,7 +100,7 @@ public class CategoryService {
     public CategoryResponseDTO updateCustomFields(Long categoryId, Long userId, List<CustomFieldRequestDTO> requested) {
         Category category = lockedOwnedCategory(categoryId, userId);
         if (!category.getTemplates().contains(TableTemplate.CUSTOM)) {
-            throw new IllegalArgumentException("Só tabelas com o template Personalizado (CUSTOM) podem definir campos próprios.");
+            throw new IllegalArgumentException("Só tabelas do tipo Personalizado têm campos próprios.");
         }
         List<CustomField> next = CustomFieldPolicy.definitions(category.getCustomFields(), requested);
         Set<String> retained = next.stream().map(CustomField::id).collect(Collectors.toSet());
@@ -155,10 +157,10 @@ public class CategoryService {
 
     public void deleteCategory(Long categoryId, Long userId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+                .orElseThrow(() -> new IllegalArgumentException("Tabela não encontrada."));
 
         if (!category.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Você não tem permissão para excluir essa categoria.");
+            throw new IllegalArgumentException("Essa tabela não é sua.");
         }
 
         categoryRepository.delete(category);
@@ -171,7 +173,7 @@ public class CategoryService {
         String name = dto.name().trim();
 
         if (subcategoryRepository.countByCategoryId(categoryId) >= MAX_SUBCATEGORIES) {
-            throw new IllegalArgumentException("Uma tabela pode ter no máximo " + MAX_SUBCATEGORIES + " subcategorias.");
+            throw TemplatedArgumentException.of("Uma tabela pode ter no máximo {0} subcategorias.", MAX_SUBCATEGORIES);
         }
         if (subcategoryRepository.existsByCategoryIdAndNameIgnoreCase(categoryId, name)) {
             throw new IllegalArgumentException("Essa tabela já tem uma subcategoria com esse nome.");
@@ -203,19 +205,19 @@ public class CategoryService {
 
     private Category ownedCategory(Long categoryId, Long userId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+                .orElseThrow(() -> new IllegalArgumentException("Tabela não encontrada."));
         return checkedOwner(category, userId);
     }
 
     private Category lockedOwnedCategory(Long categoryId, Long userId) {
         Category category = categoryRepository.findByIdForUpdate(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+                .orElseThrow(() -> new IllegalArgumentException("Tabela não encontrada."));
         return checkedOwner(category, userId);
     }
 
     private static Category checkedOwner(Category category, Long userId) {
         if (!category.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Você não tem permissão para editar essa categoria.");
+            throw new IllegalArgumentException("Essa tabela não é sua.");
         }
         return category;
     }
