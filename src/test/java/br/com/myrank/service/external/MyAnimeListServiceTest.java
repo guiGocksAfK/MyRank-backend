@@ -111,7 +111,7 @@ class MyAnimeListServiceTest {
                 any(HttpEntity.class), eq(MalListResponseDTO.class))).thenThrow(cause);
         assertThatThrownBy(() -> search(resource, "Naruto"))
                 .isInstanceOf(ExternalServiceUnavailableException.class)
-                .hasMessage("Não foi possível buscar " + worksName + " agora. O MyAnimeList pode estar instável ou limitando requisições. Tente novamente em instantes.")
+                .hasMessage("Não foi possível buscar " + worksName + " agora. Tente de novo em instantes.")
                 .hasCause(cause);
     }
 
@@ -193,7 +193,7 @@ class MyAnimeListServiceTest {
                 .thenThrow(timeout).thenThrow(new HttpServerErrorException(HttpStatus.SERVICE_UNAVAILABLE));
         assertThatThrownBy(() -> details(resource, 13L))
                 .isInstanceOf(ExternalServiceUnavailableException.class)
-                .hasMessage("Não foi possível buscar os detalhes do " + workName + " agora. O MyAnimeList pode estar instável — tente novamente em instantes.")
+                .hasMessage("Não foi possível buscar os detalhes do " + workName + " agora. Tente de novo em instantes.")
                 .hasCause(timeout);
         assertThatThrownBy(() -> details(resource, 13L)).isInstanceOf(ExternalServiceUnavailableException.class);
     }
@@ -205,7 +205,7 @@ class MyAnimeListServiceTest {
         else respond(MANGA_URL, MalMangaNodeDTO.class, null);
         assertThatThrownBy(() -> details(resource, 13L))
                 .isInstanceOf(ExternalServiceUnavailableException.class)
-                .hasMessage("Não foi possível buscar os detalhes do " + workName + " agora. Tente novamente em instantes.");
+                .hasMessage("Não foi possível buscar os detalhes do " + workName + " agora. Tente de novo em instantes.");
         if (resource.equals("anime")) respond(ANIME_URL, MalAnimeNodeDTO.class, new MalAnimeNodeDTO());
         else respond(MANGA_URL, MalMangaNodeDTO.class, new MalMangaNodeDTO());
         assertThatThrownBy(() -> details(resource, 13L)).isInstanceOf(ExternalServiceUnavailableException.class);

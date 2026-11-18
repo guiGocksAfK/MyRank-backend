@@ -86,7 +86,7 @@ class OnboardingServiceTest {
     void escolhaForaDaEtapaTables_eRecusada(OnboardingStep step) {
         user.setOnboardingStep(step);
         assertThatThrownBy(() -> service.chooseTables(1L, List.of(MOVIE)))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("TABLES");
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("já foi feita");
         verify(categories, never()).saveAll(any());
     }
 
@@ -94,7 +94,7 @@ class OnboardingServiceTest {
     void nomesJaExistentes_naoCriamTabelasParcialmente() {
         when(categories.existsByUserIdAndNameIgnoreCase(1L, "🎬 Filmes")).thenReturn(true);
         assertThatThrownBy(() -> service.chooseTables(1L, List.of(MUSIC, MOVIE)))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("já tem uma categoria");
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("já tem uma tabela");
         verify(categories, never()).saveAll(any());
         assertThat(user.getOnboardingStep()).isEqualTo(OnboardingStep.TABLES);
     }

@@ -75,6 +75,7 @@ class ExternalMusicSearchControllerTest {
                 new ExternalServiceUnavailableException("Serviços indisponíveis.", new RuntimeException()));
         mvc.perform(get("/api/external/music/42"))
                 .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.message").value("Serviços indisponíveis."));
+                // mensagem fora de i18n/errors.json não vai para a tela: vira a genérica
+                .andExpect(jsonPath("$.message").value("Não foi possível concluir agora. Tente de novo em instantes."));
     }
 }
