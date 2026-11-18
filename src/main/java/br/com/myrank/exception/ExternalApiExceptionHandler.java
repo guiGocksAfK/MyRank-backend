@@ -1,5 +1,7 @@
 package br.com.myrank.exception;
 
+import br.com.myrank.config.ErrorMessages;
+import jakarta.servlet.http.HttpServletRequest;
 import br.com.myrank.controller.ExternalSearchController;
 import br.com.myrank.dto.ErrorResponseDTO;
 import org.springframework.http.HttpStatus;
@@ -25,54 +27,63 @@ public class ExternalApiExceptionHandler {
 
     /** Erro já tratado/relançado explicitamente pelos nossos services externos. */
     @ExceptionHandler(ExternalServiceUnavailableException.class)
-    public ResponseEntity<ErrorResponseDTO> handleExternalServiceUnavailable(ExternalServiceUnavailableException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleExternalServiceUnavailable(ExternalServiceUnavailableException ex,
+                                                                             HttpServletRequest request) {
         ErrorResponseDTO body = new ErrorResponseDTO(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
-                ex.getMessage()
+                text(ex.getMessage(), request)
         );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     /** A API externa respondeu, mas com erro 5xx (ex.: 502/503/504 do próprio provedor). */
     @ExceptionHandler(HttpServerErrorException.class)
-    public ResponseEntity<ErrorResponseDTO> handleExternalServerError(HttpServerErrorException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleExternalServerError(HttpServerErrorException ex, HttpServletRequest request) {
         ErrorResponseDTO body = new ErrorResponseDTO(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
-                "O serviço externo está indisponível no momento. Tente novamente em instantes."
+                text("A busca está fora do ar agora. Tente de novo em instantes.", request)
         );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     /** A API externa respondeu com erro 4xx (ex.: chave inválida, recurso não encontrado). */
     @ExceptionHandler(HttpClientErrorException.class)
-    public ResponseEntity<ErrorResponseDTO> handleExternalClientError(HttpClientErrorException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleExternalClientError(HttpClientErrorException ex, HttpServletRequest request) {
         HttpStatus status = ex.getStatusCode() == HttpStatus.NOT_FOUND
                 ? HttpStatus.NOT_FOUND
                 : HttpStatus.BAD_GATEWAY;
-        String message = ex.getStatusCode() == HttpStatus.NOT_FOUND
-                ? "Obra não encontrada na base externa."
-                : "Erro ao se comunicar com o serviço externo.";
+        String message = text(ex.getStatusCode() == HttpStatus.NOT_FOUND
+                ? "Essa obra não foi encontrada na busca."
+                : "Não foi possível buscar agora. Tente de novo em instantes.", request);
         ErrorResponseDTO body = new ErrorResponseDTO(status.value(), message);
         return ResponseEntity.status(status).body(body);
     }
 
     /** Timeout, DNS, conexão recusada — a chamada nem chegou a ter resposta HTTP. */
     @ExceptionHandler(ResourceAccessException.class)
-    public ResponseEntity<ErrorResponseDTO> handleResourceAccess(ResourceAccessException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleResourceAccess(ResourceAccessException ex, HttpServletRequest request) {
         ErrorResponseDTO body = new ErrorResponseDTO(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
-                "Não foi possível conectar ao serviço externo. Verifique sua conexão ou tente novamente em instantes."
+                text("Não foi possível buscar agora. Tente de novo em instantes.", request)
         );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     /** Fallback: qualquer outra falha de cliente HTTP (RestTemplate) não coberta acima. */
     @ExceptionHandler(RestClientException.class)
-    public ResponseEntity<ErrorResponseDTO> handleGenericRestClientError(RestClientException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleGenericRestClientError(RestClientException ex, HttpServletRequest request) {
         ErrorResponseDTO body = new ErrorResponseDTO(
                 HttpStatus.BAD_GATEWAY.value(),
-                "Erro inesperado ao se comunicar com o serviço externo."
+                text("Não foi possível buscar agora. Tente de novo em instantes.", request)
         );
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(body);
+    }
+
+    /** Mensagem no idioma da pessoa; desconhecida vira a genérica (o detalhe já está no log). */
+    private static String text(String message, HttpServletRequest request) {
+        ErrorMessages messages = ErrorMessages.get();
+        String language = ErrorMessages.language(request);
+        return messages.knows(message) ? messages.translate(message, language)
+                : messages.translate(ErrorMessages.UNAVAILABLE, language);
     }
 }

@@ -1,5 +1,6 @@
 package br.com.myrank.service.ai;
 
+import br.com.myrank.exception.TemplatedArgumentException;
 import br.com.myrank.repository.AiUsageRepository;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -24,6 +25,9 @@ public class AiUsageService {
     public static final int DAILY_LIMIT = 15;
     /** Hora local em que o orçamento reseta. */
     private static final int RESET_HOUR = 6;
+
+    /** Modelo da mensagem de limite (traduzido em i18n/errors.json). */
+    static final String LIMIT_MESSAGE = "Você usou suas {0} mensagens de IA de hoje. O limite zera às {1}h.";
 
     private final AiUsageRepository repository;
     private final NamedParameterJdbcTemplate jdbc;
@@ -81,7 +85,7 @@ public class AiUsageService {
                 .addValue("limit", DAILY_LIMIT);
         var used = jdbc.query(sql, params, (rs, rowNum) -> rs.getInt("used"));
         if (used.isEmpty()) {
-            throw new IllegalArgumentException(limitMessage());
+            throw TemplatedArgumentException.of(LIMIT_MESSAGE, DAILY_LIMIT, RESET_HOUR);
         }
         return new Reservation(window, DAILY_LIMIT - used.get(0));
     }
@@ -97,8 +101,4 @@ public class AiUsageService {
                 .addValue("windowStart", Timestamp.valueOf(reservation.windowStart())));
     }
 
-    private String limitMessage() {
-        return "Você usou suas " + DAILY_LIMIT + " mensagens de IA de hoje. O limite zera às "
-                + RESET_HOUR + "h.";
-    }
 }

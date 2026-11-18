@@ -1,5 +1,7 @@
 package br.com.myrank.service;
 
+import br.com.myrank.exception.TemplatedArgumentException;
+
 import br.com.myrank.domain.entity.Category;
 import br.com.myrank.domain.enums.TableTemplate;
 import br.com.myrank.domain.model.CustomField;
@@ -26,7 +28,7 @@ final class CustomFieldPolicy {
     private CustomFieldPolicy() {}
 
     static List<CustomField> definitions(List<CustomField> current, List<CustomFieldRequestDTO> requested) {
-        if (requested == null) throw new IllegalArgumentException("Informe a lista completa de campos próprios.");
+        if (requested == null) throw new IllegalArgumentException("Os campos próprios vieram incompletos. Atualize a página e tente de novo.");
         if (requested.size() > MAX_FIELDS) {
             throw new IllegalArgumentException("Uma tabela pode ter no máximo 5 campos próprios.");
         }
@@ -51,7 +53,7 @@ final class CustomFieldPolicy {
             }
             selectedNames.add(name);
             if (request.type() == null) {
-                throw new IllegalArgumentException("Informe o tipo do campo próprio: TEXT, NUMBER, DATE ou BOOLEAN.");
+                throw new IllegalArgumentException("Escolha o tipo do campo próprio: texto, número, data ou sim/não.");
             }
             String id = request.id();
             if (id == null) {
@@ -74,17 +76,17 @@ final class CustomFieldPolicy {
         Map<String, Object> normalized = new LinkedHashMap<>(details);
         if (!details.containsKey("fields")) return normalized;
         if (template != TableTemplate.CUSTOM) {
-            throw new IllegalArgumentException("Campos próprios só podem ser usados em itens Personalizados (CUSTOM).");
+            throw new IllegalArgumentException("Campos próprios só existem em obras do tipo Personalizado.");
         }
         if (!(details.get("fields") instanceof Map<?, ?> fields)) {
-            throw new IllegalArgumentException("Os valores dos campos próprios devem formar um objeto em details.fields.");
+            throw new IllegalArgumentException("Os campos próprios vieram num formato inválido. Atualize a página e tente de novo.");
         }
         Map<String, CustomField> definitions = new HashMap<>();
         category.getCustomFields().forEach(field -> definitions.put(field.id(), field));
         Map<String, Object> checked = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : fields.entrySet()) {
             if (!(entry.getKey() instanceof String id) || !definitions.containsKey(id)) {
-                throw new IllegalArgumentException("O valor informado pertence a um campo próprio que não existe nesta tabela.");
+                throw new IllegalArgumentException("Um dos campos próprios não existe mais nesta tabela. Atualize a página e tente de novo.");
             }
             Object value = entry.getValue();
             if (value == null) continue; // null remove o valor, sem apagar a definição do campo.
@@ -96,13 +98,12 @@ final class CustomFieldPolicy {
                 case BOOLEAN -> value instanceof Boolean;
             };
             if (!valid) {
-                String rule = switch (definition.type()) {
-                    case TEXT -> "texto de até 200 caracteres";
-                    case NUMBER -> "número finito";
-                    case DATE -> "data válida no formato yyyy-MM-dd";
-                    case BOOLEAN -> "true ou false";
+                throw switch (definition.type()) {
+                    case TEXT -> TemplatedArgumentException.of("O campo {0} aceita texto de até 200 caracteres.", definition.name());
+                    case NUMBER -> TemplatedArgumentException.of("O campo {0} aceita só números.", definition.name());
+                    case DATE -> TemplatedArgumentException.of("O campo {0} aceita só datas completas.", definition.name());
+                    case BOOLEAN -> TemplatedArgumentException.of("O campo {0} aceita só sim ou não.", definition.name());
                 };
-                throw new IllegalArgumentException("O campo \"" + definition.name() + "\" deve receber " + rule + ".");
             }
             checked.put(id, value);
         }
