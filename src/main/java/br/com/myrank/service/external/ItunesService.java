@@ -111,7 +111,7 @@ public class ItunesService {
             return dto;
         } catch (RestClientException e) {
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes no iTunes. Tente novamente em instantes.", e);
+                    "Não foi possível buscar os detalhes da música ou álbum. Tente de novo em instantes.", e);
         }
     }
 

@@ -107,7 +107,9 @@ public class MyAnimeListService {
         } catch (RestClientException e) {
             // 4xx (ex.: 400 query curta, 403 client id inválido) e demais falhas.
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar " + worksName + " agora. O MyAnimeList pode estar instável ou limitando requisições. Tente novamente em instantes.", e);
+                    "manga".equals(resource)
+                            ? "Não foi possível buscar mangás agora. Tente de novo em instantes."
+                            : "Não foi possível buscar animes agora. Tente de novo em instantes.", e);
         }
     }
 
@@ -166,7 +168,7 @@ public class MyAnimeListService {
     /** Detalhes de mangá: autores como criador e duração zero, sem ponderação por tempo. */
     public ExternalWorkDetailsDTO getMangaDetails(Long malId) {
         if (malId == null || malId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de mangá inválido.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esse mangá não foi encontrado.");
         }
         MalMangaNodeDTO details = getDetails(malId, "manga", "mangá", MANGA_DETAILS_FIELDS, MalMangaNodeDTO.class);
         ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
@@ -197,12 +199,16 @@ public class MyAnimeListService {
             details = executeGet(url, responseType);
         } catch (RestClientException e) {
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes do " + workName + " agora. O MyAnimeList pode estar instável — tente novamente em instantes.", e);
+                    "manga".equals(resource)
+                            ? "Não foi possível buscar os detalhes do mangá agora. Tente de novo em instantes."
+                            : "Não foi possível buscar os detalhes do anime agora. Tente de novo em instantes.", e);
         }
 
         if (details == null || details.getTitle() == null) {
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes do " + workName + " agora. Tente novamente em instantes.", null);
+                    "manga".equals(resource)
+                            ? "Não foi possível buscar os detalhes do mangá agora. Tente de novo em instantes."
+                            : "Não foi possível buscar os detalhes do anime agora. Tente de novo em instantes.", null);
         }
 
         return details;

@@ -92,12 +92,12 @@ public class RawgService {
             details = restTemplate.getForObject(url, RawgGameDetailsDTO.class);
         } catch (RestClientException e) {
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes do jogo agora. O serviço da RAWG pode estar instável — tente novamente em instantes.", e);
+                    "Não foi possível buscar os detalhes do jogo agora. Tente de novo em instantes.", e);
         }
 
         if (details == null) {
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes do jogo agora. Tente novamente em instantes.", null);
+                    "Não foi possível buscar os detalhes do jogo agora. Tente de novo em instantes.", null);
         }
 
         ExternalWorkDetailsDTO dto = new ExternalWorkDetailsDTO(
