@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
+import br.com.myrank.exception.ExternalServiceUnavailableException;
 
 @Service
 public class OAuthService {
@@ -72,12 +74,15 @@ public class OAuthService {
                     .body(GoogleTokenResponse.class);
 
             if (tokenResponse == null || tokenResponse.idToken() == null || tokenResponse.idToken().isBlank()) {
-                throw new IllegalArgumentException("Não foi possível falar com o Google agora. Tente de novo.");
+                throw new ExternalServiceUnavailableException("Não foi possível falar com o Google agora. Tente de novo.", null);
             }
 
             return tokenResponse.idToken();
-        } catch (RestClientResponseException ex) {
+        } catch (HttpClientErrorException ex) {
             throw new IllegalArgumentException("A autorização do Google expirou. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Google está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Google agora. Tente de novo.", ex);
         }
     }
 
@@ -108,8 +113,11 @@ public class OAuthService {
                 throw new IllegalArgumentException("A autorização do Discord não foi aceita. Tente de novo.");
             }
             return discordUser.id();
-        } catch (RestClientResponseException ex) {
+        } catch (HttpClientErrorException ex) {
             throw new IllegalArgumentException("A autorização do Discord não foi aceita. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Discord está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Discord agora. Tente de novo.", ex);
         }
     }
 
@@ -136,12 +144,15 @@ public class OAuthService {
                     .body(DiscordTokenResponse.class);
 
             if (tokenResponse == null || tokenResponse.accessToken() == null || tokenResponse.accessToken().isBlank()) {
-                throw new IllegalArgumentException("Não foi possível falar com o Discord agora. Tente de novo.");
+                throw new ExternalServiceUnavailableException("Não foi possível falar com o Discord agora. Tente de novo.", null);
             }
 
             return tokenResponse.accessToken();
-        } catch (RestClientResponseException ex) {
+        } catch (HttpClientErrorException ex) {
             throw new IllegalArgumentException("A autorização do Discord expirou. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Discord está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Discord agora. Tente de novo.", ex);
         }
     }
 
@@ -176,8 +187,11 @@ public class OAuthService {
 
             String usernameBase = resolveUsernameBase(tokenInfo.name(), tokenInfo.email());
             return new OAuthUserInfo(tokenInfo.sub(), tokenInfo.email(), usernameBase, tokenInfo.picture());
-        } catch (RestClientResponseException ex) {
+        } catch (HttpClientErrorException ex) {
             throw new IllegalArgumentException("A autorização do Google não foi aceita. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Google está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Google agora. Tente de novo.", ex);
         }
     }
 
@@ -210,8 +224,11 @@ public class OAuthService {
             String usernameBase = discordUser.username() != null ? discordUser.username() : "discord" + discordUser.id();
 
             return new OAuthUserInfo(discordUser.id(), discordUser.email(), usernameBase, avatarUrl);
-        } catch (RestClientResponseException ex) {
+        } catch (HttpClientErrorException ex) {
             throw new IllegalArgumentException("A autorização do Discord não foi aceita. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Discord está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Discord agora. Tente de novo.", ex);
         }
     }
 

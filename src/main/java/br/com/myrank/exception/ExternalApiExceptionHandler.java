@@ -4,6 +4,8 @@ import br.com.myrank.config.ErrorMessages;
 import jakarta.servlet.http.HttpServletRequest;
 import br.com.myrank.controller.ExternalSearchController;
 import br.com.myrank.dto.ErrorResponseDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -25,10 +27,13 @@ import org.springframework.web.client.RestClientException;
 @RestControllerAdvice(assignableTypes = ExternalSearchController.class)
 public class ExternalApiExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(ExternalApiExceptionHandler.class);
+
     /** Erro já tratado/relançado explicitamente pelos nossos services externos. */
     @ExceptionHandler(ExternalServiceUnavailableException.class)
     public ResponseEntity<ErrorResponseDTO> handleExternalServiceUnavailable(ExternalServiceUnavailableException ex,
                                                                              HttpServletRequest request) {
+        log.warn("Busca externa falhou em {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         ErrorResponseDTO body = new ErrorResponseDTO(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
                 text(ex.getMessage(), request)
@@ -39,6 +44,7 @@ public class ExternalApiExceptionHandler {
     /** A API externa respondeu, mas com erro 5xx (ex.: 502/503/504 do próprio provedor). */
     @ExceptionHandler(HttpServerErrorException.class)
     public ResponseEntity<ErrorResponseDTO> handleExternalServerError(HttpServerErrorException ex, HttpServletRequest request) {
+        log.warn("Busca externa falhou em {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         ErrorResponseDTO body = new ErrorResponseDTO(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
                 text("A busca está fora do ar agora. Tente de novo em instantes.", request)
@@ -49,6 +55,7 @@ public class ExternalApiExceptionHandler {
     /** A API externa respondeu com erro 4xx (ex.: chave inválida, recurso não encontrado). */
     @ExceptionHandler(HttpClientErrorException.class)
     public ResponseEntity<ErrorResponseDTO> handleExternalClientError(HttpClientErrorException ex, HttpServletRequest request) {
+        log.warn("Busca externa recusou o pedido em {}: {}", request.getRequestURI(), ex.getStatusCode());
         HttpStatus status = ex.getStatusCode() == HttpStatus.NOT_FOUND
                 ? HttpStatus.NOT_FOUND
                 : HttpStatus.BAD_GATEWAY;
@@ -62,6 +69,7 @@ public class ExternalApiExceptionHandler {
     /** Timeout, DNS, conexão recusada — a chamada nem chegou a ter resposta HTTP. */
     @ExceptionHandler(ResourceAccessException.class)
     public ResponseEntity<ErrorResponseDTO> handleResourceAccess(ResourceAccessException ex, HttpServletRequest request) {
+        log.warn("Busca externa falhou em {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         ErrorResponseDTO body = new ErrorResponseDTO(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
                 text("Não foi possível buscar agora. Tente de novo em instantes.", request)
@@ -72,6 +80,7 @@ public class ExternalApiExceptionHandler {
     /** Fallback: qualquer outra falha de cliente HTTP (RestTemplate) não coberta acima. */
     @ExceptionHandler(RestClientException.class)
     public ResponseEntity<ErrorResponseDTO> handleGenericRestClientError(RestClientException ex, HttpServletRequest request) {
+        log.warn("Busca externa falhou em {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         ErrorResponseDTO body = new ErrorResponseDTO(
                 HttpStatus.BAD_GATEWAY.value(),
                 text("Não foi possível buscar agora. Tente de novo em instantes.", request)
@@ -79,7 +88,7 @@ public class ExternalApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(body);
     }
 
-    /** Mensagem no idioma da pessoa; desconhecida vira a genérica (o detalhe já está no log). */
+    /** Mensagem no idioma da pessoa; desconhecida vira a genérica (o detalhe vai para o log em cada handler). */
     private static String text(String message, HttpServletRequest request) {
         ErrorMessages messages = ErrorMessages.get();
         String language = ErrorMessages.language(request);

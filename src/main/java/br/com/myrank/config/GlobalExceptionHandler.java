@@ -100,9 +100,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ExternalServiceUnavailableException.class)
     public ResponseEntity<Map<String, String>> handleExternal(ExternalServiceUnavailableException ex,
                                                               HttpServletRequest request) {
+        // sempre no log: é a única pista de qual serviço caiu e por quê
+        log.warn("Serviço externo fora do ar em {} {}: {}", request.getMethod(), request.getRequestURI(),
+                ex.getMessage(), ex.getCause());
         String text = messages.forUser(ex, ErrorMessages.language(request));
         if (text != null) return reply(HttpStatus.SERVICE_UNAVAILABLE, text);
-        log.warn("Serviço externo fora do ar: {}", ex.getMessage());
         return generic(HttpStatus.SERVICE_UNAVAILABLE, ErrorMessages.UNAVAILABLE, request);
     }
 
@@ -162,7 +164,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EmailNotVerifiedException.class)
     public ResponseEntity<Map<String, String>> handleEmailNotVerified(EmailNotVerifiedException ex,
                                                                       HttpServletRequest request) {
-        String text = messages.translate(ex.getMessage(), ErrorMessages.language(request));
+        String language = ErrorMessages.language(request);
+        String text = messages.forUser(ex, language);
+        if (text == null) {
+            log.warn("Email não verificado sem mensagem para a tela: {}", ex.getMessage());
+            text = messages.translate(ErrorMessages.BAD_REQUEST, language);
+        }
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("message", text, "code", "EMAIL_NOT_VERIFIED"));
     }
