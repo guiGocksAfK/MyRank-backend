@@ -169,7 +169,7 @@ class CustomFieldsIntegrationTest {
         assertThatThrownBy(() -> categories.updateCustomFields(tableId, owner.getId(),
                 List.of(new CustomFieldRequestDTO(null, "Local", TEXT)))).hasMessageContaining("Só tabelas");
         Long custom = table(owner, CUSTOM).getId();
-        assertThatThrownBy(() -> categories.updateCustomFields(custom, stranger.getId(), List.of())).hasMessageContaining("permissão");
+        assertThatThrownBy(() -> categories.updateCustomFields(custom, stranger.getId(), List.of())).hasMessageContaining("não é sua");
         assertThat(categoryRepository.findById(custom).orElseThrow().getCustomFields()).isEmpty();
     }
 
@@ -210,12 +210,12 @@ class CustomFieldsIntegrationTest {
         String id = categories.updateCustomFields(tableId, owner.getId(),
                 List.of(new CustomFieldRequestDTO(null, "Local", TEXT))).getCustomFields().get(0).id();
         assertThatThrownBy(() -> work(owner, tableId, CUSTOM, Map.of("fields", Map.of("f_inexist", "A"))))
-                .hasMessageContaining("não existe nesta tabela");
+                .hasMessageContaining("não existe mais nesta tabela");
         assertThatThrownBy(() -> work(owner, tableId, MOVIE, Map.of("fields", Map.of(id, "A"))))
-                .hasMessageContaining("só podem ser usados");
+                .hasMessageContaining("só existem em obras do tipo Personalizado");
         Long workId = work(owner, tableId, CUSTOM, Map.of("fields", Map.of(id, "A"))).getId();
         assertThatThrownBy(() -> works.updateWork(workId, owner.getId(), update(MOVIE, null)))
-                .hasMessageContaining("só podem ser usados");
+                .hasMessageContaining("só existem em obras do tipo Personalizado");
         works.updateWork(workId, owner.getId(), update(MOVIE, Map.of()));
         flush();
         assertThat(workRepository.findById(workId).orElseThrow().getTemplate()).isEqualTo(MOVIE);

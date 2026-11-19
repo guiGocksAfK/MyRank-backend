@@ -99,13 +99,13 @@ class CustomFieldsServiceTest {
     @Test
     void tiposAusentesIdsDesconhecidos_eIdsDuplicadosSaoRecusados() {
         assertThatThrownBy(() -> categoryService.updateCustomFields(10L, 1L,
-                List.of(new CustomFieldRequestDTO(null, "Tipo", null)))).hasMessageContaining("Informe o tipo");
+                List.of(new CustomFieldRequestDTO(null, "Tipo", null)))).hasMessageContaining("Escolha o tipo");
         assertThatThrownBy(() -> categoryService.updateCustomFields(10L, 1L,
                 List.of(new CustomFieldRequestDTO("id-forjado", "Tipo", TEXT)))).hasMessageContaining("não encontrado");
         assertThatThrownBy(() -> categoryService.updateCustomFields(10L, 1L, List.of(
                 new CustomFieldRequestDTO("f_text0001", "A", TEXT), new CustomFieldRequestDTO("f_text0001", "B", TEXT))))
                 .hasMessageContaining("duas vezes");
-        assertThatThrownBy(() -> categoryService.updateCustomFields(10L, 1L, null)).hasMessageContaining("lista completa");
+        assertThatThrownBy(() -> categoryService.updateCustomFields(10L, 1L, null)).hasMessageContaining("vieram incompletos");
     }
 
     @Test
@@ -149,10 +149,10 @@ class CustomFieldsServiceTest {
     @Test
     void somenteODonoPodeAlterarCampos_eTabelaPrecisaDeCustom() {
         assertThatThrownBy(() -> categoryService.updateCustomFields(10L, 2L, List.of()))
-                .hasMessageContaining("permissão");
+                .hasMessageContaining("não é sua");
         category.setTemplates(List.of(MOVIE));
         assertThatThrownBy(() -> categoryService.updateCustomFields(10L, 1L, List.of()))
-                .hasMessageContaining("Só tabelas com o template Personalizado");
+                .hasMessageContaining("Só tabelas do tipo Personalizado");
         verify(categories, never()).save(any());
         verifyNoInteractions(works);
     }
@@ -203,12 +203,12 @@ class CustomFieldsServiceTest {
     static Stream<Arguments> invalidValues() {
         return Stream.of(
                 Arguments.of("f_text0001", 12, "texto"), Arguments.of("f_text0001", "a".repeat(201), "200 caracteres"),
-                Arguments.of("f_num00001", "12", "número finito"), Arguments.of("f_num00001", Double.NaN, "número finito"),
-                Arguments.of("f_num00001", Double.POSITIVE_INFINITY, "número finito"),
-                Arguments.of("f_num00001", Float.NEGATIVE_INFINITY, "número finito"),
-                Arguments.of("f_date0001", "2023-02-29", "yyyy-MM-dd"), Arguments.of("f_date0001", "2024-04-31", "yyyy-MM-dd"),
-                Arguments.of("f_date0001", "2024-2-01", "yyyy-MM-dd"), Arguments.of("f_date0001", "2024-01-01T00:00:00Z", "yyyy-MM-dd"),
-                Arguments.of("f_bool0001", "true", "true ou false"), Arguments.of("f_bool0001", 1, "true ou false"));
+                Arguments.of("f_num00001", "12", "só números"), Arguments.of("f_num00001", Double.NaN, "só números"),
+                Arguments.of("f_num00001", Double.POSITIVE_INFINITY, "só números"),
+                Arguments.of("f_num00001", Float.NEGATIVE_INFINITY, "só números"),
+                Arguments.of("f_date0001", "2023-02-29", "datas completas"), Arguments.of("f_date0001", "2024-04-31", "datas completas"),
+                Arguments.of("f_date0001", "2024-2-01", "datas completas"), Arguments.of("f_date0001", "2024-01-01T00:00:00Z", "datas completas"),
+                Arguments.of("f_bool0001", "true", "sim ou não"), Arguments.of("f_bool0001", 1, "sim ou não"));
     }
 
     @Test
@@ -220,21 +220,21 @@ class CustomFieldsServiceTest {
     @Test
     void campoDeOutraTabela_eFieldsQueNaoSejaObjetoSaoRecusados() {
         assertThatThrownBy(() -> create(Map.of("fields", Map.of("id-de-outra-tabela", 1))))
-                .hasMessageContaining("não existe nesta tabela");
-        assertThatThrownBy(() -> create(Map.of("fields", List.of()))).hasMessageContaining("devem formar um objeto");
+                .hasMessageContaining("não existe mais nesta tabela");
+        assertThatThrownBy(() -> create(Map.of("fields", List.of()))).hasMessageContaining("formato inválido");
         Map<String, Object> nullFields = new LinkedHashMap<>();
         nullFields.put("fields", null);
-        assertThatThrownBy(() -> create(nullFields)).hasMessageContaining("devem formar um objeto");
+        assertThatThrownBy(() -> create(nullFields)).hasMessageContaining("formato inválido");
     }
 
     @Test
     void itensNaoCustomRecusamFields_eMudancaDeTemplateValidaValoresJaExistentes() {
         assertThatThrownBy(() -> workService.createWork(owner, request(MOVIE, Map.of("fields", Map.of()))))
-                .hasMessageContaining("só podem ser usados em itens Personalizados");
+                .hasMessageContaining("só existem em obras do tipo Personalizado");
         Work existing = create(Map.of("fields", Map.of("f_text0001", "valor")));
         when(works.findById(20L)).thenReturn(Optional.of(existing));
         assertThatThrownBy(() -> workService.updateWork(20L, 1L, update(MOVIE, null)))
-                .hasMessageContaining("só podem ser usados em itens Personalizados");
+                .hasMessageContaining("só existem em obras do tipo Personalizado");
         assertThat(existing.getTemplate()).isEqualTo(CUSTOM);
         assertThat(workService.updateWork(20L, 1L, update(MOVIE, Map.of())).getTemplate()).isEqualTo(MOVIE);
     }
@@ -242,10 +242,10 @@ class CustomFieldsServiceTest {
     @Test
     void limiteDeOitoKbContinuaValendoNaCriacao_eEdicao() {
         Map<String, Object> tooLarge = Map.of("blob", "é".repeat(4096));
-        assertThatThrownBy(() -> create(tooLarge)).hasMessageContaining("grandes demais");
+        assertThatThrownBy(() -> create(tooLarge)).hasMessageContaining("tamanho permitido");
         Work existing = create(Map.of());
         when(works.findById(20L)).thenReturn(Optional.of(existing));
-        assertThatThrownBy(() -> workService.updateWork(20L, 1L, update(null, tooLarge))).hasMessageContaining("grandes demais");
+        assertThatThrownBy(() -> workService.updateWork(20L, 1L, update(null, tooLarge))).hasMessageContaining("tamanho permitido");
     }
 
     private List<CustomFieldRequestDTO> currentRequests() {

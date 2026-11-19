@@ -47,7 +47,7 @@ public class UserService {
                 .map(existing -> userRepository.existsByUsernameAndIdNot(username, existing.getId()))
                 .orElseGet(() -> userRepository.existsByUsername(username));
         if (usernameTaken) {
-            throw new IllegalArgumentException("Username já está em uso.");
+            throw new IllegalArgumentException("Esse nome de usuário já está em uso.");
         }
         if (pending.isEmpty() && userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email já está em uso.");
@@ -81,7 +81,7 @@ public class UserService {
                 throw new IllegalArgumentException("O nome de usuário deve ter de 3 a 50 caracteres.");
             }
             if (userRepository.existsByUsernameAndIdNot(username, id)) {
-                throw new IllegalArgumentException("Username já está em uso.");
+                throw new IllegalArgumentException("Esse nome de usuário já está em uso.");
             }
             user.setUsername(username);
         }
@@ -116,7 +116,7 @@ public class UserService {
                 try {
                     groups.add(NotificationGroup.valueOf(String.valueOf(raw).trim().toUpperCase()));
                 } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException("Tipo de aviso inválido: " + raw);
+                    throw new IllegalArgumentException("Tipo de aviso inválido.");
                 }
             }
             user.setMutedGroups(groups);
@@ -140,7 +140,7 @@ public class UserService {
                 user.setAvatarUrl(null);
             } else {
                 if (!url.startsWith("https://")) {
-                    throw new IllegalArgumentException("A URL da foto precisa começar com https://");
+                    throw new IllegalArgumentException("A URL da foto precisa começar com https://.");
                 }
                 if (url.length() > 1000) {
                     throw new IllegalArgumentException("A URL da foto é longa demais.");
@@ -233,7 +233,7 @@ public class UserService {
             if (existingByEmail.isPresent()) {
                 User user = existingByEmail.get();
                 if (user.getAuthProvider() != AuthProvider.LOCAL && user.getAuthProvider() != provider) {
-                    throw new IllegalArgumentException("Email já cadastrado com outro método de login.");
+                    throw new IllegalArgumentException("Esse email já tem conta no MyRank com outro jeito de entrar. Entre do jeito que você entrou da primeira vez.");
                 }
 
                 if (user.getAuthProvider() == AuthProvider.LOCAL && !user.isEmailVerified()) {

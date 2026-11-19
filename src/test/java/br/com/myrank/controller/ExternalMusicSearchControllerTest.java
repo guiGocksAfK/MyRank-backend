@@ -72,9 +72,22 @@ class ExternalMusicSearchControllerTest {
     @Test
     void indisponibilidadeDosDetalhesSegueTratamentoExistenteCom503() throws Exception {
         when(deezerService.getMusicDetails("42")).thenThrow(
+                new ExternalServiceUnavailableException(
+                        "Não foi possível buscar os detalhes da música ou álbum. Tente de novo em instantes.",
+                        new RuntimeException()));
+        mvc.perform(get("/api/external/music/42"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value(
+                        "Não foi possível buscar os detalhes da música ou álbum. Tente de novo em instantes."));
+    }
+
+    @Test
+    void indisponibilidadeComMensagemDesconhecida_viraAGenerica() throws Exception {
+        when(deezerService.getMusicDetails("42")).thenThrow(
                 new ExternalServiceUnavailableException("Serviços indisponíveis.", new RuntimeException()));
         mvc.perform(get("/api/external/music/42"))
                 .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.message").value("Serviços indisponíveis."));
+                // mensagem fora de i18n/errors.json não vai para a tela
+                .andExpect(jsonPath("$.message").value("Não foi possível concluir agora. Tente de novo em instantes."));
     }
 }

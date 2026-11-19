@@ -1,5 +1,7 @@
 package br.com.myrank.service.social;
 
+import br.com.myrank.exception.TemplatedArgumentException;
+
 import br.com.myrank.domain.entity.FeedEvent;
 import br.com.myrank.domain.entity.Take;
 import br.com.myrank.domain.entity.TakeComment;
@@ -79,7 +81,7 @@ public class TakeCommentService {
 
         String text = textRaw == null ? "" : textRaw.trim();
         if (text.isEmpty()) throw new IllegalArgumentException("O comentário está vazio.");
-        if (text.length() > TEXT_MAX) throw new IllegalArgumentException("O comentário passa de " + TEXT_MAX + " caracteres.");
+        if (text.length() > TEXT_MAX) throw TemplatedArgumentException.of("O comentário passa de {0} caracteres.", TEXT_MAX);
 
         Long rootParentId = null;
         Long replyTargetAuthor = null;
@@ -121,7 +123,7 @@ public class TakeCommentService {
         }
         String text = textRaw == null ? "" : textRaw.trim();
         if (text.isEmpty()) throw new IllegalArgumentException("O comentário está vazio.");
-        if (text.length() > TEXT_MAX) throw new IllegalArgumentException("O comentário passa de " + TEXT_MAX + " caracteres.");
+        if (text.length() > TEXT_MAX) throw TemplatedArgumentException.of("O comentário passa de {0} caracteres.", TEXT_MAX);
 
         c.setText(text);
         c.setEditedAt(java.time.LocalDateTime.now());

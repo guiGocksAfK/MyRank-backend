@@ -124,7 +124,7 @@ public class CreatorProfileService {
         String photoUrl = dto.photoUrl() == null ? null : dto.photoUrl().trim();
         if (photoUrl != null && photoUrl.isEmpty()) photoUrl = null;
         if (photoUrl != null && !photoUrl.startsWith("https://")) {
-            throw new IllegalArgumentException("O link da foto precisa começar com https://");
+            throw new IllegalArgumentException("O link da foto precisa começar com https://.");
         }
 
         UserCreator mine = userCreatorRepository.findByUserIdAndCreatorKey(userId, key).orElse(null);

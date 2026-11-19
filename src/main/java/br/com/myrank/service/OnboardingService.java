@@ -1,5 +1,7 @@
 package br.com.myrank.service;
 
+import br.com.myrank.exception.TemplatedArgumentException;
+
 import br.com.myrank.domain.entity.Category;
 import br.com.myrank.domain.entity.User;
 import br.com.myrank.domain.enums.OnboardingStep;
@@ -60,14 +62,14 @@ public class OnboardingService {
     public List<CategoryResponseDTO> chooseTables(Long userId, List<TableTemplate> templates) {
         User user = lockedUser(userId);
         if (user.getOnboardingStep() != OnboardingStep.TABLES) {
-            throw new IllegalArgumentException("A escolha de tabelas só é permitida na etapa TABLES do tutorial.");
+            throw new IllegalArgumentException("A escolha de tabelas do tutorial já foi feita.");
         }
         validateTemplates(templates);
 
         List<Category> categories = templates.stream().map(template -> {
             String name = NAMES.get(template).localized(user.getLanguage());
             if (categoryRepository.existsByUserIdAndNameIgnoreCase(userId, name)) {
-                throw new IllegalArgumentException("Você já tem uma categoria com esse nome: " + name + ".");
+                throw TemplatedArgumentException.of("Você já tem uma tabela chamada {0}.", name);
             }
             Category category = new Category();
             category.setUser(user);
@@ -105,16 +107,16 @@ public class OnboardingService {
 
     private static void validateTemplates(List<TableTemplate> templates) {
         if (templates == null || templates.isEmpty()) {
-            throw new IllegalArgumentException("Escolha pelo menos um template para iniciar o tutorial.");
+            throw new IllegalArgumentException("Escolha pelo menos um tipo de tabela.");
         }
         if (templates.stream().anyMatch(Objects::isNull)) {
-            throw new IllegalArgumentException("A lista não pode conter templates nulos.");
+            throw new IllegalArgumentException("Há um tipo vazio na lista.");
         }
         if (new HashSet<>(templates).size() != templates.size()) {
-            throw new IllegalArgumentException("A lista não pode conter templates repetidos.");
+            throw new IllegalArgumentException("Há tipos repetidos na lista.");
         }
         if (templates.contains(CUSTOM)) {
-            throw new IllegalArgumentException("Personalizado (custom) deve ser criado depois do tutorial.");
+            throw new IllegalArgumentException("Tabelas do tipo Personalizado são criadas depois do tutorial.");
         }
     }
 }

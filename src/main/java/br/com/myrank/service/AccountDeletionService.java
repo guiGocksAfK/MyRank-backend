@@ -55,7 +55,7 @@ public class AccountDeletionService {
     /** Manda o código que confirma a posse do email antes de excluir a conta. */
     public void issueDeletionCode(User user) {
         if (!emailClient.isConfigured()) {
-            throw new IllegalStateException("Envio de email indisponível. Tente novamente mais tarde.");
+            throw new IllegalStateException("Envio de email indisponível. Tente de novo mais tarde.");
         }
         LocalDateTime now = LocalDateTime.now(clock);
         if (user.getAccountDeletionCodeExpiresAt() != null

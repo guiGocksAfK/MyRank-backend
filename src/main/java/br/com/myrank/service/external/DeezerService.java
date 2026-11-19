@@ -113,7 +113,7 @@ public class DeezerService {
             }
             // Sem título e artista conhecidos, um ID da Deezer não identifica a mesma obra no iTunes.
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes da música ou álbum. Tente novamente em instantes.",
+                    "Não foi possível buscar os detalhes da música ou álbum. Tente de novo em instantes.",
                     deezerFailure);
         }
     }

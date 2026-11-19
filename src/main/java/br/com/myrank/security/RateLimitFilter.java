@@ -1,5 +1,7 @@
 package br.com.myrank.security;
 
+import br.com.myrank.config.ErrorMessages;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +12,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.UrlPathHelper;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -26,7 +30,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
+    private static final ObjectMapper JSON = new ObjectMapper();
+
     private static final long WINDOW_MS = 60_000;
+    /** Traduzido em i18n/errors.json. */
+    static final String TOO_MANY = "Muitos pedidos seguidos. Tente de novo em {0} s.";
     /** Acima disso, zera o mapa inteiro — teto de memória bruto pro volume atual. */
     private static final int MAX_KEYS = 20_000;
 
@@ -84,8 +92,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 response.setStatus(429);
                 response.setHeader("Retry-After", String.valueOf(retry));
                 response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write(
-                        "{\"message\":\"Muitas requisições. Tente de novo em " + retry + "s.\"}");
+                String text = ErrorMessages.get().translate(TOO_MANY,
+                        List.of(String.valueOf(retry)), ErrorMessages.language(request));
+                response.getWriter().write(JSON.writeValueAsString(Map.of("message", text)));
                 return;
             }
         }

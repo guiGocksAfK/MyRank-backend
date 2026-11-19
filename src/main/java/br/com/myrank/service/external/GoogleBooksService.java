@@ -2,6 +2,8 @@ package br.com.myrank.service.external;
 
 import br.com.myrank.dto.external.*;
 import br.com.myrank.exception.ExternalServiceUnavailableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -15,6 +17,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class GoogleBooksService {
+
+    private static final Logger log = LoggerFactory.getLogger(GoogleBooksService.class);
 
     private static final String BASE_URL = "https://www.googleapis.com/books/v1/volumes";
 
@@ -47,7 +51,7 @@ public class GoogleBooksService {
             throw rateLimitException(e);
         } catch (RestClientException e) {
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar livros agora. O Google Books pode estar indisponível — tente novamente em instantes.", e);
+                    "Não foi possível buscar livros agora. Tente de novo em instantes.", e);
         }
     }
 
@@ -97,12 +101,12 @@ public class GoogleBooksService {
             throw rateLimitException(e);
         } catch (RestClientException e) {
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes do livro agora. O serviço do Google Books pode estar instável — tente novamente em instantes.", e);
+                    "Não foi possível buscar os detalhes do livro agora. Tente de novo em instantes.", e);
         }
 
         if (item == null || item.getVolumeInfo() == null) {
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes do livro agora. Tente novamente em instantes.", null);
+                    "Não foi possível buscar os detalhes do livro agora. Tente de novo em instantes.", null);
         }
 
         GoogleBookVolumeInfoDTO info = item.getVolumeInfo();
@@ -124,11 +128,12 @@ public class GoogleBooksService {
     /** 429 do Google Books: quota diária estourada (típico quando não há API key configurada). */
     private ExternalServiceUnavailableException rateLimitException(HttpClientErrorException e) {
         boolean semKey = apiKey == null || apiKey.isBlank();
-        String detalhe = semKey
-                ? " Configure uma API key do Google Books (GOOGLE_BOOKS_API_KEY) para aumentar o limite."
-                : " Tente novamente em instantes.";
+        if (semKey) {
+            // sem a chave a quota é pequena; quem precisa saber disso é quem cuida do servidor
+            log.warn("Google Books sem GOOGLE_BOOKS_API_KEY: limite de requisições atingido");
+        }
         return new ExternalServiceUnavailableException(
-                "O Google Books atingiu o limite de requisições." + detalhe, e);
+                "A busca de livros atingiu o limite agora. Tente de novo em alguns minutos.", e);
     }
 
     private List<ExternalSearchResultDTO> mapSearchResults(GoogleBooksSearchResponseDTO response) {

@@ -196,7 +196,7 @@ public class TmdbService {
             return executeGet(url, responseType);
         } catch (RestClientException e) {
             throw new ExternalServiceUnavailableException(
-                    "Não foi possível buscar os detalhes agora. O serviço da TMDB pode estar instável — tente novamente em instantes.", e);
+                    "Não foi possível buscar os detalhes agora. Tente de novo em instantes.", e);
         }
     }
 

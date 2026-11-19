@@ -1,0 +1,886 @@
+{
+  "A URL da foto precisa começar com https://.": {
+    "en": "The photo link must start with https://.",
+    "es": "El enlace de la foto debe empezar con https://."
+  },
+  "A URL da foto é longa demais.": {
+    "en": "The photo link is too long.",
+    "es": "El enlace de la foto es demasiado largo."
+  },
+  "A autorização do Discord expirou. Tente de novo.": {
+    "en": "The Discord authorization expired. Try again.",
+    "es": "La autorización de Discord expiró. Inténtalo de nuevo."
+  },
+  "A autorização do Discord não foi aceita. Tente de novo.": {
+    "en": "The Discord authorization wasn't accepted. Try again.",
+    "es": "La autorización de Discord no fue aceptada. Inténtalo de nuevo."
+  },
+  "A autorização do Google expirou. Tente de novo.": {
+    "en": "The Google authorization expired. Try again.",
+    "es": "La autorización de Google expiró. Inténtalo de nuevo."
+  },
+  "A autorização do Google não foi aceita. Tente de novo.": {
+    "en": "The Google authorization wasn't accepted. Try again.",
+    "es": "La autorización de Google no fue aceptada. Inténtalo de nuevo."
+  },
+  "A autorização não chegou. Tente de novo.": {
+    "en": "The authorization didn't arrive. Try again.",
+    "es": "La autorización no llegó. Inténtalo de nuevo."
+  },
+  "A bio deve ter no máximo 500 caracteres.": {
+    "en": "The bio can have at most 500 characters.",
+    "es": "La bio puede tener como máximo 500 caracteres."
+  },
+  "A busca de livros atingiu o limite agora. Tente de novo em alguns minutos.": {
+    "en": "Book search hit its limit for now. Try again in a few minutes.",
+    "es": "La búsqueda de libros llegó al límite por ahora. Inténtalo de nuevo en unos minutos."
+  },
+  "A busca está fora do ar agora. Tente de novo em instantes.": {
+    "en": "Search is down right now. Try again in a moment.",
+    "es": "La búsqueda no funciona ahora. Inténtalo de nuevo en un momento."
+  },
+  "A confirmação do email expirou. Comece o cadastro de novo.": {
+    "en": "The email confirmation expired. Start the sign-up again.",
+    "es": "La confirmación del email expiró. Empieza el registro de nuevo."
+  },
+  "A descrição deve ter no máximo 300 caracteres.": {
+    "en": "The description can have at most 300 characters.",
+    "es": "La descripción puede tener como máximo 300 caracteres."
+  },
+  "A descrição passa de {0} caracteres.": {
+    "en": "The description is over {0} characters.",
+    "es": "La descripción pasa de {0} caracteres."
+  },
+  "A escolha de tabelas do tutorial já foi feita.": {
+    "en": "The tutorial's table choice was already made.",
+    "es": "La elección de tablas del tutorial ya está hecha."
+  },
+  "A mensagem está vazia.": {
+    "en": "The message is empty.",
+    "es": "El mensaje está vacío."
+  },
+  "A mensagem não pode ser vazia.": {
+    "en": "The message can't be empty.",
+    "es": "El mensaje no puede estar vacío."
+  },
+  "A mensagem passa de 2000 caracteres.": {
+    "en": "The message is over 2000 characters.",
+    "es": "El mensaje pasa de 2000 caracteres."
+  },
+  "A mensagem respondida não existe.": {
+    "en": "The message you replied to doesn't exist.",
+    "es": "El mensaje respondido no existe."
+  },
+  "A nota precisa ser de 0 a 10.": {
+    "en": "The score must be from 0 to 10.",
+    "es": "La nota debe ser de 0 a 10."
+  },
+  "A senha deve ter pelo menos 8 caracteres.": {
+    "en": "The password must have at least 8 characters.",
+    "es": "La contraseña debe tener al menos 8 caracteres."
+  },
+  "A tabela já tem um campo próprio com esse nome.": {
+    "en": "The table already has a custom field with that name.",
+    "es": "La tabla ya tiene un campo propio con ese nombre."
+  },
+  "A tabela precisa de pelo menos um tipo.": {
+    "en": "The table needs at least one type.",
+    "es": "La tabla necesita al menos un tipo."
+  },
+  "Agrupamento não encontrado.": {
+    "en": "Group not found.",
+    "es": "Agrupación no encontrada."
+  },
+  "Aguarde alguns segundos antes de pedir outro código.": {
+    "en": "Wait a few seconds before asking for another code.",
+    "es": "Espera unos segundos antes de pedir otro código."
+  },
+  "Aguarde um minuto antes de pedir outro código.": {
+    "en": "Wait a minute before asking for another code.",
+    "es": "Espera un minuto antes de pedir otro código."
+  },
+  "Algo deu errado do nosso lado. Tente de novo em instantes.": {
+    "en": "Something went wrong on our side. Try again in a moment.",
+    "es": "Algo salió mal de nuestro lado. Inténtalo de nuevo en un momento."
+  },
+  "Algum dado veio inválido. Confira e tente de novo.": {
+    "en": "Some of the data is invalid. Check it and try again.",
+    "es": "Algún dato no es válido. Revisa e inténtalo de nuevo."
+  },
+  "Análise não encontrada.": {
+    "en": "Analysis not found.",
+    "es": "Análisis no encontrado."
+  },
+  "Campo próprio não encontrado nesta tabela.": {
+    "en": "Custom field not found in this table.",
+    "es": "Campo propio no encontrado en esta tabla."
+  },
+  "Campos próprios só existem em obras do tipo Personalizado.": {
+    "en": "Custom fields only exist in works of the Custom type.",
+    "es": "Los campos propios solo existen en obras del tipo Personalizado."
+  },
+  "Cargo inválido.": {
+    "en": "Invalid role.",
+    "es": "Rol no válido."
+  },
+  "Comentário não encontrado.": {
+    "en": "Comment not found.",
+    "es": "Comentario no encontrado."
+  },
+  "Comentário não pertence a este take.": {
+    "en": "This comment isn't from this take.",
+    "es": "Este comentario no es de este take."
+  },
+  "Conclua a escolha de tabelas antes de finalizar o tutorial.": {
+    "en": "Finish choosing your tables before ending the tutorial.",
+    "es": "Termina de elegir las tablas antes de finalizar el tutorial."
+  },
+  "Confirme o código antes de trocar a senha.": {
+    "en": "Confirm the code before changing your password.",
+    "es": "Confirma el código antes de cambiar la contraseña."
+  },
+  "Confirme seu email antes de criar a conta.": {
+    "en": "Confirm your email before creating the account.",
+    "es": "Confirma tu email antes de crear la cuenta."
+  },
+  "Confirme seu email antes de entrar. Enviamos um link para a sua caixa de entrada.": {
+    "en": "Confirm your email before signing in. We sent a link to your inbox.",
+    "es": "Confirma tu email antes de entrar. Enviamos un enlace a tu bandeja de entrada."
+  },
+  "Conversa não encontrada.": {
+    "en": "Conversation not found.",
+    "es": "Conversación no encontrada."
+  },
+  "Convite inválido.": {
+    "en": "Invalid invite.",
+    "es": "Invitación no válida."
+  },
+  "Criadores demais de uma vez.": {
+    "en": "Too many creators at once.",
+    "es": "Demasiados creadores a la vez."
+  },
+  "Código de exclusão inválido ou expirado.": {
+    "en": "Invalid or expired deletion code.",
+    "es": "Código de eliminación no válido o expirado."
+  },
+  "Código expirado. Peça um novo.": {
+    "en": "Code expired. Ask for a new one.",
+    "es": "Código expirado. Pide uno nuevo."
+  },
+  "Código incorreto.": {
+    "en": "Wrong code.",
+    "es": "Código incorrecto."
+  },
+  "Destinatário inválido.": {
+    "en": "Invalid recipient.",
+    "es": "Destinatario no válido."
+  },
+  "Digite o código enviado ao seu email.": {
+    "en": "Type the code sent to your email.",
+    "es": "Escribe el código enviado a tu email."
+  },
+  "Digite seu nome de usuário para confirmar.": {
+    "en": "Type your username to confirm.",
+    "es": "Escribe tu nombre de usuario para confirmar."
+  },
+  "Dê um nome ao grupo.": {
+    "en": "Give the group a name.",
+    "es": "Ponle un nombre al grupo."
+  },
+  "Email inválido.": {
+    "en": "Invalid email.",
+    "es": "Email no válido."
+  },
+  "Email já está em uso.": {
+    "en": "Email already in use.",
+    "es": "El email ya está en uso."
+  },
+  "Email ou senha inválidos.": {
+    "en": "Invalid email or password.",
+    "es": "Email o contraseña no válidos."
+  },
+  "Emoji inválido.": {
+    "en": "Invalid emoji.",
+    "es": "Emoji no válido."
+  },
+  "Envio de email indisponível. Tente de novo mais tarde.": {
+    "en": "Email sending is unavailable. Try again later.",
+    "es": "El envío de emails no está disponible. Inténtalo de nuevo más tarde."
+  },
+  "Escolha a obra do take.": {
+    "en": "Choose the work for the take.",
+    "es": "Elige la obra del take."
+  },
+  "Escolha a tabela.": {
+    "en": "Choose the table.",
+    "es": "Elige la tabla."
+  },
+  "Escolha no máximo 10 tipos.": {
+    "en": "Choose at most 10 types.",
+    "es": "Elige como máximo 10 tipos."
+  },
+  "Escolha o tipo da obra.": {
+    "en": "Choose the work's type.",
+    "es": "Elige el tipo de la obra."
+  },
+  "Escolha o tipo do campo próprio: texto, número, data ou sim/não.": {
+    "en": "Choose the custom field's type: text, number, date or yes/no.",
+    "es": "Elige el tipo del campo propio: texto, número, fecha o sí/no."
+  },
+  "Escolha pelo menos um tipo de tabela.": {
+    "en": "Choose at least one table type.",
+    "es": "Elige al menos un tipo de tabla."
+  },
+  "Escolha pelo menos uma tabela.": {
+    "en": "Choose at least one table.",
+    "es": "Elige al menos una tabla."
+  },
+  "Escolha uma reação.": {
+    "en": "Choose a reaction.",
+    "es": "Elige una reacción."
+  },
+  "Escreva algo no take.": {
+    "en": "Write something in the take.",
+    "es": "Escribe algo en el take."
+  },
+  "Escreva um comentário.": {
+    "en": "Write a comment.",
+    "es": "Escribe un comentario."
+  },
+  "Escreva uma pergunta.": {
+    "en": "Write a question.",
+    "es": "Escribe una pregunta."
+  },
+  "Essa ação só vale pra grupos.": {
+    "en": "That only works for groups.",
+    "es": "Eso solo vale para grupos."
+  },
+  "Essa função não está disponível agora. Atualize a página e tente de novo.": {
+    "en": "This feature isn't available right now. Refresh the page and try again.",
+    "es": "Esta función no está disponible ahora. Recarga la página e inténtalo de nuevo."
+  },
+  "Essa mensagem não pode ser editada.": {
+    "en": "This message can't be edited.",
+    "es": "Este mensaje no se puede editar."
+  },
+  "Essa música ou álbum não foi encontrado.": {
+    "en": "This song or album wasn't found.",
+    "es": "No se encontró esa canción o álbum."
+  },
+  "Essa obra não foi encontrada na busca.": {
+    "en": "This work wasn't found in the search.",
+    "es": "No se encontró esa obra en la búsqueda."
+  },
+  "Essa pessoa só recebe mensagens de quem ela segue.": {
+    "en": "This person only gets messages from people they follow.",
+    "es": "Esta persona solo recibe mensajes de quien sigue."
+  },
+  "Essa subcategoria é de outra tabela.": {
+    "en": "This subcategory belongs to another table.",
+    "es": "Esa subcategoría es de otra tabla."
+  },
+  "Essa tabela já tem uma subcategoria com esse nome.": {
+    "en": "This table already has a subcategory with that name.",
+    "es": "Esa tabla ya tiene una subcategoría con ese nombre."
+  },
+  "Essa tabela não é sua.": {
+    "en": "This table isn't yours.",
+    "es": "Esa tabla no es tuya."
+  },
+  "Esse convite não vale mais.": {
+    "en": "This invite is no longer valid.",
+    "es": "Esta invitación ya no es válida."
+  },
+  "Esse email já tem conta no MyRank com outro jeito de entrar. Entre do jeito que você entrou da primeira vez.": {
+    "en": "This email already has a MyRank account with another sign-in method. Sign in the way you did the first time.",
+    "es": "Este email ya tiene cuenta en MyRank con otra forma de entrar. Entra como lo hiciste la primera vez."
+  },
+  "Esse grupo é fechado.": {
+    "en": "This group is closed.",
+    "es": "Este grupo está cerrado."
+  },
+  "Esse item do feed não existe mais.": {
+    "en": "This feed item no longer exists.",
+    "es": "Este elemento del feed ya no existe."
+  },
+  "Esse mangá não foi encontrado.": {
+    "en": "This manga wasn't found.",
+    "es": "No se encontró ese manga."
+  },
+  "Esse nome de usuário já está em uso.": {
+    "en": "This username is already taken.",
+    "es": "Ese nombre de usuario ya está en uso."
+  },
+  "Esse tipo não faz parte da tabela.": {
+    "en": "This type isn't part of the table.",
+    "es": "Ese tipo no forma parte de la tabla."
+  },
+  "Esse usuário não está no grupo.": {
+    "en": "This user isn't in the group.",
+    "es": "Ese usuario no está en el grupo."
+  },
+  "Esta conta do Discord já está conectada a outra conta do MyRank.": {
+    "en": "This Discord account is already connected to another MyRank account.",
+    "es": "Esta cuenta de Discord ya está conectada a otra cuenta de MyRank."
+  },
+  "Esta conta do Discord já está vinculada a outro usuário do MyRank.": {
+    "en": "This Discord account is already linked to another MyRank user.",
+    "es": "Esta cuenta de Discord ya está vinculada a otro usuario de MyRank."
+  },
+  "Este take é de um perfil privado.": {
+    "en": "This take is from a private profile.",
+    "es": "Este take es de un perfil privado."
+  },
+  "Há tipos repetidos na lista.": {
+    "en": "There are repeated types in the list.",
+    "es": "Hay tipos repetidos en la lista."
+  },
+  "Há um tipo vazio na lista.": {
+    "en": "There's an empty type in the list.",
+    "es": "Hay un tipo vacío en la lista."
+  },
+  "Idioma inválido.": {
+    "en": "Invalid language.",
+    "es": "Idioma no válido."
+  },
+  "Informe o criador.": {
+    "en": "Enter the creator.",
+    "es": "Indica el creador."
+  },
+  "Informe o código.": {
+    "en": "Enter the code.",
+    "es": "Indica el código."
+  },
+  "Informe o nome da subcategoria.": {
+    "en": "Enter the subcategory's name.",
+    "es": "Indica el nombre de la subcategoría."
+  },
+  "Informe o nome da tabela.": {
+    "en": "Enter the table's name.",
+    "es": "Indica el nombre de la tabla."
+  },
+  "Informe o nome de cada campo próprio.": {
+    "en": "Enter a name for each custom field.",
+    "es": "Indica el nombre de cada campo propio."
+  },
+  "Informe o nome do agrupamento.": {
+    "en": "Enter the group's name.",
+    "es": "Indica el nombre de la agrupación."
+  },
+  "Informe o nome do grupo.": {
+    "en": "Enter the group's name.",
+    "es": "Indica el nombre del grupo."
+  },
+  "Informe o título.": {
+    "en": "Enter the title.",
+    "es": "Indica el título."
+  },
+  "Informe seu email.": {
+    "en": "Enter your email.",
+    "es": "Indica tu email."
+  },
+  "Informe um nome de usuário.": {
+    "en": "Enter a username.",
+    "es": "Indica un nombre de usuario."
+  },
+  "Informe uma senha.": {
+    "en": "Enter a password.",
+    "es": "Indica una contraseña."
+  },
+  "Mensagem não encontrada.": {
+    "en": "Message not found.",
+    "es": "Mensaje no encontrado."
+  },
+  "Muitas tentativas. Peça um novo código.": {
+    "en": "Too many attempts. Ask for a new code.",
+    "es": "Demasiados intentos. Pide un código nuevo."
+  },
+  "Muitos pedidos de código agora. Tente de novo em alguns minutos.": {
+    "en": "Too many code requests right now. Try again in a few minutes.",
+    "es": "Demasiadas solicitudes de código ahora. Inténtalo de nuevo en unos minutos."
+  },
+  "Muitos pedidos seguidos. Tente de novo em {0} s.": {
+    "en": "Too many requests in a row. Try again in {0} s.",
+    "es": "Demasiadas solicitudes seguidas. Inténtalo de nuevo en {0} s."
+  },
+  "Máximo de 50 participantes.": {
+    "en": "At most 50 participants.",
+    "es": "Máximo de 50 participantes."
+  },
+  "Não dá pra apagar avisos do sistema.": {
+    "en": "System notices can't be deleted.",
+    "es": "No se pueden borrar los avisos del sistema."
+  },
+  "Não dá pra definir o cargo de dono.": {
+    "en": "The owner role can't be assigned.",
+    "es": "No se puede asignar el rol de dueño."
+  },
+  "Não dá pra mudar o cargo do dono.": {
+    "en": "The owner's role can't be changed.",
+    "es": "No se puede cambiar el rol del dueño."
+  },
+  "Não dá pra reagir a essa mensagem.": {
+    "en": "You can't react to this message.",
+    "es": "No puedes reaccionar a este mensaje."
+  },
+  "Não dá pra responder essa mensagem.": {
+    "en": "You can't reply to this message.",
+    "es": "No puedes responder a este mensaje."
+  },
+  "Não dá pra tirar esse tipo: ainda tem itens dele na tabela. Mova ou apague esses itens antes.": {
+    "en": "This type can't be removed: the table still has works of it. Move or delete them first.",
+    "es": "No se puede quitar ese tipo: la tabla aún tiene obras de él. Muévelas o bórralas antes."
+  },
+  "Não foi possível buscar agora. Tente de novo em instantes.": {
+    "en": "Couldn't search right now. Try again in a moment.",
+    "es": "No se pudo buscar ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível buscar animes agora. Tente de novo em instantes.": {
+    "en": "Couldn't search anime right now. Try again in a moment.",
+    "es": "No se pudo buscar animes ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível buscar livros agora. Tente de novo em instantes.": {
+    "en": "Couldn't search books right now. Try again in a moment.",
+    "es": "No se pudo buscar libros ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível buscar mangás agora. Tente de novo em instantes.": {
+    "en": "Couldn't search manga right now. Try again in a moment.",
+    "es": "No se pudo buscar mangas ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível buscar os detalhes agora. Tente de novo em instantes.": {
+    "en": "Couldn't load the details right now. Try again in a moment.",
+    "es": "No se pudieron cargar los detalles ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível buscar os detalhes da música ou álbum. Tente de novo em instantes.": {
+    "en": "Couldn't load the song or album details. Try again in a moment.",
+    "es": "No se pudieron cargar los detalles de la canción o álbum. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível buscar os detalhes do anime agora. Tente de novo em instantes.": {
+    "en": "Couldn't load the anime details right now. Try again in a moment.",
+    "es": "No se pudieron cargar los detalles del anime ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível buscar os detalhes do jogo agora. Tente de novo em instantes.": {
+    "en": "Couldn't load the game details right now. Try again in a moment.",
+    "es": "No se pudieron cargar los detalles del juego ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível buscar os detalhes do livro agora. Tente de novo em instantes.": {
+    "en": "Couldn't load the book details right now. Try again in a moment.",
+    "es": "No se pudieron cargar los detalles del libro ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível buscar os detalhes do mangá agora. Tente de novo em instantes.": {
+    "en": "Couldn't load the manga details right now. Try again in a moment.",
+    "es": "No se pudieron cargar los detalles del manga ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível concluir agora. Tente de novo em instantes.": {
+    "en": "Couldn't finish right now. Try again in a moment.",
+    "es": "No se pudo terminar ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível concluir o pedido. Atualize a página e tente de novo.": {
+    "en": "Couldn't complete the request. Refresh the page and try again.",
+    "es": "No se pudo completar la solicitud. Recarga la página e inténtalo de nuevo."
+  },
+  "Não foi possível enviar o email agora. Tente de novo em instantes.": {
+    "en": "Couldn't send the email right now. Try again in a moment.",
+    "es": "No se pudo enviar el email ahora. Inténtalo de nuevo en un momento."
+  },
+  "Não foi possível falar com o Discord agora. Tente de novo.": {
+    "en": "Couldn't reach Discord right now. Try again.",
+    "es": "No se pudo hablar con Discord ahora. Inténtalo de nuevo."
+  },
+  "Não foi possível falar com o Google agora. Tente de novo.": {
+    "en": "Couldn't reach Google right now. Try again.",
+    "es": "No se pudo hablar con Google ahora. Inténtalo de nuevo."
+  },
+  "Não recebemos o email dessa conta. Autorize o acesso ao email e tente de novo.": {
+    "en": "We didn't get this account's email. Allow access to your email and try again.",
+    "es": "No recibimos el email de esta cuenta. Permite el acceso al email e inténtalo de nuevo."
+  },
+  "Não recebemos o email do seu Discord. Autorize o acesso ao email e tente de novo.": {
+    "en": "We didn't get your Discord email. Allow access to your email and try again.",
+    "es": "No recibimos el email de tu Discord. Permite el acceso al email e inténtalo de nuevo."
+  },
+  "Não é possível trocar o tipo de um campo próprio. Remova o campo e crie outro.": {
+    "en": "A custom field's type can't be changed. Remove the field and create another one.",
+    "es": "No se puede cambiar el tipo de un campo propio. Quita el campo y crea otro."
+  },
+  "O campo {0} aceita só datas completas.": {
+    "en": "The {0} field only accepts complete dates.",
+    "es": "El campo {0} solo acepta fechas completas."
+  },
+  "O campo {0} aceita só números.": {
+    "en": "The {0} field only accepts numbers.",
+    "es": "El campo {0} solo acepta números."
+  },
+  "O campo {0} aceita só sim ou não.": {
+    "en": "The {0} field only accepts yes or no.",
+    "es": "El campo {0} solo acepta sí o no."
+  },
+  "O campo {0} aceita texto de até 200 caracteres.": {
+    "en": "The {0} field accepts text up to 200 characters.",
+    "es": "El campo {0} acepta texto de hasta 200 caracteres."
+  },
+  "O comentário deve ter no máximo 500 caracteres.": {
+    "en": "The comment can have at most 500 characters.",
+    "es": "El comentario puede tener como máximo 500 caracteres."
+  },
+  "O comentário está vazio.": {
+    "en": "The comment is empty.",
+    "es": "El comentario está vacío."
+  },
+  "O comentário passa de {0} caracteres.": {
+    "en": "The comment is over {0} characters.",
+    "es": "El comentario pasa de {0} caracteres."
+  },
+  "O criador passa de 200 caracteres.": {
+    "en": "The creator is over 200 characters.",
+    "es": "El creador pasa de 200 caracteres."
+  },
+  "O código expirou. Peça um novo.": {
+    "en": "The code expired. Ask for a new one.",
+    "es": "El código expiró. Pide uno nuevo."
+  },
+  "O email do seu Discord não está verificado. Verifique no Discord e tente de novo.": {
+    "en": "Your Discord email isn't verified. Verify it on Discord and try again.",
+    "es": "El email de tu Discord no está verificado. Verifícalo en Discord e inténtalo de nuevo."
+  },
+  "O email do seu Google não está verificado.": {
+    "en": "Your Google email isn't verified.",
+    "es": "El email de tu Google no está verificado."
+  },
+  "O grupo está cheio.": {
+    "en": "The group is full.",
+    "es": "El grupo está lleno."
+  },
+  "O grupo pode ter no máximo {0} participantes.": {
+    "en": "The group can have at most {0} participants.",
+    "es": "El grupo puede tener como máximo {0} participantes."
+  },
+  "O link da capa é longo demais.": {
+    "en": "The cover link is too long.",
+    "es": "El enlace de la portada es demasiado largo."
+  },
+  "O link da foto precisa começar com https://.": {
+    "en": "The photo link must start with https://.",
+    "es": "El enlace de la foto debe empezar con https://."
+  },
+  "O link da foto é longo demais.": {
+    "en": "The photo link is too long.",
+    "es": "El enlace de la foto es demasiado largo."
+  },
+  "O nome de usuário deve ter de 3 a 50 caracteres.": {
+    "en": "The username must have 3 to 50 characters.",
+    "es": "El nombre de usuario debe tener de 3 a 50 caracteres."
+  },
+  "O nome de usuário digitado não confere.": {
+    "en": "The username you typed doesn't match.",
+    "es": "El nombre de usuario escrito no coincide."
+  },
+  "O nome deve ter no máximo 60 caracteres.": {
+    "en": "The name can have at most 60 characters.",
+    "es": "El nombre puede tener como máximo 60 caracteres."
+  },
+  "O nome do agrupamento é longo demais.": {
+    "en": "The group's name is too long.",
+    "es": "El nombre de la agrupación es demasiado largo."
+  },
+  "O nome do campo próprio deve ter de 1 a 40 caracteres.": {
+    "en": "The custom field's name must have 1 to 40 characters.",
+    "es": "El nombre del campo propio debe tener de 1 a 40 caracteres."
+  },
+  "O nome do grupo é longo demais.": {
+    "en": "The group's name is too long.",
+    "es": "El nombre del grupo es demasiado largo."
+  },
+  "O nome passa de {0} caracteres.": {
+    "en": "The name is over {0} characters.",
+    "es": "El nombre pasa de {0} caracteres."
+  },
+  "O serviço de IA está instável agora. Tente de novo em instantes.": {
+    "en": "The AI service is unstable right now. Try again in a moment.",
+    "es": "El servicio de IA está inestable ahora. Inténtalo de nuevo en un momento."
+  },
+  "O serviço de IA está instável agora. Tente gerar a análise de novo em instantes.": {
+    "en": "The AI service is unstable right now. Try generating the analysis again in a moment.",
+    "es": "El servicio de IA está inestable ahora. Intenta generar el análisis de nuevo en un momento."
+  },
+  "O serviço de IA está instável agora. Tente perguntar de novo em instantes.": {
+    "en": "The AI service is unstable right now. Try asking again in a moment.",
+    "es": "El servicio de IA está inestable ahora. Intenta preguntar de nuevo en un momento."
+  },
+  "O serviço de IA recusou o pedido. Tente gerar a análise de novo mais tarde.": {
+    "en": "The AI service refused the request. Try generating the analysis again later.",
+    "es": "El servicio de IA rechazó la solicitud. Intenta generar el análisis de nuevo más tarde."
+  },
+  "O serviço de IA recusou o pedido. Tente perguntar de novo mais tarde.": {
+    "en": "The AI service refused the request. Try asking again later.",
+    "es": "El servicio de IA rechazó la solicitud. Intenta preguntar de nuevo más tarde."
+  },
+  "O take deve ter de 3 a 280 caracteres.": {
+    "en": "The take must have 3 to 280 characters.",
+    "es": "El take debe tener de 3 a 280 caracteres."
+  },
+  "O take está curto demais.": {
+    "en": "The take is too short.",
+    "es": "El take es demasiado corto."
+  },
+  "O take passa de 280 caracteres.": {
+    "en": "The take is over 280 characters.",
+    "es": "El take pasa de 280 caracteres."
+  },
+  "O tempo informado é grande demais.": {
+    "en": "The time entered is too long.",
+    "es": "El tiempo indicado es demasiado largo."
+  },
+  "O tempo não pode ser negativo.": {
+    "en": "The time can't be negative.",
+    "es": "El tiempo no puede ser negativo."
+  },
+  "O título é longo demais.": {
+    "en": "The title is too long.",
+    "es": "El título es demasiado largo."
+  },
+  "Obra não encontrada.": {
+    "en": "Work not found.",
+    "es": "Obra no encontrada."
+  },
+  "Obras demais na seleção.": {
+    "en": "Too many works selected.",
+    "es": "Demasiadas obras seleccionadas."
+  },
+  "Opção de entrada do grupo inválida.": {
+    "en": "Invalid group join option.",
+    "es": "Opción de entrada al grupo no válida."
+  },
+  "Opção de mensagens inválida.": {
+    "en": "Invalid message option.",
+    "es": "Opción de mensajes no válida."
+  },
+  "Ordem com obras demais.": {
+    "en": "Order with too many works.",
+    "es": "Orden con demasiadas obras."
+  },
+  "Ordenação inválida.": {
+    "en": "Invalid sorting.",
+    "es": "Orden no válido."
+  },
+  "Os campos próprios vieram incompletos. Atualize a página e tente de novo.": {
+    "en": "The custom fields came incomplete. Refresh the page and try again.",
+    "es": "Los campos propios llegaron incompletos. Recarga la página e inténtalo de nuevo."
+  },
+  "Os campos próprios vieram num formato inválido. Atualize a página e tente de novo.": {
+    "en": "The custom fields came in an invalid format. Refresh the page and try again.",
+    "es": "Los campos propios llegaron en un formato no válido. Recarga la página e inténtalo de nuevo."
+  },
+  "Os dados dessa obra passaram do tamanho permitido.": {
+    "en": "This work's data went over the allowed size.",
+    "es": "Los datos de esta obra pasaron del tamaño permitido."
+  },
+  "Os dados dessa obra vieram num formato inválido.": {
+    "en": "This work's data came in an invalid format.",
+    "es": "Los datos de esta obra llegaron en un formato no válido."
+  },
+  "Pedido não encontrado.": {
+    "en": "Request not found.",
+    "es": "Solicitud no encontrada."
+  },
+  "Reação inválida.": {
+    "en": "Invalid reaction.",
+    "es": "Reacción no válida."
+  },
+  "Selecione ao menos uma obra para analisar.": {
+    "en": "Select at least one work to analyze.",
+    "es": "Selecciona al menos una obra para analizar."
+  },
+  "Subcategoria não encontrada.": {
+    "en": "Subcategory not found.",
+    "es": "Subcategoría no encontrada."
+  },
+  "Só dá pra adicionar quem vocês se seguem mutuamente. Os outros entram pelo link de convite.": {
+    "en": "You can only add people you both follow. Everyone else joins through the invite link.",
+    "es": "Solo puedes añadir a quien se siguen mutuamente. Los demás entran por el enlace de invitación."
+  },
+  "Só o dono ou admins adicionam participantes.": {
+    "en": "Only the owner or admins add participants.",
+    "es": "Solo el dueño o los admins añaden participantes."
+  },
+  "Só o dono ou admins editam o grupo.": {
+    "en": "Only the owner or admins edit the group.",
+    "es": "Solo el dueño o los admins editan el grupo."
+  },
+  "Só o dono ou admins mexem em cargos.": {
+    "en": "Only the owner or admins change roles.",
+    "es": "Solo el dueño o los admins cambian roles."
+  },
+  "Só o dono ou os admins cuidam do link de convite.": {
+    "en": "Only the owner or admins manage the invite link.",
+    "es": "Solo el dueño o los admins gestionan el enlace de invitación."
+  },
+  "Só o dono pode excluir o grupo.": {
+    "en": "Only the owner can delete the group.",
+    "es": "Solo el dueño puede eliminar el grupo."
+  },
+  "Só tabelas do tipo Personalizado têm campos próprios.": {
+    "en": "Only tables of the Custom type have custom fields.",
+    "es": "Solo las tablas del tipo Personalizado tienen campos propios."
+  },
+  "Tabela não encontrada.": {
+    "en": "Table not found.",
+    "es": "Tabla no encontrada."
+  },
+  "Tabelas demais no agrupamento.": {
+    "en": "Too many tables in the group.",
+    "es": "Demasiadas tablas en la agrupación."
+  },
+  "Tabelas do tipo Personalizado são criadas depois do tutorial.": {
+    "en": "Custom tables are created after the tutorial.",
+    "es": "Las tablas del tipo Personalizado se crean después del tutorial."
+  },
+  "Take não encontrado.": {
+    "en": "Take not found.",
+    "es": "Take no encontrado."
+  },
+  "Tipo de aviso inválido.": {
+    "en": "Invalid notice type.",
+    "es": "Tipo de aviso no válido."
+  },
+  "Tipo de criador inválido.": {
+    "en": "Invalid creator type.",
+    "es": "Tipo de creador no válido."
+  },
+  "Tipo de obra inválido.": {
+    "en": "Invalid work type.",
+    "es": "Tipo de obra no válido."
+  },
+  "Um campo próprio não pode aparecer duas vezes na lista.": {
+    "en": "A custom field can't appear twice in the list.",
+    "es": "Un campo propio no puede aparecer dos veces en la lista."
+  },
+  "Um dos campos próprios não existe mais nesta tabela. Atualize a página e tente de novo.": {
+    "en": "One of the custom fields no longer exists in this table. Refresh the page and try again.",
+    "es": "Uno de los campos propios ya no existe en esta tabla. Recarga la página e inténtalo de nuevo."
+  },
+  "Uma das pessoas escolhidas não existe mais.": {
+    "en": "One of the chosen people no longer exists.",
+    "es": "Una de las personas elegidas ya no existe."
+  },
+  "Uma das tabelas escolhidas não existe mais.": {
+    "en": "One of the chosen tables no longer exists.",
+    "es": "Una de las tablas elegidas ya no existe."
+  },
+  "Uma das tabelas escolhidas não é sua.": {
+    "en": "One of the chosen tables isn't yours.",
+    "es": "Una de las tablas elegidas no es tuya."
+  },
+  "Uma tabela pode ter no máximo 5 campos próprios.": {
+    "en": "A table can have at most 5 custom fields.",
+    "es": "Una tabla puede tener como máximo 5 campos propios."
+  },
+  "Uma tabela pode ter no máximo {0} subcategorias.": {
+    "en": "A table can have at most {0} subcategories.",
+    "es": "Una tabla puede tener como máximo {0} subcategorías."
+  },
+  "Usuário não encontrado.": {
+    "en": "User not found.",
+    "es": "Usuario no encontrado."
+  },
+  "Visualização inválida.": {
+    "en": "Invalid view.",
+    "es": "Vista no válida."
+  },
+  "Você foi removido desse grupo. Só a moderação pode te adicionar de novo.": {
+    "en": "You were removed from this group. Only the moderators can add you back.",
+    "es": "Te quitaron de este grupo. Solo la moderación puede volver a añadirte."
+  },
+  "Você já está no grupo.": {
+    "en": "You're already in the group.",
+    "es": "Ya estás en el grupo."
+  },
+  "Você já pediu pra entrar.": {
+    "en": "You already asked to join.",
+    "es": "Ya pediste entrar."
+  },
+  "Você já tem um agrupamento com esse nome.": {
+    "en": "You already have a group with that name.",
+    "es": "Ya tienes una agrupación con ese nombre."
+  },
+  "Você já tem uma tabela chamada {0}.": {
+    "en": "You already have a table called {0}.",
+    "es": "Ya tienes una tabla llamada {0}."
+  },
+  "Você já tem uma tabela com esse nome.": {
+    "en": "You already have a table with that name.",
+    "es": "Ya tienes una tabla con ese nombre."
+  },
+  "Você não modera esse grupo.": {
+    "en": "You don't moderate this group.",
+    "es": "No moderas este grupo."
+  },
+  "Você não participa dessa conversa.": {
+    "en": "You're not part of this conversation.",
+    "es": "No participas en esta conversación."
+  },
+  "Você não pode apagar essa mensagem.": {
+    "en": "You can't delete this message.",
+    "es": "No puedes borrar este mensaje."
+  },
+  "Você não pode apagar este comentário.": {
+    "en": "You can't delete this comment.",
+    "es": "No puedes borrar este comentario."
+  },
+  "Você não pode expulsar ninguém desse grupo.": {
+    "en": "You can't remove anyone from this group.",
+    "es": "No puedes expulsar a nadie de este grupo."
+  },
+  "Você não pode seguir a si mesmo.": {
+    "en": "You can't follow yourself.",
+    "es": "No puedes seguirte a ti mismo."
+  },
+  "Você não tem permissão para editar essa obra.": {
+    "en": "You don't have permission to edit this work.",
+    "es": "No tienes permiso para editar esta obra."
+  },
+  "Você não tem permissão para editar esse agrupamento.": {
+    "en": "You don't have permission to edit this group.",
+    "es": "No tienes permiso para editar esta agrupación."
+  },
+  "Você não tem permissão para excluir essa obra.": {
+    "en": "You don't have permission to delete this work.",
+    "es": "No tienes permiso para eliminar esta obra."
+  },
+  "Você não tem permissão para excluir esse agrupamento.": {
+    "en": "You don't have permission to delete this group.",
+    "es": "No tienes permiso para eliminar esta agrupación."
+  },
+  "Você só altera o cargo de quem está abaixo de você.": {
+    "en": "You can only change the role of people below you.",
+    "es": "Solo cambias el rol de quien está por debajo de ti."
+  },
+  "Você só edita suas mensagens.": {
+    "en": "You can only edit your own messages.",
+    "es": "Solo editas tus mensajes."
+  },
+  "Você só expulsa quem tem cargo abaixo do seu.": {
+    "en": "You can only remove people with a role below yours.",
+    "es": "Solo expulsas a quien tiene un rol por debajo del tuyo."
+  },
+  "Você só pode apagar os seus takes.": {
+    "en": "You can only delete your own takes.",
+    "es": "Solo puedes borrar tus takes."
+  },
+  "Você só pode dar take em obras suas.": {
+    "en": "You can only write takes about your own works.",
+    "es": "Solo puedes escribir takes sobre tus obras."
+  },
+  "Você só pode editar os seus comentários.": {
+    "en": "You can only edit your own comments.",
+    "es": "Solo puedes editar tus comentarios."
+  },
+  "Você só pode editar os seus takes.": {
+    "en": "You can only edit your own takes.",
+    "es": "Solo puedes editar tus takes."
+  },
+  "Você usou suas {0} mensagens de IA de hoje. O limite zera às {1}h.": {
+    "en": "You used your {0} AI messages for today. The limit resets at {1}:00.",
+    "es": "Usaste tus {0} mensajes de IA de hoy. El límite se reinicia a las {1}h."
+  }
+}

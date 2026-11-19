@@ -99,7 +99,7 @@ class CustomFieldsControllerTest {
         stranger.setId(2L);
         when(auth.getUser(any())).thenReturn(stranger);
         mvc.perform(put("/api/categories/10/custom-fields").contentType(MediaType.APPLICATION_JSON).content("[]"))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(containsString("permissão")));
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(containsString("não é sua")));
         verify(categories, never()).save(any());
         verifyNoInteractions(works);
     }
@@ -117,7 +117,7 @@ class CustomFieldsControllerTest {
         category.setTemplates(List.of(MOVIE));
         mvc.perform(put("/api/categories/10/custom-fields").contentType(MediaType.APPLICATION_JSON)
                         .content("[{\"name\":\"Local\",\"type\":\"TEXT\"}]"))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(containsString("CUSTOM")));
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(containsString("Personalizado")));
     }
 
     @ParameterizedTest

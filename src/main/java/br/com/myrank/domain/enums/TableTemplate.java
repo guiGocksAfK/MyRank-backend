@@ -42,6 +42,6 @@ public enum TableTemplate {
         for (TableTemplate template : values()) {
             if (template.value.equals(value)) return template;
         }
-        throw new IllegalArgumentException("Template inválido: " + value);
+        throw new IllegalArgumentException("Tipo de obra inválido.");
     }
 }

@@ -1,5 +1,7 @@
 package br.com.myrank.service.social;
 
+import br.com.myrank.exception.TemplatedArgumentException;
+
 import br.com.myrank.domain.entity.Conversation;
 import br.com.myrank.domain.entity.ConversationBan;
 import br.com.myrank.domain.entity.ConversationJoinRequest;
@@ -121,11 +123,11 @@ public class ChatService {
         LinkedHashSet<Long> ids = new LinkedHashSet<>();
         if (memberIdsRaw != null) memberIdsRaw.forEach(id -> { if (id != null) ids.add(id); });
         ids.remove(me);
-        if (ids.size() >= GROUP_MAX) throw new IllegalArgumentException("Máximo de " + GROUP_MAX + " participantes.");
+        if (ids.size() >= GROUP_MAX) throw TemplatedArgumentException.of("O grupo pode ter no máximo {0} participantes.", GROUP_MAX);
         requireAddable(me, ids, null);
 
         List<User> found = userRepository.findAllById(ids);
-        if (found.size() != ids.size()) throw new IllegalArgumentException("Algum usuário não existe.");
+        if (found.size() != ids.size()) throw new IllegalArgumentException("Uma das pessoas escolhidas não existe mais.");
 
         Conversation conv = new Conversation(ConversationType.GROUP, name, me);
         conv.setAccess(access);
@@ -504,11 +506,11 @@ public class ChatService {
         ids.remove(me);
         if (ids.isEmpty()) return listMembers(me, convId);
         if (existing.size() + ids.size() > GROUP_MAX) {
-            throw new IllegalArgumentException("Máximo de " + GROUP_MAX + " participantes.");
+            throw TemplatedArgumentException.of("O grupo pode ter no máximo {0} participantes.", GROUP_MAX);
         }
 
         List<User> found = userRepository.findAllById(ids);
-        if (found.size() != ids.size()) throw new IllegalArgumentException("Algum usuário não existe.");
+        if (found.size() != ids.size()) throw new IllegalArgumentException("Uma das pessoas escolhidas não existe mais.");
         requireAddable(me, ids, convId);
 
         for (Long id : ids) {
@@ -740,7 +742,7 @@ public class ChatService {
         Conversation conv = getConversation(convId);
         requireGroup(conv);
         if (!myMembership.getRole().canEditGroup()) {
-            throw new IllegalArgumentException("Só o dono ou admins " + verb + " o link de convite.");
+            throw new IllegalArgumentException("Só o dono ou os admins cuidam do link de convite.");
         }
         return conv;
     }
@@ -988,7 +990,7 @@ public class ChatService {
     private String sanitizeName(String raw) {
         String name = raw == null ? "" : raw.trim();
         if (name.isEmpty()) throw new IllegalArgumentException("Dê um nome ao grupo.");
-        if (name.length() > NAME_MAX) throw new IllegalArgumentException("O nome passa de " + NAME_MAX + " caracteres.");
+        if (name.length() > NAME_MAX) throw TemplatedArgumentException.of("O nome passa de {0} caracteres.", NAME_MAX);
         return name;
     }
 
@@ -998,7 +1000,7 @@ public class ChatService {
         String desc = raw.trim();
         if (desc.isEmpty()) return null;
         if (desc.length() > DESC_MAX) {
-            throw new IllegalArgumentException("A descrição passa de " + DESC_MAX + " caracteres.");
+            throw TemplatedArgumentException.of("A descrição passa de {0} caracteres.", DESC_MAX);
         }
         return desc;
     }
@@ -1009,7 +1011,7 @@ public class ChatService {
         String url = raw.trim();
         if (url.isEmpty()) return null;
         if (!url.startsWith("https://")) {
-            throw new IllegalArgumentException("A URL da foto precisa começar com https://");
+            throw new IllegalArgumentException("A URL da foto precisa começar com https://.");
         }
         if (url.length() > IMAGE_URL_MAX) {
             throw new IllegalArgumentException("A URL da foto é longa demais.");
@@ -1021,7 +1023,7 @@ public class ChatService {
         try {
             return ConversationAccess.valueOf(raw.trim().toUpperCase());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Acesso inválido.");
+            throw new IllegalArgumentException("Opção de entrada do grupo inválida.");
         }
     }
 

@@ -101,7 +101,7 @@ class ExternalMangaSearchControllerTest {
     void buscaExigeParametroQuery() throws Exception {
         mvc.perform(get("/api/external/search/manga"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Parâmetro obrigatório ausente: query."));
+                .andExpect(jsonPath("$.message").value("Não foi possível concluir o pedido. Atualize a página e tente de novo."));
         verifyNoInteractions(restTemplate);
     }
 
@@ -120,7 +120,7 @@ class ExternalMangaSearchControllerTest {
         mvc.perform(get("/api/external/manga/13"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.message").value(
-                        "Não foi possível buscar os detalhes do mangá agora. O MyAnimeList pode estar instável — tente novamente em instantes."));
+                        "Não foi possível buscar os detalhes do mangá agora. Tente de novo em instantes."));
     }
 
     private void respondToDetails(String json) throws Exception {

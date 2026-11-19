@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
+import br.com.myrank.exception.ExternalServiceUnavailableException;
 
 @Service
 public class OAuthService {
@@ -72,12 +74,15 @@ public class OAuthService {
                     .body(GoogleTokenResponse.class);
 
             if (tokenResponse == null || tokenResponse.idToken() == null || tokenResponse.idToken().isBlank()) {
-                throw new IllegalArgumentException("Não foi possível obter token do Google.");
+                throw new ExternalServiceUnavailableException("Não foi possível falar com o Google agora. Tente de novo.", null);
             }
 
             return tokenResponse.idToken();
-        } catch (RestClientResponseException ex) {
-            throw new IllegalArgumentException("Code do Google inválido ou expirado.");
+        } catch (HttpClientErrorException ex) {
+            throw new IllegalArgumentException("A autorização do Google expirou. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Google está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Google agora. Tente de novo.", ex);
         }
     }
 
@@ -105,11 +110,14 @@ public class OAuthService {
                     .retrieve()
                     .body(DiscordUser.class);
             if (discordUser == null || discordUser.id() == null || discordUser.id().isBlank()) {
-                throw new IllegalArgumentException("Token do Discord inválido.");
+                throw new IllegalArgumentException("A autorização do Discord não foi aceita. Tente de novo.");
             }
             return discordUser.id();
-        } catch (RestClientResponseException ex) {
-            throw new IllegalArgumentException("Token do Discord inválido ou expirado.");
+        } catch (HttpClientErrorException ex) {
+            throw new IllegalArgumentException("A autorização do Discord não foi aceita. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Discord está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Discord agora. Tente de novo.", ex);
         }
     }
 
@@ -136,12 +144,15 @@ public class OAuthService {
                     .body(DiscordTokenResponse.class);
 
             if (tokenResponse == null || tokenResponse.accessToken() == null || tokenResponse.accessToken().isBlank()) {
-                throw new IllegalArgumentException("Não foi possível obter token do Discord.");
+                throw new ExternalServiceUnavailableException("Não foi possível falar com o Discord agora. Tente de novo.", null);
             }
 
             return tokenResponse.accessToken();
-        } catch (RestClientResponseException ex) {
-            throw new IllegalArgumentException("Code do Discord inválido ou expirado.");
+        } catch (HttpClientErrorException ex) {
+            throw new IllegalArgumentException("A autorização do Discord expirou. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Discord está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Discord agora. Tente de novo.", ex);
         }
     }
 
@@ -163,21 +174,24 @@ public class OAuthService {
                     .body(GoogleTokenInfo.class);
 
             if (tokenInfo == null || tokenInfo.sub() == null || tokenInfo.sub().isBlank()) {
-                throw new IllegalArgumentException("Token do Google inválido.");
+                throw new IllegalArgumentException("A autorização do Google não foi aceita. Tente de novo.");
             }
 
             if (!clientId.equals(tokenInfo.aud())) {
-                throw new IllegalArgumentException("Token do Google inválido.");
+                throw new IllegalArgumentException("A autorização do Google não foi aceita. Tente de novo.");
             }
 
             if (!"true".equalsIgnoreCase(tokenInfo.emailVerified())) {
-                throw new IllegalArgumentException("Email do Google não verificado.");
+                throw new IllegalArgumentException("O email do seu Google não está verificado.");
             }
 
             String usernameBase = resolveUsernameBase(tokenInfo.name(), tokenInfo.email());
             return new OAuthUserInfo(tokenInfo.sub(), tokenInfo.email(), usernameBase, tokenInfo.picture());
-        } catch (RestClientResponseException ex) {
-            throw new IllegalArgumentException("Token do Google inválido ou expirado.");
+        } catch (HttpClientErrorException ex) {
+            throw new IllegalArgumentException("A autorização do Google não foi aceita. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Google está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Google agora. Tente de novo.", ex);
         }
     }
 
@@ -195,23 +209,26 @@ public class OAuthService {
                     .body(DiscordUser.class);
 
             if (discordUser == null || discordUser.id() == null || discordUser.id().isBlank()) {
-                throw new IllegalArgumentException("Token do Discord inválido.");
+                throw new IllegalArgumentException("A autorização do Discord não foi aceita. Tente de novo.");
             }
 
             if (discordUser.email() == null || discordUser.email().isBlank()) {
-                throw new IllegalArgumentException("Email do Discord não disponível. Autorize o acesso ao email no login.");
+                throw new IllegalArgumentException("Não recebemos o email do seu Discord. Autorize o acesso ao email e tente de novo.");
             }
 
             if (!Boolean.TRUE.equals(discordUser.verified())) {
-                throw new IllegalArgumentException("Email do Discord não verificado.");
+                throw new IllegalArgumentException("O email do seu Discord não está verificado. Verifique no Discord e tente de novo.");
             }
 
             String avatarUrl = buildDiscordAvatarUrl(discordUser);
             String usernameBase = discordUser.username() != null ? discordUser.username() : "discord" + discordUser.id();
 
             return new OAuthUserInfo(discordUser.id(), discordUser.email(), usernameBase, avatarUrl);
-        } catch (RestClientResponseException ex) {
-            throw new IllegalArgumentException("Token do Discord inválido ou expirado.");
+        } catch (HttpClientErrorException ex) {
+            throw new IllegalArgumentException("A autorização do Discord não foi aceita. Tente de novo.");
+        } catch (RestClientException ex) {
+            // 5xx, timeout ou rede: o Discord está fora do ar, não é culpa da pessoa
+            throw new ExternalServiceUnavailableException("Não foi possível falar com o Discord agora. Tente de novo.", ex);
         }
     }
 
@@ -236,7 +253,7 @@ public class OAuthService {
 
     private LoginResponseDTO buildLoginResponse(User user) {
         if (user.getEmail() == null || user.getEmail().isBlank()) {
-            throw new IllegalArgumentException("Conta OAuth sem email. Não foi possível autenticar.");
+            throw new IllegalArgumentException("Não recebemos o email dessa conta. Autorize o acesso ao email e tente de novo.");
         }
 
         String token = jwtService.generateToken(user);
