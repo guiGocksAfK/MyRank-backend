@@ -5,27 +5,28 @@ series, anime, manga, games, books and music), but a table can hold anything:
 scores become tables, tables merge into a single ranking, and the ranking
 becomes a profile of your taste.
 
-A personal project, live at **[myrank-oficial.vercel.app](https://myrank-oficial.vercel.app/)**.
+A personal project, live at **[myrank.duckdns.org](https://myrank.duckdns.org/)**.
 This repository contains the API; the web app lives in
 [MyRank-frontend](https://github.com/guiGocksAfK/MyRank).
 
-Detailed operational and security docs ([SECURITY.md](SECURITY.md),
-[deploy/README.md](deploy/README.md) and [`docs/`](docs)) are written in Portuguese;
-see [Documentation](#documentation) for the full list.
+Detailed operational docs ([deploy/README.md](deploy/README.md) and [`docs/`](docs))
+are written in Portuguese; see [Documentation](#documentation) for the full list.
 
 ## Features
 
 - **Tables built from templates.** Movies, series, anime, manga, games, books,
   songs and albums, each searching its own source (TMDB, MyAnimeList, RAWG,
-  Google Books, Deezer). A table can mix templates (e.g. Games + Series), and the
-  **Custom** template takes up to five fields of its own (text, number, date, yes/no).
+  Google Books, Deezer). A table can mix templates (e.g. Games + Series), organize
+  items into up to 20 subcategories, and the **Custom** template takes up to five
+  fields of its own (text, number, date, yes/no).
 - **Automatic metadata.** Picking a search result fills in cover, creator, date,
   duration and the details each card needs (seasons, episodes, volumes, pages,
   album, track count), plus genres kept for the AI analysis. A refresh action
   updates ongoing works such as airing series.
 - **Unified ranking** across any selection of tables, with manual reordering and
   an optional **time-weighted score** (`score + log10(minutes / 60)`) for the
-  templates where time spent means something.
+  templates where time spent means something, plus a dedicated **Creators** ranking
+  with automatic photos/logos from TMDB and per-user overrides.
 - **AI Insights**: a taste profile generated from your scores (Gemini), with a
   follow-up chat and a daily budget per user.
 - **Social layer, private by default.** Follow requests for private profiles,
@@ -33,10 +34,16 @@ see [Documentation](#documentation) for the full list.
 - **Chat** with direct messages, groups and invite links, in real time over
   WebSocket.
 - **Achievements**: 72 badges evaluated server-side whenever a work changes.
-- **Accounts** with e-mail and password, Google or Discord. E-mail ownership is
-  proven by a code before the account exists; password recovery and account
-  deletion also work by e-mail code. A short onboarding lets new users pick
-  their tables and rank a first work.
+- **Accounts and settings** with e-mail and password, Google or Discord. E-mail
+  ownership is proven by a code before the account exists; password recovery and
+  account deletion also work by e-mail code. Synced settings cover language,
+  default time-weighted score, list/grid view, who can start a direct message,
+  muted notification groups, linking a Discord account from Settings regardless of
+  sign-in method, and signing out of other devices. A short onboarding lets new
+  users pick their tables and rank a first work.
+- **Multilingual responses (PT, EN, ES).** API error messages, transactional
+  e-mails and AI Insights adapt to the user's language (`Accept-Language` or
+  account preference; without the header, Portuguese is used for the Discord bot).
 - **Discord bot** support through a service key, so the bot can act for users
   who linked their Discord account.
 
@@ -44,8 +51,8 @@ see [Documentation](#documentation) for the full list.
 
 | Component | Runs on | Notes |
 |---|---|---|
-| Frontend | Vercel | React SPA served with CSP and security headers. |
-| API | Oracle Cloud VM (ARM64), in Docker | Behind a shared Caddy, which issues and renews the TLS certificate. |
+| Frontend | Vercel (proxied by Caddy) | React SPA served at `myrank.duckdns.org` via Caddy (`X-MyRank-Proxy`; direct Vercel hits redirect there) with CSP and security headers, keeping web app and API under one origin for `SameSite=Strict` cookies. |
+| API | Oracle Cloud VM (ARM64), in Docker | Behind the shared Caddy on the VM, which issues and renews the TLS certificate. |
 | Database | Neon (PostgreSQL, São Paulo region) | TLS required on every connection; Neon's own point-in-time recovery. |
 | E-mail | Brevo | Sign-up, password recovery and account deletion codes. |
 | Backups | VM | See [Backups](#backups). |
@@ -99,20 +106,27 @@ A summary of what is in place. The full breakdown, including the reasoning
 behind each decision and the known limitations, is in [SECURITY.md](SECURITY.md).
 
 - **Authentication required by default.** Only sign-up, login, recovery, health
-  and the public showcase are open. The user is loaded from the database on
-  every request, and each token carries a session version: changing the
-  password signs out every other device at once.
+  and the public showcase are open. Sessions use the `myrank_session` cookie
+  (`HttpOnly`, `Secure`, `SameSite=Strict`) with `Origin` verification on
+  state-changing requests. The user is loaded from the database on every request,
+  and each token carries a session version (`token_version`): changing the
+  password or signing out invalidates older sessions at once.
 - **E-mail ownership proven before anything is created.** Six-digit codes are
   stored only as hashes, expire in 15 minutes and die after five wrong attempts.
   Recovery responds the same way whether or not an account exists.
 - **Ownership checked on every operation**, private profiles respected in the
-  feed, profiles and comparisons, and chat subscriptions authorized per
-  conversation.
-- **Rate limiting** on login, sign-up, codes and the external search proxy.
+  feed, profiles and comparisons, direct messages gated by `dmPolicy`, direct
+  group additions requiring mutual follow, group kicks recorded as bans
+  (`conversation_bans`), and chat subscriptions authorized per conversation.
+- **Rate limiting** on login, OAuth, sign-up, codes, password reset, Discord
+  linking, the external search proxy and bulk details refresh (`refresh-details`),
+  keyed by Discord user ID when requests come from the bot.
 - **Strict input validation**, including the free-form `details` of each work
   (8 KB cap) and type-checked custom fields.
-- **No internal details leaked in errors**; one-time tokens and codes are never
-  stored in plain text.
+- **No internal details leaked in errors**: only messages listed in the closed
+  catalog (`i18n/errors.json`, translated to PT/EN/ES) reach the screen, while
+  technical or server-configuration errors become generic messages and stay in
+  the logs; one-time tokens and codes are never stored in plain text.
 
 ## Running locally
 
@@ -152,10 +166,15 @@ The schema is owned by Flyway in
 - **V9** content templates and per-work `details`.
 - **V10** custom fields of the Custom template.
 - **V11** onboarding progress, with new accounts private by default.
+- **V12** group bans (`conversation_bans`).
+- **V13** creator photos cached from TMDB and per-user creator overrides.
+- **V14** account settings (`dm_policy`, `muted_notifications`, `weighted_by_default`).
+- **V15** default rankings view (`rankings_view`).
+- **V16** drop of legacy `user_stats` table and old link-based token columns.
 
 Applied migrations are never edited, and no change requires dropping the
 database. Upgrading an existing production database to this version (the
-baseline of the squash, then V9–V11) is described in
+baseline of the squash, then V9–V16) is described in
 [deploy/README.md](deploy/README.md#atualizar-a-produção-para-esta-versão).
 
 ## Documentation
@@ -166,6 +185,7 @@ baseline of the squash, then V9–V11) is described in
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | What is pending, in order |
 | [`docs/decisoes.md`](docs/decisoes.md) | Product and technical decisions, and why |
 | [`docs/autenticacao.md`](docs/autenticacao.md) | Sign-up, login, e-mail codes, sessions, account deletion |
+| [`docs/configuracoes.md`](docs/configuracoes.md) | Account settings, Discord linking, privacy, notifications and session revocation |
 | [`docs/templates.md`](docs/templates.md) | Templates, card details and custom fields |
 | [`docs/ranking.md`](docs/ranking.md) | Scores, unified ranking, creators and taste affinity |
 | [`docs/social.md`](docs/social.md) | Privacy, follows, feed, takes, comments, notifications |
@@ -187,7 +207,9 @@ The ones that differ between development and production:
 | `DB_URL` | PostgreSQL from `docker-compose.yml` | Neon, with `sslmode=require` |
 | `JWT_SECRET` | Any value with 32+ characters | Dedicated secret (`openssl rand -base64 48`) |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Frontend domain |
-| `FRONTEND_URL` | `http://localhost:5173` | Frontend domain, used in e-mails |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional (needed for Google OAuth code login) | Google OAuth client credentials |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | Optional (needed for Discord OAuth login/linking) | Discord OAuth client credentials |
+| `MYRANK_BOT_API_KEY` | Empty (`BotAuthenticationFilter` disabled) | Shared secret (`openssl rand -hex 32`) |
 | `BREVO_API_KEY`, `MAIL_FROM_EMAIL` | Empty (e-mail features answer that sending is unavailable) | Brevo key and a verified sender |
 | `SERVER_FORWARD_HEADERS_STRATEGY` | (empty) | `native`, since the API runs behind Caddy |
 
@@ -209,10 +231,12 @@ src/main/java/br/com/myrank/
 │   └── email/        Brevo client and the shared e-mail layout
 ├── domain/           JPA entities, enums and value objects
 ├── dto/              request and response records
+├── exception/        translated/templated errors and external API handler
 ├── repository/       Spring Data repositories
 ├── security/         JWT, rate limit, Discord bot key, WebSocket auth
 └── config/           security, CORS, clock and error handling
 src/main/resources/db/migration/   Flyway migrations
+src/main/resources/i18n/errors.json  PT/EN/ES user-facing error catalog
 deploy/               production compose, VM setup and runbook
 docs/                 feature contracts (Portuguese)
 ```

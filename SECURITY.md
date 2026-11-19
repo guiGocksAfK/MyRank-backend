@@ -1,97 +1,98 @@
-# Segurança — MyRank API
+# Security — MyRank API
 
-Resumo das proteções em vigor e do que ainda precisa de decisão. O frontend tem
-as proteções do lado dele (CSP e headers via `vercel.json`) descritas no
-repositório do front.
+Summary of protections currently in place and what still requires a decision. The
+frontend has its own client-side protections (CSP and security headers via
+`vercel.json`) described in the frontend repository.
 
-## Em vigor
+## In place
 
-| Área | Como |
+| Area | How |
 |---|---|
-| Senhas | BCrypt com salt por usuário (custo padrão do Spring, 10). Nunca voltam em resposta. Mínimo de 8 caracteres na criação e na troca. Conta criada pelo Google ou Discord não tem senha. |
-| Cadastro | O email é provado **antes** de existir conta: código de 6 dígitos por email, e só com ele o cadastro final é aceito. Quem digita o email de outra pessoa não consegue reservar nada. |
-| Códigos por email | Cadastro, recuperação de senha e exclusão de conta usam código, guardado só como SHA-256 (nunca o valor) e comparado em tempo constante. Cadastro e recuperação: 6 dígitos, 15 minutos, morre depois de 5 erros, 30s entre reenvios. Exclusão: 8 caracteres, 10 minutos, 1 minuto entre reenvios, limitada pelo rate limit (ver [docs/autenticacao.md](docs/autenticacao.md)). |
-| Passes entre etapas | Acertar o código gera um passe curto (JWT) que libera a etapa seguinte. Cada fluxo assina com uma chave derivada do segredo do login + propósito: o passe do cadastro não troca senha, e nenhum passe serve como sessão. |
-| Login | Conta social, email inexistente e senha errada dão a **mesma** mensagem. "Email não confirmado" só aparece depois que a senha confere, pra não revelar quais emails têm cadastro pendente. |
-| Recuperação de senha | Email sem conta segue o mesmo caminho de uma conta real (o código é gerado, só não é mandado), então resposta e erros não revelam quem tem conta. Exceção decidida: conta só com Google/Discord é avisada na hora de qual provedor usar. |
-| Sessão | JWT HS256 de 24h gravado no cookie `myrank_session` (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`). `JWT_SECRET` é obrigatório no boot (mínimo 32 caracteres). A cada requisição o usuário é lido do banco. Cada token carrega a **versão de sessão** da conta: trocar a senha (ou usar "sair dos outros aparelhos") aumenta a versão e derruba todas as sessões abertas na hora. `POST /api/auth/logout` apaga o cookie neste navegador. |
-| Autenticação | Toda rota exige sessão válida (cookie `myrank_session` ou header `Authorization: Bearer` durante a transição), menos as abertas de propósito: `/api/auth/**`, `POST /api/users` (cadastro final, que exige o passe do código), `GET /api/health`, `GET /api/external/showcase` e o handshake do WebSocket. Quando autenticada pelo cookie, toda requisição de escrita (`POST`, `PUT`, `PATCH`, `DELETE`) exige `Origin` pertencente a `CORS_ALLOWED_ORIGINS` (defesa contra CSRF somada ao `SameSite=Strict`). Sem login válido a resposta é **401**; sem permissão, **403**. |
-| Autorização | Dono conferido em toda operação de tabela, obra, subdivisão e campo próprio. Perfil privado: obras, takes e comparação só pra quem segue. O item só aceita um template que a tabela tenha. |
-| Chat em tempo real | O handshake do WebSocket lê o cookie `myrank_session` e o `CONNECT` do STOMP exige JWT válido (do cookie ou do header `Authorization`, com a mesma checagem de versão de sessão). Cada inscrição é autorizada por conversa, e publicar direto no broker é proibido: mensagem só entra pela API. |
-| Bot do Discord | Header `X-Bot-Key` comparado em tempo constante, válido só num conjunto fechado de rotas. A pessoa precisa ter vinculado o Discord à conta. Rate limit por usuário do Discord (e não pelo IP do bot). |
-| Rate limiting | Janela fixa de 1 minuto, em memória, por IP: login 10, OAuth 15, envio de código 3, conferência de código 10, cadastro 5, exclusão de conta 5, busca externa 40, preencher detalhes de todas as obras 2. Não confia em `X-Forwarded-For` direto: atrás do Caddy, o Tomcat só aceita o IP real vindo da rede interna (`SERVER_FORWARD_HEADERS_STRATEGY=native`). |
-| Validação de entrada | Bean Validation nos DTOs, com tamanho máximo nos textos. O `details` de cada obra é sempre um objeto JSON de até 8 KB. Campos próprios validados pelo tipo: texto até 200, número finito, data real, sim/não sem conversão. |
-| Concorrência | Gravar uma obra e mudar os campos ou templates da tabela não acontecem ao mesmo tempo (trava na linha da tabela), pra um campo removido não voltar por uma gravação simultânea. |
-| Vazamento de erro | Exceção não mapeada vira um 500 genérico, sem stack trace. Erros de regra viram 400 com mensagem em português. |
-| Dados guardados | Tokens e códigos de uso único só como hash. Exclusão de conta é definitiva (não é soft delete), confirmada por código no email, com comprovante depois. |
-| Headers HTTP | Padrões do Spring Security: HSTS (1 ano, com subdomínios; o Spring reconhece o HTTPS que chega pelo Caddy), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` e `Cache-Control: no-store`. Conferido na produção. |
-| CORS | Origens explícitas em `CORS_ALLOWED_ORIGINS`, sem curinga. |
-| Segredos | Tudo por variável de ambiente. O `.env` da VM não vai pro git. |
-| Contêiner | Imagem final roda com usuário sem privilégio (`myrank:myrank`). |
-| Banco | Neon com TLS obrigatório (`sslmode=require`). Schema sob Flyway, e o Hibernate só valida (`ddl-auto=validate`). |
+| Passwords | BCrypt with per-user salt (Spring default cost, 10). Never returned in responses. Minimum of 8 characters on creation and reset. Accounts created with Google or Discord have no password. |
+| Sign-up | E-mail ownership is proven **before** an account row is created: 6-digit e-mail code, and final sign-up is accepted only with its pass. Typing someone else's e-mail cannot reserve anything. |
+| E-mail codes | Sign-up, password recovery and account deletion use codes stored only as SHA-256 hashes (never the plain value) and compared in constant time. Sign-up and recovery: 6 digits, 15-minute TTL, invalidated after 5 wrong attempts, 30s resend cooldown, in-memory cap of 10,000 pending entries (`EmailCodeStore` evicts expired entries and rejects floods with 503). Deletion: 8 characters, 10-minute TTL, 1-minute resend cooldown, stored on the user row and protected by IP rate limiting (see [docs/autenticacao.md](docs/autenticacao.md)). |
+| Step passes | Entering a valid code returns a short-lived JWT (`EmailPass`, 30 min sign-up / 15 min recovery) that unlocks the next step. Each flow signs with a key derived from `JWT_SECRET` + purpose (`signup-pass`, `reset-pass`): a sign-up pass cannot reset passwords, and no pass works as a session token. |
+| Login | Social-only account, unknown e-mail and wrong password return the **exact same** error message. `"Email not verified"` is checked only after the password matches, so the endpoint never leaks which e-mails have pending sign-ups. |
+| Password recovery | Unknown e-mails follow the same code-generation path as a real account (code generated, nothing sent), so responses and errors never reveal who has an account. Explicit product exception: social-only Google/Discord accounts immediately receive which provider to use. |
+| Session | 24h HS256 JWT stored in the `myrank_session` cookie (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`). `JWT_SECRET` (32+ chars) is required at boot. The user is loaded from the database on every request, checking `users.token_version` against the token's `ver` claim: changing the password, calling "sign out of other devices" (`POST /api/users/me/sessions/revoke`) or signing out from Settings increments `token_version` and invalidates all active tokens at once. `POST /api/auth/logout` clears the cookie in the current browser. |
+| Authentication | Every route requires a valid session (`myrank_session` cookie or `Authorization: Bearer` header during transition), except explicitly open routes: `/api/auth/**`, `POST /api/users` (final sign-up, gated by the step pass), `GET /api/health`, `GET /api/external/showcase` and the WebSocket handshake (`/ws/**`). For cookie-authenticated requests, state-changing methods (`POST`, `PUT`, `PATCH`, `DELETE`) require an `Origin` header matching `CORS_ALLOWED_ORIGINS` (CSRF defense alongside `SameSite=Strict`). Unauthenticated requests receive **401**; unauthorized ones receive **403**. |
+| Authorization | Resource ownership verified on every table, work, subcategory, custom field and table group operation. Private profiles restrict works, takes, comments and comparisons to followers. Direct messages honor the recipient's `dmPolicy` (`EVERYONE` or `FOLLOWING` for new conversations); presence ("last seen") is exposed only between mutual followers. Direct group additions require mutual follow; kicking a member records a ban in `conversation_bans` (`V12`), blocking re-entry via directory, request or invite link until a moderator adds them back. Works only accept templates enabled on their table. |
+| Real-time chat | SockJS handshake reads the `myrank_session` cookie and STOMP `CONNECT` validates the JWT (from cookie or `Authorization` header, with the same `token_version` check). Subscriptions are authorized per conversation, and direct publishing to broker destinations is blocked: messages enter only through the REST API. |
+| Discord bot | `X-Bot-Key` header verified in constant time, restricted to an explicit allowlist of routes (`BOT_ROUTES` in `BotAuthenticationFilter` — never `/api/auth/**`, account deletion, session revocation or Discord linking; `/api/users/me` allows only exact `GET` and `PUT`). Disabled completely when `MYRANK_BOT_API_KEY` is blank. Requires a linked `discord_id` on the account and rate limits by Discord user ID rather than the bot's IP. |
+| Rate limiting | Fixed 1-minute in-memory window (20,000 keys cap), matching decoded application paths (`UrlPathHelper` to block URL-encoding bypasses such as `/api/auth/log%69n`). Per-IP (or per-Discord-user for bot calls) limits: login 10, OAuth 15, forgot-password 3, forgot-password verify 10, reset-password 10, sign-up code 3, sign-up verify 10, registration (`POST /api/users`) 5, deletion code 3, account deletion (`DELETE /api/users/me`) 5, Discord link (`POST /api/users/me/discord`) 10, external search/details (`/api/external/**`) 40, bulk details refresh (`POST /api/works/refresh-details`) 2. Does not trust raw `X-Forwarded-For` directly (`SERVER_FORWARD_HEADERS_STRATEGY=native` behind Caddy). |
+| Input validation | Bean Validation on DTOs with length limits. Per-work `details` is always a JSON object capped at 8 KB. Custom fields are strictly type-checked (`TEXT` up to 200 chars, finite `NUMBER`, valid ISO `DATE`, strict `BOOLEAN`). |
+| Concurrency | Saving a work and updating table templates or custom fields cannot overlap (pessimistic row lock on the category), preventing a removed field from being restored by a concurrent write. |
+| Error leakage | Closed error catalog (`src/main/resources/i18n/errors.json` + `ErrorMessages`): only cataloged user-facing messages are returned (translated to PT, EN or ES via `Accept-Language`); library exceptions, server misconfigurations and unmapped errors become a generic message while technical details stay in server logs. |
+| Stored data | One-time codes are stored only as SHA-256 hashes (legacy link-based token columns were removed in `V16`). Account deletion is hard-delete, confirmed by e-mail code and username, with a confirmation e-mail sent afterwards. |
+| HTTP headers | Spring Security defaults: HSTS (1 year, `includeSubDomains`; Spring recognizes HTTPS forwarded by Caddy), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Cache-Control: no-store`. Verified in production. |
+| CORS | Explicit origins in `CORS_ALLOWED_ORIGINS`, no wildcards. |
+| Secrets | All secrets supplied via environment variables. Production `.env` stays off git. |
+| Container | Final image runs as an unprivileged user (`myrank:myrank`). |
+| Database | Neon PostgreSQL with mandatory TLS (`sslmode=require`). Schema owned by Flyway; Hibernate only validates (`ddl-auto=validate`). |
 
-## Pendências e decisões abertas
+## Open items and pending decisions
 
-1. **Concluir a migração da sessão por cookie no front e no domínio.** O backend
-   já emite e lê o cookie `myrank_session` (`HttpOnly; Secure; SameSite=Strict`),
-   confere `Origin` nas escritas e autentica o WebSocket pelo cookie. Falta:
-   1. pôr front e API sob o mesmo domínio registrável (ex.: `myrank.dev` e
-      `api.myrank.dev`) para o navegador enviar cookie `SameSite=Strict`;
-   2. no front, parar de salvar o JWT no `localStorage`, enviar cookies nas
-      chamadas (`credentials: 'include'`) e usar `POST /api/auth/logout`;
-   3. depois que o front novo estiver no ar, parar de devolver `token` no corpo
-      do `LoginResponseDTO`.
+1. **Finish removing the legacy `token` field from login responses.** The domain
+   proxy (`myrank.duckdns.org` via Caddy), the `myrank_session` `HttpOnly; Secure; SameSite=Strict`
+   cookie, `Origin` verification on writes, SockJS cookie handshake,
+   `withCredentials: true` on the frontend, and `POST /api/auth/logout` are
+   already live. The remaining cleanup step is removing `token` from
+   `LoginResponseDTO` and dropping the `Authorization: Bearer` fallback in
+   `JwtAuthenticationFilter` and `StompAuthChannelInterceptor`.
 
-2. **Backups sem criptografia e só na VM.** O dump diário guarda 14 dias, mas
-   em texto puro e no mesmo servidor da API: se a VM for perdida, sobra só o
-   PITR do Neon. Falta o que a Escola Imaculada já tem: dump criptografado com
-   `age` na origem, cópia no Backblaze B2 com Object Lock e alerta de falha
-   (healthchecks.io).
+2. **Unencrypted backups stored only on the VM.** The daily dump keeps 14 days
+   of history, but in plain text on the same VM as the API: if the VM is lost,
+   only Neon PITR remains. Missing piece: client-side `age` encryption, off-site
+   replication to Backblaze B2 with Object Lock, and failure alerting
+   (e.g. healthchecks.io).
 
-3. **Estado em memória: só funciona com uma instância.** O rate limit, os
-   códigos por email e o cache das buscas de música ficam na memória do
-   processo. Com mais de uma instância, cada uma teria o próprio limite e os
-   próprios códigos (um código enviado por uma não valeria na outra). Reiniciar
-   a API também zera os códigos pendentes (a pessoa só pede outro). Se um dia
-   houver mais de uma instância, mover os três pra um store compartilhado
+3. **In-memory state: single-instance only.** Rate limiting, e-mail codes and
+   the music search cache live in process memory. Running more than one API
+   instance would split rate-limit counters and e-mail codes across nodes, and
+   restarting the API clears pending e-mail codes (users just request a new one).
+   If the API ever scales beyond one instance, move all three to a shared store
    (Redis).
 
-4. **Custo do BCrypt no padrão (10).** Subir pra 12 dobra duas vezes o trabalho
-   de quem tenta quebrar hashes vazados (~200ms por login, imperceptível).
-   Hashes antigos continuam válidos, porque o custo vai gravado no próprio hash,
-   e migram sozinhos na próxima troca de senha.
+4. **Default BCrypt cost (10).** Raising the cost to 12 doubles cracking work
+   twice (~200 ms per login, barely noticeable). Existing hashes remain valid
+   because the cost is embedded in each hash and upgrade automatically on the
+   next password change.
 
-5. **Logout não revoga o token no servidor.** Sair apaga o token no navegador,
-   mas um token copiado antes continua válido até expirar (24h). A revogação
-   imediata hoje só acontece trocando a senha (versão de sessão). O botão "sair
-   dos outros aparelhos" nas Configurações aumenta essa versão.
+5. **`POST /api/auth/logout` alone only clears the browser cookie.** Signing out
+   from the Settings UI already calls `POST /api/users/me/sessions/revoke`
+   first, incrementing `token_version` and revoking all active tokens on the
+   server before clearing the cookie. However, calling `POST /api/auth/logout`
+   by itself without `/sessions/revoke` only clears the cookie in that browser,
+   leaving any previously copied token valid until it expires (24h) or
+   `token_version` changes.
 
-6. **Sem bloqueio por conta no login.** O limite é por IP; alguém com muitos IPs
-   pode tentar senhas numa mesma conta devagar. Opções: atraso progressivo por
-   conta, ou código por email depois de N erros.
+6. **No per-account login lockout.** Rate limiting is per IP; an attacker with
+   many IPs could still try passwords slowly against a single account. Options:
+   progressive per-account delay, or an e-mail verification code after N failed
+   attempts.
 
-7. **Sem CSP nem `Referrer-Policy` na API.** A API manda os padrões do Spring
-   Security (ver "Em vigor"), mas não esses dois. Como ela só devolve JSON, o
-   risco é baixo; as duas fazem diferença mesmo é no front, que já as tem.
+7. **No CSP or `Referrer-Policy` headers on API responses.** The API sends
+   Spring Security's defaults (see [In place](#in-place)), but not these two.
+   Because the API only returns JSON, the risk is low; both headers mainly
+   protect the frontend, which already sets them.
 
-8. **Avatar por URL externa.** A foto de perfil é um link que a própria pessoa
-   informa e que o navegador de quem vê o perfil carrega direto. Quem controla
-   o servidor da imagem enxerga o IP de quem abriu o perfil. O mesmo vale pra
-   capa das obras, que aparece no feed e no perfil de outras pessoas e aceita
-   `http` (o Google Books devolve capas assim; o front sobe tudo pra `https`
-   pela CSP). Alternativa: upload com armazenamento próprio, ou proxy de imagens.
+8. **External URLs for avatars, group photos and work covers.** Profile photos,
+   group images and work covers are URLs loaded directly by viewers' browsers,
+   exposing each viewer's IP to whichever server hosts the image (`http` URLs are
+   upgraded to `https` by the frontend CSP when possible). Alternatives:
+   self-hosted uploads or an image proxy.
 
-9. **LGPD: exportação só das obras.** A exclusão de conta existe, e nas
-   Configurações dá para baixar as obras (CSV ou JSON). Ainda não saem num
-   arquivo os takes, comentários, conversas e seguidores.
+9. **LGPD data export covers only works.** Account deletion exists, and Settings
+   lets users export their works as CSV or JSON. Takes, comments, chat messages
+   and followers are not yet included in an export bundle.
 
-10. **Sem auditoria e sem análise de dependências automática.** Não há trilha
-    de quem alterou o quê, e não há CI rodando os testes nem checando CVEs das
-    dependências (por exemplo com o OWASP Dependency-Check).
+10. **No audit trail or automated dependency CVE checks.** There is no audit
+    log of who changed what, and no CI pipeline running tests or checking
+    dependency CVEs (e.g. OWASP Dependency-Check).
 
-11. **WebSocket não reconfere a sessão depois de conectar.** O JWT e a versão de
-    sessão são checados no `CONNECT`. Depois de uma troca de senha, ou de o
-    token vencer, uma conexão já aberta continua recebendo eventos das conversas
-    até cair (a participação em cada conversa continua sendo conferida a cada
-    envio). Correção: derrubar pelo servidor as conexões da conta quando a
-    versão de sessão muda.
+11. **Open WebSocket connections are not terminated immediately when `token_version` changes.**
+    The JWT and `token_version` are checked at STOMP `CONNECT`. After a password
+    change or session revocation, an already-open WebSocket keeps receiving
+    conversation events until it disconnects (though sending messages and
+    creating subscriptions still check authorization and membership). Fix: close
+    open WebSocket sessions for the user whenever `token_version` changes.
