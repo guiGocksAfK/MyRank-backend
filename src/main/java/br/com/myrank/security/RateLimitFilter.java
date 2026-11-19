@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
+    private static final ObjectMapper JSON = new ObjectMapper();
+
     private static final long WINDOW_MS = 60_000;
     /** Traduzido em i18n/errors.json. */
     static final String TOO_MANY = "Muitos pedidos seguidos. Tente de novo em {0} s.";
@@ -92,7 +94,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 response.setContentType("application/json;charset=UTF-8");
                 String text = ErrorMessages.get().translate(TOO_MANY,
                         List.of(String.valueOf(retry)), ErrorMessages.language(request));
-                response.getWriter().write(new ObjectMapper().writeValueAsString(Map.of("message", text)));
+                response.getWriter().write(JSON.writeValueAsString(Map.of("message", text)));
                 return;
             }
         }

@@ -41,6 +41,32 @@ class GlobalExceptionHandlerLanguageTest {
     }
 
     @Test
+    void idioma_respeitaAOrdemDePreferencia() {
+        assertThat(ErrorMessages.language(request("fr-FR, en-US;q=0.9, es;q=0.8"))).isEqualTo("en");
+        assertThat(ErrorMessages.language(request("pt;q=0.5, en;q=0.9"))).isEqualTo("en");
+        assertThat(ErrorMessages.language(request("de, es;q=0.7"))).isEqualTo("es");
+        assertThat(ErrorMessages.language(request("fr, de"))).isEqualTo("pt");
+        assertThat(ErrorMessages.language(request(";;;q=abc"))).isEqualTo("pt");
+    }
+
+    @Test
+    void partes_entramNumaPassadaSo() {
+        // o nome digitado pela pessoa tem "{1}": não pode virar a segunda parte
+        assertThat(br.com.myrank.exception.ErrorText.fill("{0} e {1}", java.util.List.of("a{1}", "b")))
+                .isEqualTo("a{1} e b");
+        assertThat(br.com.myrank.exception.ErrorText.fill("custa $5 {0}", java.util.List.of("\\$1")))
+                .isEqualTo("custa $5 \\$1");
+    }
+
+    @Test
+    void emailNaoVerificado_traduzido() {
+        var ex = new br.com.myrank.exception.EmailNotVerifiedException();
+        assertThat(handler.handleEmailNotVerified(ex, request("en")).getBody())
+                .containsEntry("message", "Confirm your email before signing in. We sent a link to your inbox.")
+                .containsEntry("code", "EMAIL_NOT_VERIFIED");
+    }
+
+    @Test
     void erroDeBiblioteca_naoVaiParaATela() {
         var ex = new NumberFormatException("For input string: \"abc\"");
         var response = handler.handleIllegalArgument(ex, request("pt-BR"));

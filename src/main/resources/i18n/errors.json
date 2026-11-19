@@ -1,4 +1,8 @@
 {
+  "A URL da foto precisa começar com https://.": {
+    "en": "The photo link must start with https://.",
+    "es": "El enlace de la foto debe empezar con https://."
+  },
   "A URL da foto é longa demais.": {
     "en": "The photo link is too long.",
     "es": "El enlace de la foto es demasiado largo."
@@ -288,12 +292,12 @@
     "es": "Esta invitación ya no es válida."
   },
   "Esse email já tem conta no MyRank com outro jeito de entrar. Entre do jeito que você entrou da primeira vez.": {
-    "en": "This group is closed.",
-    "es": "Este grupo es cerrado."
-  },
-  "Esse grupo é fechado.": {
     "en": "This email already has a MyRank account with another sign-in method. Sign in the way you did the first time.",
     "es": "Este email ya tiene cuenta en MyRank con otra forma de entrar. Entra como lo hiciste la primera vez."
+  },
+  "Esse grupo é fechado.": {
+    "en": "This group is closed.",
+    "es": "Este grupo está cerrado."
   },
   "Esse item do feed não existe mais.": {
     "en": "This feed item no longer exists.",
@@ -555,6 +559,10 @@
     "en": "The cover link is too long.",
     "es": "El enlace de la portada es demasiado largo."
   },
+  "O link da foto precisa começar com https://.": {
+    "en": "The photo link must start with https://.",
+    "es": "El enlace de la foto debe empezar con https://."
+  },
   "O link da foto é longo demais.": {
     "en": "The photo link is too long.",
     "es": "El enlace de la foto es demasiado largo."
@@ -639,13 +647,21 @@
     "en": "Too many works selected.",
     "es": "Demasiadas obras seleccionadas."
   },
+  "Opção de entrada do grupo inválida.": {
+    "en": "Invalid group join option.",
+    "es": "Opción de entrada al grupo no válida."
+  },
   "Opção de mensagens inválida.": {
+    "en": "Invalid message option.",
+    "es": "Opción de mensajes no válida."
+  },
+  "Ordem com obras demais.": {
     "en": "Order with too many works.",
     "es": "Orden con demasiadas obras."
   },
-  "Ordem com obras demais.": {
-    "en": "Invalid message option.",
-    "es": "Opción de mensajes no válida."
+  "Ordenação inválida.": {
+    "en": "Invalid sorting.",
+    "es": "Orden no válido."
   },
   "Os campos próprios vieram incompletos. Atualize a página e tente de novo.": {
     "en": "The custom fields came incomplete. Refresh the page and try again.",
@@ -818,10 +834,6 @@
   "Você não pode seguir a si mesmo.": {
     "en": "You can't follow yourself.",
     "es": "No puedes seguirte a ti mismo."
-  },
-  "Você não tem acesso a essa conversa.": {
-    "en": "You don't have access to this conversation.",
-    "es": "No tienes acceso a esta conversación."
   },
   "Você não tem permissão para editar essa obra.": {
     "en": "You don't have permission to edit this work.",

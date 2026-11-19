@@ -48,7 +48,10 @@ public final class ErrorMessages {
     private final Map<String, Map<String, String>> catalog;
 
     ErrorMessages(Map<String, Map<String, String>> catalog) {
-        this.catalog = catalog;
+        // cópia imutável: a instância é compartilhada por todas as requisições
+        Map<String, Map<String, String>> copy = new java.util.HashMap<>();
+        catalog.forEach((key, translations) -> copy.put(key, Map.copyOf(translations)));
+        this.catalog = Map.copyOf(copy);
     }
 
     public static ErrorMessages get() {
@@ -67,7 +70,7 @@ public final class ErrorMessages {
 
     /** Todas as mensagens conhecidas, em português (para o teste do catálogo). */
     public java.util.Set<String> templates() {
-        return catalog.keySet();
+        return catalog.keySet(); // já imutável (Map.copyOf)
     }
 
     static Map<String, Map<String, String>> load() {
@@ -109,13 +112,25 @@ public final class ErrorMessages {
         return knows(message) ? translate(message, language) : null;
     }
 
-    /** "en", "es" ou "pt", pelo primeiro idioma do Accept-Language. */
+    /**
+     * "pt", "en" ou "es": o primeiro desses na ordem de preferência do Accept-Language
+     * (respeita o q=). "fr-FR, en;q=0.9" vira "en". Nenhum suportado, cabeçalho
+     * ausente ou malformado: "pt".
+     */
     public static String language(HttpServletRequest request) {
         String header = request == null ? null : request.getHeader("Accept-Language");
         if (header == null || header.isBlank()) return "pt";
-        String first = header.split(",")[0].trim().toLowerCase(Locale.ROOT);
-        if (first.startsWith("en")) return "en";
-        if (first.startsWith("es")) return "es";
+        try {
+            for (Locale.LanguageRange range : Locale.LanguageRange.parse(header)) {
+                if (range.getWeight() <= 0) continue;
+                String tag = range.getRange().toLowerCase(Locale.ROOT);
+                if (tag.startsWith("pt")) return "pt";
+                if (tag.startsWith("en")) return "en";
+                if (tag.startsWith("es")) return "es";
+            }
+        } catch (IllegalArgumentException malformed) {
+            // cabeçalho estranho não pode derrubar a resposta de erro
+        }
         return "pt";
     }
 }
