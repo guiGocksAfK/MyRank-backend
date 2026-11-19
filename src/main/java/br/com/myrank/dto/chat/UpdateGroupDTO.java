@@ -7,7 +7,7 @@ public record UpdateGroupDTO(
         @Size(max = 80, message = "O nome do grupo é longo demais.")
         String name,
 
-        @Size(max = 1000) String imageUrl,
+        @Size(max = 1000, message = "A URL da foto é longa demais.") String imageUrl,
         String access,        // OPEN | REQUEST | CLOSED
 
         @Size(max = 300, message = "A descrição deve ter no máximo 300 caracteres.")

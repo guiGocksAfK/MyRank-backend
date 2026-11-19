@@ -14,7 +14,7 @@ public record CreateGroupDTO(
         List<Long> memberIds,
         String access,        // OPEN | REQUEST | CLOSED (default CLOSED)
 
-        @Size(max = 1000) String imageUrl,
+        @Size(max = 1000, message = "A URL da foto é longa demais.") String imageUrl,
         @Size(max = 300, message = "A descrição deve ter no máximo 300 caracteres.")
         String description
 ) {}

@@ -64,8 +64,10 @@ class ErrorMessagesCatalogTest {
                     while (m.find()) {
                         for (int g = 1; g <= m.groupCount(); g++) {
                             String text = m.group(g).replace("\\\"", "\"");
-                            // pedaço de código ("manga"), não frase
-                            boolean sentence = text.contains(" ") && text.matches("(?s).*[.?!]$");
+                            // frase para a tela: tem espaço e começa com maiúscula. Pedaço de
+                            // código ("manga") fica de fora. Não exige ponto no fim: frase sem
+                            // ponto escapava daqui e virava a genérica na tela.
+                            boolean sentence = text.contains(" ") && Character.isUpperCase(text.codePointAt(0));
                             if (sentence && !INTERNAL.contains(text)) found.add(text);
                         }
                     }
@@ -82,6 +84,24 @@ class ErrorMessagesCatalogTest {
         assertThat(ErrorMessages.get().templates())
                 .as("mensagens sem tradução em i18n/errors.json")
                 .containsAll(source);
+    }
+
+    /** "O comentário passa de " + max + "...": não bate com nenhuma chave e vira a genérica. */
+    @Test
+    void nenhumaMensagemMontadaComMais() throws IOException {
+        Pattern glued = Pattern.compile(
+                "new (?:IllegalArgumentException|IllegalStateException|BadCredentialsException|ExternalServiceUnavailableException)"
+                        + "\\(\\s*" + STR + "\\s*\\+");
+        Set<String> found = new TreeSet<>();
+        try (Stream<Path> files = Files.walk(Path.of("src/main/java"))) {
+            for (Path file : files.filter(f -> f.toString().endsWith(".java")).toList()) {
+                Matcher m = glued.matcher(Files.readString(file, StandardCharsets.UTF_8));
+                while (m.find()) {
+                    if (!INTERNAL.contains(m.group(1))) found.add(file.getFileName() + ": " + m.group(1));
+                }
+            }
+        }
+        assertThat(found).as("use TemplatedArgumentException.of(\"... {0} ...\", valor)").isEmpty();
     }
 
     @Test
