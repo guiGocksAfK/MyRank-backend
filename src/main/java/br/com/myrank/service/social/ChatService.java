@@ -1011,7 +1011,7 @@ public class ChatService {
         String url = raw.trim();
         if (url.isEmpty()) return null;
         if (!url.startsWith("https://")) {
-            throw new IllegalArgumentException("A URL da foto precisa começar com https://");
+            throw new IllegalArgumentException("A URL da foto precisa começar com https://.");
         }
         if (url.length() > IMAGE_URL_MAX) {
             throw new IllegalArgumentException("A URL da foto é longa demais.");
@@ -1023,7 +1023,7 @@ public class ChatService {
         try {
             return ConversationAccess.valueOf(raw.trim().toUpperCase());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Você não tem acesso a essa conversa.");
+            throw new IllegalArgumentException("Opção de entrada do grupo inválida.");
         }
     }
 

@@ -44,7 +44,7 @@ public class RankingController {
         User user = authUtils.getUser(userDetails);
         UnifiedSort chosen = sort == null || sort.isBlank()
                 ? (user.isWeightedByDefault() ? UnifiedSort.WEIGHTED : UnifiedSort.SCORE)
-                : parse(UnifiedSort.class, sort, "Ordenação inválida.");
+                : parse(UnifiedSort.class, sort);
         return ResponseEntity.ok(rankingService.unified(user.getId(), chosen, table).stream()
                 .map(WorkResponseDTO::fromEntity).toList());
     }
@@ -56,16 +56,16 @@ public class RankingController {
             @RequestParam(defaultValue = "avg") String order,
             @RequestParam(required = false) String type) {
         User user = authUtils.getUser(userDetails);
-        CreatorOrder chosen = parse(CreatorOrder.class, order, "Ordenação inválida.");
+        CreatorOrder chosen = parse(CreatorOrder.class, order);
         String typeFilter = type == null || type.isBlank() ? null : type.trim();
         return ResponseEntity.ok(rankingService.creators(user.getId(), chosen, typeFilter));
     }
 
-    private static <E extends Enum<E>> E parse(Class<E> type, String raw, String message) {
+    private static <E extends Enum<E>> E parse(Class<E> type, String raw) {
         try {
             return Enum.valueOf(type, raw.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException(message);
+            throw new IllegalArgumentException("Ordenação inválida.");
         }
     }
 }

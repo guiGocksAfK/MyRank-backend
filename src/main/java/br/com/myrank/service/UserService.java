@@ -140,7 +140,7 @@ public class UserService {
                 user.setAvatarUrl(null);
             } else {
                 if (!url.startsWith("https://")) {
-                    throw new IllegalArgumentException("A URL da foto precisa começar com https://");
+                    throw new IllegalArgumentException("A URL da foto precisa começar com https://.");
                 }
                 if (url.length() > 1000) {
                     throw new IllegalArgumentException("A URL da foto é longa demais.");
